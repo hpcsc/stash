@@ -1,0 +1,792 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stash Story Map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --sm-bg: #F3F5F4;
+    --sm-panel: #FFFFFF;
+    --sm-ink: #16201B;
+    --sm-muted: #5A6861;
+    --sm-line: #D5DCD8;
+    --sm-chip: #7A4FA3;
+    --sm-chip-ink: #FFFFFF;
+    --sm-sel: #C2410C;
+    --sm-sel-ink: #FFFFFF;
+    --sm-sel-soft: #FDEBDD;
+    --sm-dim: 0.14;
+    --sm-pre: 0.5;
+    --sm-crit: #FDE68A;
+    --sm-crit-line: #B45309;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --sm-bg: #0F1513;
+      --sm-panel: #151C19;
+      --sm-ink: #E2E9E5;
+      --sm-muted: #93A199;
+      --sm-line: #2B3632;
+      --sm-chip: #C6A6EA;
+      --sm-chip-ink: #1E1530;
+      --sm-sel: #F59E0B;
+      --sm-sel-ink: #1A1206;
+      --sm-sel-soft: #3A2A10;
+      --sm-dim: 0.18;
+      --sm-pre: 0.55;
+      --sm-crit: #3A2A10;
+      --sm-crit-line: #F59E0B;
+    }
+  }
+  :root[data-theme="dark"] {
+    --sm-bg: #0F1513;
+    --sm-panel: #151C19;
+    --sm-ink: #E2E9E5;
+    --sm-muted: #93A199;
+    --sm-line: #2B3632;
+    --sm-chip: #C6A6EA;
+    --sm-chip-ink: #1E1530;
+    --sm-sel: #F59E0B;
+    --sm-sel-ink: #1A1206;
+    --sm-sel-soft: #3A2A10;
+    --sm-dim: 0.18;
+    --sm-pre: 0.55;
+    --sm-crit: #3A2A10;
+    --sm-crit-line: #F59E0B;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--sm-bg);
+    color: var(--sm-ink);
+    font-family: "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+    font-size: 14px;
+    line-height: 1.45;
+  }
+  .sm-head { max-width: 1760px; margin: 0 auto; padding: 20px 16px 4px; }
+  .sm-head h1 { font-size: 20px; margin: 0 0 4px; font-weight: 600; }
+  .sm-head p { margin: 0; color: var(--sm-muted); max-width: 900px; }
+  .sm-head a { color: inherit; }
+
+  .sm-layout {
+    max-width: 1760px;
+    margin: 0 auto;
+    padding: 12px 16px 24px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 360px;
+    gap: 16px;
+    align-items: start;
+  }
+  .sm-diagram {
+    background: var(--sm-panel);
+    border: 1px solid var(--sm-line);
+    border-radius: 10px;
+    overflow: auto;
+    min-width: 0;
+  }
+  .sm-diagram svg { display: block; width: 100%; min-width: 960px; height: auto; }
+
+  .sm-side {
+    position: sticky;
+    top: 12px;
+    max-height: calc(100vh - 24px);
+    overflow: auto;
+    background: var(--sm-panel);
+    border: 1px solid var(--sm-line);
+    border-radius: 10px;
+    padding: 14px;
+  }
+  .sm-side h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--sm-muted); margin: 0 0 8px; font-weight: 600; }
+  .sm-detail { border: 1px solid var(--sm-line); border-radius: 8px; padding: 10px 12px; margin-bottom: 14px; min-height: 64px; }
+  .sm-detail p { margin: 4px 0 0; }
+  .sm-detail .sm-muted, .sm-muted { color: var(--sm-muted); }
+  .sm-detail-title { font-weight: 600; }
+  .sm-links { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; align-items: center; }
+  .sm-reset { margin-left: auto; font: inherit; font-size: 12px; background: none; border: 1px solid var(--sm-line); border-radius: 6px; color: var(--sm-ink); padding: 2px 8px; cursor: pointer; }
+
+  .sm-step { font-size: 12px; color: var(--sm-muted); margin: 12px 0 6px; font-weight: 600; }
+  .sm-card {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 2px 10px;
+    width: 100%;
+    text-align: left;
+    font: inherit;
+    color: inherit;
+    background: none;
+    border: 1px solid var(--sm-line);
+    border-radius: 8px;
+    padding: 8px 10px;
+    margin-bottom: 6px;
+    cursor: pointer;
+  }
+  .sm-card:hover { border-color: var(--sm-chip); }
+  .sm-card[aria-pressed="true"] { border-color: var(--sm-sel); background: var(--sm-sel-soft); }
+  .sm-card-title { font-weight: 600; }
+  .sm-card-value { grid-column: 2; color: var(--sm-muted); font-size: 13px; }
+
+  .sm-pill {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    border-radius: 999px;
+    padding: 1px 7px;
+    background: var(--sm-chip);
+    color: var(--sm-chip-ink);
+    border: 0;
+    font-family: inherit;
+    white-space: nowrap;
+    align-self: start;
+    margin-top: 2px;
+  }
+  button.sm-pill { cursor: pointer; }
+  .sm-pill.sm-on { background: var(--sm-sel); color: var(--sm-sel-ink); }
+
+  /* the diagram */
+  #sm-flow .sm-part, #sm-flow .sm-chip { transition: opacity 0.15s; }
+  #sm-flow .sm-part[data-stories]:not([data-stories=""]) { cursor: pointer; }
+  #sm-flow .sm-chip { cursor: pointer; }
+  #sm-flow.sm-focus .sm-part:not(.sm-on):not(.sm-pre),
+  #sm-flow.sm-focus .sm-chip:not(.sm-on):not(.sm-pre) { opacity: var(--sm-dim); }
+  #sm-flow.sm-focus .sm-part.sm-pre:not(.sm-on),
+  #sm-flow.sm-focus .sm-chip.sm-pre { opacity: var(--sm-pre); }
+  #sm-flow .sm-chip-bg { fill: var(--sm-chip); }
+  #sm-flow .sm-chip-t { fill: var(--sm-chip-ink); }
+  #sm-flow .sm-chip.sm-on .sm-chip-bg { fill: var(--sm-sel); }
+  #sm-flow .sm-chip.sm-on .sm-chip-t { fill: var(--sm-sel-ink); }
+  #sm-flow .sm-chip:focus { outline: none; }
+  #sm-flow .sm-chip:focus-visible .sm-chip-bg { stroke: var(--sm-ink); stroke-width: 1.5; }
+
+  /* the dependency graph */
+  .sm-graph-svg { display: block; width: 100%; height: auto; }
+  .sm-graph-key { font-size: 12px; margin: 6px 0 14px; }
+  .sm-g-step { font-size: 10px; fill: var(--sm-muted); }
+  .sm-g-edge { fill: none; stroke: var(--sm-muted); stroke-width: 1.2; opacity: 0.7; }
+  .sm-g-edge.sm-crit { stroke: var(--sm-crit-line); stroke-width: 1.8; opacity: 1; }
+  .sm-g-node { cursor: pointer; }
+  .sm-g-node rect { fill: var(--sm-panel); stroke: var(--sm-line); stroke-width: 1.2; }
+  .sm-g-node.sm-crit rect { fill: var(--sm-crit); stroke: var(--sm-crit-line); }
+  .sm-g-node text { fill: var(--sm-ink); font-size: 10.5px; font-weight: 700; letter-spacing: 0.03em; }
+  .sm-g-node:focus { outline: none; }
+  .sm-g-node:focus-visible rect { stroke: var(--sm-ink); stroke-width: 2; }
+  .sm-gfocus .sm-g-node:not(.sm-on):not(.sm-pre):not(.sm-post) { opacity: 0.35; }
+  .sm-gfocus .sm-g-edge:not(.sm-on):not(.sm-post) { opacity: 0.2; }
+  .sm-g-node.sm-on rect { fill: var(--sm-sel); stroke: var(--sm-sel); }
+  .sm-g-node.sm-on text { fill: var(--sm-sel-ink); }
+  .sm-g-node.sm-pre rect { fill: var(--sm-chip); stroke: var(--sm-chip); }
+  .sm-g-node.sm-pre text { fill: var(--sm-chip-ink); }
+  .sm-g-node.sm-post rect { stroke: var(--sm-chip); stroke-width: 1.6; stroke-dasharray: 3 2; }
+  .sm-g-edge.sm-on { stroke: var(--sm-chip); stroke-width: 1.8; opacity: 1; }
+  .sm-g-edge.sm-post { stroke: var(--sm-chip); stroke-dasharray: 3 2; opacity: 1; }
+
+  @media (max-width: 1000px) {
+    .sm-layout { grid-template-columns: minmax(0, 1fr); }
+    .sm-side { position: static; max-height: none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="sm-head">
+  <h1>Stash: stories on the flow</h1>
+  <p>Each chip names the story that adds or changes that part of the flow. Select a story to light up its
+    parts, or select a part to see its stories. The stories are in
+    <a href="stash.md">stash.md</a>.</p>
+</header>
+
+<main class="sm-layout">
+<div class="sm-diagram">
+<svg id="sm-flow" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+     viewBox="0 0 1240 830" width="1240" height="830" role="img"
+     aria-label="Stash: the event flow, with a chip on each part that a story adds or changes.">
+  <style>
+    .bg { fill: #FFFFFF; }
+    .event { fill: #FFE0C0; stroke: #B44E12; stroke-width: 1.5; }
+    .store { fill: #ECEFED; stroke: #5A6861; stroke-width: 1.3; }
+    .note { fill: none; stroke: #C9D2CE; stroke-width: 1; }
+    .rule { stroke: #C9D2CE; stroke-width: 1; }
+    .gear { fill: #16201B; }
+    .gear-hole { fill: #FFFFFF; }
+    .event-dead { fill: #FFE0C0; stroke: #A33A2A; stroke-width: 1.6; stroke-dasharray: 5 4; }
+    .absent { fill: #FFFFFF; stroke: #A33A2A; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .warn { font-family: "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, sans-serif; font-size: 10px; fill: #A33A2A; }
+    .edge-stop { stroke: #A33A2A; stroke-width: 1.5; stroke-dasharray: 5 4; fill: none; }
+    .head-stop { fill: #A33A2A; }
+    .title { font-family: "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, sans-serif; font-size: 16px; font-weight: 600; fill: #16201B; }
+    .part { font-family: "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, sans-serif; font-size: 12.5px; font-weight: 600; fill: #5A6861; }
+    .event-t { font-family: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; font-size: 11px; fill: #16201B; }
+    .name { font-family: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; font-size: 11.5px; font-weight: 600; fill: #16201B; }
+    .sub { font-family: "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, sans-serif; font-size: 10px; fill: #5A6861; }
+    .leg { font-family: "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, sans-serif; font-size: 11px; fill: #16201B; }
+    .gate-t, .qual { paint-order: stroke; stroke: #FFFFFF; stroke-width: 5px; stroke-linejoin: round; }
+    .gate-t { font-family: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; font-size: 10.5px; font-weight: 600; fill: #14705A; }
+    .qual { font-family: "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, sans-serif; font-size: 10px; fill: #5A6861; }
+    .edge { stroke: #16201B; stroke-width: 1.4; fill: none; }
+    .edge-gated { stroke: #14705A; stroke-width: 2; fill: none; }
+    .edge-new { stroke: #7A4FA3; stroke-width: 1.8; fill: none; }
+    .head { fill: #16201B; }
+    .head-gated { fill: #14705A; }
+    .head-new { fill: #7A4FA3; }
+    .sm-chip-bg { fill: #7A4FA3; }
+    .sm-chip-t { font-family: "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, sans-serif; font-size: 9px; font-weight: 700; letter-spacing: 0.04em; fill: #FFFFFF; }
+
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #151C19; }
+      .event { fill: #40260F; stroke: #F2A868; }
+      .store { fill: #1E2723; stroke: #93A199; }
+      .note { stroke: #33403A; }
+      .rule { stroke: #33403A; }
+      .gear { fill: #E2E9E5; }
+      .gear-hole { fill: #151C19; }
+      .event-dead { fill: #40260F; stroke: #E88C78; }
+      .absent { fill: #151C19; stroke: #E88C78; }
+      .warn { fill: #E88C78; }
+      .edge-stop { stroke: #E88C78; }
+      .head-stop { fill: #E88C78; }
+      .title, .event-t, .name, .leg { fill: #E2E9E5; }
+      .part, .sub, .qual { fill: #93A199; }
+      .gate-t, .qual { stroke: #151C19; }
+      .gate-t { fill: #53C3A1; }
+      .edge { stroke: #E2E9E5; }
+      .edge-gated { stroke: #53C3A1; }
+      .edge-new { stroke: #C6A6EA; }
+      .head { fill: #E2E9E5; }
+      .head-gated { fill: #53C3A1; }
+      .head-new { fill: #C6A6EA; }
+      .sm-chip-bg { fill: #C6A6EA; }
+      .sm-chip-t { fill: #1E1530; }
+    }
+  </style>
+
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" class="head"/>
+    </marker>
+    <marker id="arrow-gated" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" class="head-gated"/>
+    </marker>
+    <marker id="arrow-new" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" class="head-new"/>
+    </marker>
+    <marker id="arrow-stop" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" class="head-stop"/>
+    </marker>
+    <g id="gear" class="gear">
+      <circle cx="0" cy="0" r="8.4"/>
+      <rect x="-2.9" y="-14.2" width="5.8" height="6.8" rx="1.3"/>
+      <rect x="-2.9" y="-14.2" width="5.8" height="6.8" rx="1.3" transform="rotate(45)"/>
+      <rect x="-2.9" y="-14.2" width="5.8" height="6.8" rx="1.3" transform="rotate(90)"/>
+      <rect x="-2.9" y="-14.2" width="5.8" height="6.8" rx="1.3" transform="rotate(135)"/>
+      <rect x="-2.9" y="-14.2" width="5.8" height="6.8" rx="1.3" transform="rotate(180)"/>
+      <rect x="-2.9" y="-14.2" width="5.8" height="6.8" rx="1.3" transform="rotate(225)"/>
+      <rect x="-2.9" y="-14.2" width="5.8" height="6.8" rx="1.3" transform="rotate(270)"/>
+      <rect x="-2.9" y="-14.2" width="5.8" height="6.8" rx="1.3" transform="rotate(315)"/>
+      <circle cx="0" cy="0" r="3.4" class="gear-hole"/>
+    </g>
+  </defs>
+
+  <rect id="sm-bg" x="0" y="0" width="1240" height="830" class="bg"/>
+  <text x="24" y="30" class="title">Stash: where each story changes the flow</text>
+
+  <!-- ===== edges first ===== -->
+  <g class="sm-part" data-name="Share sheet → ItemCaptured" data-stories="US-010">
+    <line x1="240" y1="119" x2="380" y2="194" class="edge-gated" marker-end="url(#arrow-gated)"/>
+  </g>
+  <g class="sm-part" data-name="Browser extension → ItemCaptured" data-stories="US-012">
+    <line x1="240" y1="199" x2="380" y2="194" class="edge" marker-end="url(#arrow)"/>
+  </g>
+  <g class="sm-part" data-name="Offline queue → ItemCaptured" data-stories="US-011">
+    <line x1="240" y1="279" x2="380" y2="194" class="edge" marker-end="url(#arrow)"/>
+  </g>
+  <g class="sm-part" data-name="ItemCaptured → files" data-stories="US-004">
+    <line x1="580" y1="194" x2="960" y2="85" class="edge-gated" marker-end="url(#arrow-gated)"/>
+  </g>
+  <g class="sm-part" data-name="ItemCaptured → LinkMetadata" data-stories="US-003">
+    <line x1="580" y1="194" x2="780" y2="176" class="edge-gated" marker-end="url(#arrow-gated)"/>
+  </g>
+  <g class="sm-part" data-name="ItemCaptured → Catchup" data-stories="US-002">
+    <line x1="580" y1="194" x2="780" y2="430" class="edge" marker-end="url(#arrow)"/>
+  </g>
+  <g class="sm-part" data-name="ItemKept → Catchup" data-stories="US-005">
+    <line x1="580" y1="268" x2="780" y2="430" class="edge" marker-end="url(#arrow)"/>
+  </g>
+  <g class="sm-part" data-name="ItemRetagged → Catchup" data-stories="US-005">
+    <line x1="580" y1="326" x2="780" y2="430" class="edge" marker-end="url(#arrow)"/>
+  </g>
+  <g class="sm-part" data-name="ItemDropped → Catchup" data-stories="US-006">
+    <line x1="580" y1="384" x2="780" y2="430" class="edge" marker-end="url(#arrow)"/>
+  </g>
+  <g class="sm-part" data-name="ItemRestored → Catchup" data-stories="US-006">
+    <line x1="580" y1="442" x2="780" y2="430" class="edge" marker-end="url(#arrow)"/>
+  </g>
+  <g class="sm-part" data-name="ItemDeleted → Catchup" data-stories="US-006">
+    <line x1="580" y1="500" x2="780" y2="430" class="edge" marker-end="url(#arrow)"/>
+  </g>
+  <g class="sm-part" data-name="TagCreated → Catchup" data-stories="US-007">
+    <line x1="580" y1="578" x2="780" y2="430" class="edge" marker-end="url(#arrow)"/>
+  </g>
+  <g class="sm-part" data-name="TagRenamed → Catchup" data-stories="US-007">
+    <line x1="580" y1="636" x2="780" y2="430" class="edge" marker-end="url(#arrow)"/>
+  </g>
+  <g class="sm-part" data-name="LinkMetadata → items" data-stories="US-003">
+    <line x1="780" y1="176" x2="960" y2="265" class="edge" marker-end="url(#arrow)"/>
+  </g>
+  <g class="sm-part" data-name="Catchup → items" data-stories="US-002">
+    <line x1="780" y1="430" x2="960" y2="250" class="edge" marker-end="url(#arrow)"/>
+  </g>
+  <g class="sm-part" data-name="Catchup → tags" data-stories="US-007">
+    <line x1="780" y1="430" x2="960" y2="385" class="edge" marker-end="url(#arrow)"/>
+  </g>
+  <g class="sm-part" data-name="Catchup → item_tags" data-stories="US-005">
+    <line x1="780" y1="430" x2="960" y2="505" class="edge" marker-end="url(#arrow)"/>
+  </g>
+
+  <!-- ===== nodes ===== -->
+  <g class="sm-part" data-name="Android share sheet" data-stories="US-010" data-chips="US-010" data-chip-pos="tr">
+    <rect x="30" y="96" width="210" height="46" rx="8" class="store sm-anchor"/>
+    <text x="135" y="118" text-anchor="middle" class="name">Android share sheet</text>
+    <text x="135" y="134" text-anchor="middle" class="sub">text · link · image · file</text>
+  </g>
+  <g class="sm-part" data-name="Browser extension" data-stories="US-012 US-013" data-chips="US-012 US-013" data-chip-pos="tr">
+    <rect x="30" y="176" width="210" height="46" rx="8" class="store sm-anchor"/>
+    <text x="135" y="198" text-anchor="middle" class="name">Browser extension</text>
+    <text x="135" y="214" text-anchor="middle" class="sub">Chrome · Firefox</text>
+  </g>
+  <g class="sm-part" data-name="Offline queue" data-stories="US-011" data-chips="US-011" data-chip-pos="tr">
+    <rect x="30" y="256" width="210" height="46" rx="8" class="store sm-anchor"/>
+    <text x="135" y="278" text-anchor="middle" class="name">Offline queue</text>
+    <text x="135" y="294" text-anchor="middle" class="sub">captures while offline</text>
+  </g>
+
+  <g class="sm-part" data-name="ItemCaptured" data-stories="US-002 US-003 US-004" data-chips="US-002" data-chip-pos="tr">
+    <rect x="380" y="176" width="200" height="36" rx="18" class="event sm-anchor"/>
+    <text x="480" y="198" text-anchor="middle" class="event-t">ItemCaptured</text>
+  </g>
+  <g class="sm-part" data-name="ItemKept" data-stories="US-005" data-chips="US-005" data-chip-pos="tr">
+    <rect x="380" y="250" width="200" height="36" rx="18" class="event sm-anchor"/>
+    <text x="480" y="272" text-anchor="middle" class="event-t">ItemKept</text>
+  </g>
+  <g class="sm-part" data-name="ItemRetagged" data-stories="US-005">
+    <rect x="380" y="308" width="200" height="36" rx="18" class="event"/>
+    <text x="480" y="330" text-anchor="middle" class="event-t">ItemRetagged</text>
+  </g>
+  <g class="sm-part" data-name="ItemDropped" data-stories="US-006" data-chips="US-006" data-chip-pos="tr">
+    <rect x="380" y="366" width="200" height="36" rx="18" class="event sm-anchor"/>
+    <text x="480" y="388" text-anchor="middle" class="event-t">ItemDropped</text>
+  </g>
+  <g class="sm-part" data-name="ItemRestored" data-stories="US-006">
+    <rect x="380" y="424" width="200" height="36" rx="18" class="event"/>
+    <text x="480" y="446" text-anchor="middle" class="event-t">ItemRestored</text>
+  </g>
+  <g class="sm-part" data-name="ItemDeleted" data-stories="US-006">
+    <rect x="380" y="482" width="200" height="36" rx="18" class="event"/>
+    <text x="480" y="504" text-anchor="middle" class="event-t">ItemDeleted</text>
+  </g>
+  <g class="sm-part" data-name="TagCreated" data-stories="US-007" data-chips="US-007" data-chip-pos="tr">
+    <rect x="380" y="560" width="200" height="36" rx="18" class="event sm-anchor"/>
+    <text x="480" y="582" text-anchor="middle" class="event-t">TagCreated</text>
+  </g>
+  <g class="sm-part" data-name="TagRenamed" data-stories="US-007">
+    <rect x="380" y="618" width="200" height="36" rx="18" class="event"/>
+    <text x="480" y="640" text-anchor="middle" class="event-t">TagRenamed</text>
+  </g>
+
+  <g class="sm-part" data-name="Catchup" data-stories="US-002 US-005 US-006 US-007">
+    <use href="#gear" xlink:href="#gear" transform="translate(780,430)"/>
+    <text x="780" y="462" text-anchor="middle" class="name">Catchup</text>
+  </g>
+  <g class="sm-part" data-name="LinkMetadata" data-stories="US-003" data-chips="US-003" data-chip-pos="above">
+    <use href="#gear" xlink:href="#gear" transform="translate(780,176)"/>
+    <text x="780" y="208" text-anchor="middle" class="name sm-anchor">LinkMetadata</text>
+  </g>
+
+  <g class="sm-part" data-name="Files (Disk / S3)" data-stories="US-004 US-014" data-chips="US-004 US-014" data-chip-pos="tr">
+    <rect x="960" y="60" width="220" height="50" rx="8" class="store sm-anchor"/>
+    <text x="1070" y="82" text-anchor="middle" class="name">Files (Disk / S3)</text>
+    <text x="1070" y="98" text-anchor="middle" class="sub">image &amp; file bytes · thumbnail</text>
+  </g>
+  <g class="sm-part" data-name="items" data-stories="US-002 US-005 US-006 US-008" data-chips="US-008" data-chip-pos="tr">
+    <rect x="960" y="240" width="220" height="50" rx="8" class="store sm-anchor"/>
+    <text x="1070" y="262" text-anchor="middle" class="name">items</text>
+    <text x="1070" y="278" text-anchor="middle" class="sub">Inbox · Library · Trash · search</text>
+  </g>
+  <g class="sm-part" data-name="tags" data-stories="US-007">
+    <rect x="960" y="360" width="220" height="50" rx="8" class="store"/>
+    <text x="1070" y="385" text-anchor="middle" class="name">tags</text>
+  </g>
+  <g class="sm-part" data-name="item_tags" data-stories="US-005 US-007">
+    <rect x="960" y="480" width="220" height="50" rx="8" class="store"/>
+    <text x="1070" y="505" text-anchor="middle" class="name">item_tags</text>
+  </g>
+
+  <!-- strip: parts outside this flow -->
+  <text x="30" y="752" class="sub">Parts outside this flow</text>
+  <g class="sm-part" data-name="Recover from failures" data-stories="US-015" data-chips="US-015" data-chip-pos="tr">
+    <rect x="30" y="764" width="230" height="44" rx="8" class="store sm-anchor"/>
+    <text x="145" y="790" text-anchor="middle" class="name">Recover from failures</text>
+  </g>
+  <g class="sm-part" data-name="Self-hosted deploy" data-stories="US-016" data-chips="US-016" data-chip-pos="tr">
+    <rect x="300" y="764" width="230" height="44" rx="8" class="store sm-anchor"/>
+    <text x="415" y="790" text-anchor="middle" class="name">Self-hosted deploy</text>
+  </g>
+  <g class="sm-part" data-name="Cloud deploy" data-stories="US-017" data-chips="US-017" data-chip-pos="tr">
+    <rect x="570" y="764" width="230" height="44" rx="8" class="store sm-anchor"/>
+    <text x="685" y="790" text-anchor="middle" class="name">Cloud deploy</text>
+  </g>
+
+  <!-- ===== labels ===== -->
+  <g class="sm-part" data-name="Gate: sign in required" data-stories="US-001" data-chips="US-001" data-chip-pos="above">
+    <text x="305" y="140" text-anchor="middle" class="gate-t sm-anchor">sign in required</text>
+  </g>
+  <g class="sm-part" data-name="Result: warn if duplicate" data-stories="US-009" data-chips="US-009" data-chip-pos="above">
+    <text x="310" y="205" text-anchor="middle" class="qual sm-anchor">warn if duplicate</text>
+  </g>
+  <g class="sm-part" data-name="Gate: type = link" data-stories="US-003">
+    <text x="655" y="178" text-anchor="middle" class="gate-t">type = link</text>
+  </g>
+  <g class="sm-part" data-name="Gate: image / file" data-stories="US-004">
+    <text x="706" y="140" text-anchor="middle" class="gate-t">image / file</text>
+  </g>
+  <g class="sm-part" data-name="Result: title &amp; description" data-stories="US-003">
+    <text x="880" y="205" text-anchor="middle" class="qual">title · description</text>
+  </g>
+</svg>
+</div>
+
+<aside class="sm-side" aria-label="Stories">
+  <h2>Selection</h2>
+  <div class="sm-detail" id="sm-detail" aria-live="polite">
+    <p class="sm-muted">Select a story or a part of the flow.</p>
+  </div>
+  <h2>Dependencies</h2>
+  <div id="sm-graph"></div>
+  <p class="sm-graph-key sm-muted" id="sm-graph-key"></p>
+  <h2>Stories, in delivery order</h2>
+  <div id="sm-list"></div>
+</aside>
+</main>
+
+<script>
+// One entry for each story: value is the "so that" of the story, as one sentence. deps lists its Depends on.
+const STORIES = [
+  { id: "US-001", title: "Sign in with your account", value: "My stash is private and reachable from every device.", deps: [] },
+  { id: "US-002", title: "Capture text into the Inbox", value: "Text I save lands in my Inbox for triage.", deps: ["US-001"] },
+  { id: "US-003", title: "Capture a link into the Inbox", value: "I keep the URL and what the page is about.", deps: ["US-002"] },
+  { id: "US-004", title: "Capture an image or file into the Inbox", value: "I can keep a photo or file like any item.", deps: ["US-002"] },
+  { id: "US-005", title: "Keep items into the Library", value: "Kept items leave my Inbox for a tagged Library.", deps: ["US-002"] },
+  { id: "US-006", title: "Drop items to Trash and recover them", value: "Triage is fast and never destructive.", deps: ["US-002"] },
+  { id: "US-007", title: "Organize with tags", value: "My Library stays findable as it grows.", deps: ["US-005"] },
+  { id: "US-008", title: "Search text and links", value: "I find something I kept without browsing.", deps: ["US-003", "US-005"] },
+  { id: "US-009", title: "Warn on duplicate captures", value: "I don't unknowingly keep copies.", deps: ["US-003"] },
+  { id: "US-010", title: "Capture from the Android share sheet", value: "Any app can send text, links, images, or files to my Inbox.", deps: ["US-003", "US-004"] },
+  { id: "US-011", title: "Capture offline and sync later", value: "A dead spot never loses a capture.", deps: ["US-010"] },
+  { id: "US-012", title: "Capture from the Chrome extension", value: "I capture text, the page, or an image while browsing.", deps: ["US-003", "US-004"] },
+  { id: "US-013", title: "Capture from the Firefox extension", value: "I capture no matter which browser I use.", deps: ["US-012"] },
+  { id: "US-014", title: "Show image thumbnails", value: "I recognize a saved image at a glance.", deps: ["US-004"] },
+  { id: "US-015", title: "Recover gracefully from failures", value: "I'm never left staring at nothing.", deps: ["US-005", "US-006"] },
+  { id: "US-016", title: "Deploy self-hosted with docker compose", value: "I run Stash on my own machine and keep control of my data.", deps: ["US-015"] },
+  { id: "US-017", title: "Deploy to a cloud provider", value: "I use Stash without running a server at home.", deps: ["US-016"] },
+];
+
+(function () {
+  const NS = "http://www.w3.org/2000/svg";
+  const svg = document.getElementById("sm-flow");
+  const detail = document.getElementById("sm-detail");
+  const list = document.getElementById("sm-list");
+  const byId = Object.fromEntries(STORIES.map((s) => [s.id, s]));
+  const parts = [...svg.querySelectorAll(".sm-part")];
+  const storiesOf = (el) => (el.dataset.stories || "").split(/\s+/).filter(Boolean);
+  const dependents = (id) => STORIES.filter((s) => s.deps.includes(id)).map((s) => s.id);
+  const reach = (next) => (id, seen = new Set()) => {
+    next(id).forEach((x) => { if (!seen.has(x)) { seen.add(x); reach(next)(x, seen); } });
+    return seen;
+  };
+  const ancestorsOf = reach((id) => byId[id].deps);
+  const descendantsOf = reach(dependents);
+
+  const step = {};
+  const stepOf = (id) => step[id] || (step[id] = 1 + Math.max(0, ...byId[id].deps.map(stepOf)));
+  STORIES.forEach((s) => stepOf(s.id));
+
+  // A story is on the critical path when the steps before it and the stories after it make the longest chain.
+  const rest = {};
+  const restOf = (id) => rest[id] || (rest[id] = 1 + Math.max(0, ...dependents(id).map(restOf)));
+  STORIES.forEach((s) => restOf(s.id));
+  const depth = Math.max(...STORIES.map((s) => step[s.id]));
+  const critical = new Set(STORIES.filter((s) => step[s.id] + rest[s.id] - 1 === depth).map((s) => s.id));
+
+  let selected = null;
+  const chips = [];
+  const cards = [];
+  const graphNodes = [];
+  const graphEdges = [];
+  let graph = null;
+
+  function node(tag, attrs) {
+    const el = document.createElementNS(NS, tag);
+    for (const [k, v] of Object.entries(attrs || {})) el.setAttribute(k, v);
+    return el;
+  }
+
+  function pill(id, onClick) {
+    const b = document.createElement(onClick ? "button" : "span");
+    b.className = "sm-pill" + (id === selected ? " sm-on" : "");
+    b.textContent = id;
+    if (onClick) {
+      b.type = "button";
+      b.title = byId[id] ? byId[id].title : id;
+      b.addEventListener("click", (e) => { e.stopPropagation(); onClick(id); });
+    }
+    return b;
+  }
+
+  function buildChips() {
+    const layer = node("g", { id: "sm-chips" });
+    svg.appendChild(layer);
+    parts.filter((p) => p.dataset.chips).forEach((p) => {
+      const anchor = p.querySelector(".sm-anchor") || p.querySelector("rect, text");
+      const box = anchor.getBBox();
+      const made = p.dataset.chips.split(/\s+/).filter(Boolean).map((id) => {
+        const g = node("g", { class: "sm-chip", "data-story": id, tabindex: "0", role: "button" });
+        const title = node("title");
+        title.textContent = byId[id] ? id + " · " + byId[id].title : id;
+        const rect = node("rect", { class: "sm-chip-bg", rx: "7", height: "14" });
+        const text = node("text", { class: "sm-chip-t", "text-anchor": "middle" });
+        text.textContent = id;
+        g.append(title, rect, text);
+        layer.appendChild(g);
+        const width = Math.ceil(text.getComputedTextLength()) + 12;
+        g.addEventListener("click", (e) => { e.stopPropagation(); select(id); });
+        g.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); select(id); }
+        });
+        chips.push(g);
+        return { rect, text, width };
+      });
+      const gap = 4;
+      const total = made.reduce((sum, m) => sum + m.width, 0) + gap * (made.length - 1);
+      let x;
+      let y;
+      switch (p.dataset.chipPos || "tr") {
+        case "after": x = box.x + box.width + 6; y = box.y + box.height / 2 - 7; break;
+        case "before": x = box.x - 6 - total; y = box.y + box.height / 2 - 7; break;
+        case "above": x = box.x + box.width / 2 - total / 2; y = box.y - 18; break;
+        case "br": x = box.x + box.width - 8 - total; y = box.y + box.height - 5; break;
+        default: x = box.x + box.width - 8 - total; y = box.y - 9;
+      }
+      made.forEach((m) => {
+        m.rect.setAttribute("x", x);
+        m.rect.setAttribute("y", y);
+        m.rect.setAttribute("width", m.width);
+        m.text.setAttribute("x", x + m.width / 2);
+        m.text.setAttribute("y", y + 10.2);
+        x += m.width + gap;
+      });
+    });
+  }
+
+  function buildGraph() {
+    const W = 58, H = 22, COL = 82, ROW = 30, PAD = 6, TOP = 20;
+    const order = Object.fromEntries(STORIES.map((s, i) => [s.id, i]));
+    const cols = {};
+    STORIES.forEach((s) => { (cols[step[s.id]] = cols[step[s.id]] || []).push(s.id); });
+    const colNums = Object.keys(cols).map(Number).sort((a, b) => a - b);
+    const maxRows = Math.max(...colNums.map((c) => cols[c].length));
+    const pos = {};
+    const middle = (id) => byId[id].deps.reduce((sum, d) => sum + pos[d].y, 0) / byId[id].deps.length;
+    colNums.forEach((c) => {
+      if (c > 1) cols[c].sort((a, b) => middle(a) - middle(b) || order[a] - order[b]);
+      const offset = (maxRows - cols[c].length) * ROW / 2;
+      cols[c].forEach((id, i) => { pos[id] = { x: PAD + (c - 1) * COL, y: TOP + offset + i * ROW }; });
+    });
+    const gw = PAD * 2 + (colNums[colNums.length - 1] - 1) * COL + W;
+    const gh = TOP + maxRows * ROW - (ROW - H) + PAD;
+    graph = node("svg", { viewBox: "0 0 " + gw + " " + gh, class: "sm-graph-svg", role: "img", "aria-label": "Story dependencies, one column for each delivery step" });
+    colNums.forEach((c) => {
+      const t = node("text", { x: PAD + (c - 1) * COL + W / 2, y: 11, "text-anchor": "middle", class: "sm-g-step" });
+      t.textContent = "Step " + c;
+      graph.appendChild(t);
+    });
+    STORIES.forEach((s) => s.deps.forEach((d) => {
+      const x1 = pos[d].x + W, y1 = pos[d].y + H / 2, x2 = pos[s.id].x, y2 = pos[s.id].y + H / 2, mx = (x1 + x2) / 2;
+      const crit = critical.has(d) && critical.has(s.id) && step[s.id] === step[d] + 1 && rest[d] === rest[s.id] + 1;
+      const path = node("path", { d: "M" + x1 + "," + y1 + " C" + mx + "," + y1 + " " + mx + "," + y2 + " " + x2 + "," + y2, class: "sm-g-edge" + (crit ? " sm-crit" : "") });
+      path.dataset.from = d;
+      path.dataset.to = s.id;
+      graph.appendChild(path);
+      graphEdges.push(path);
+    }));
+    STORIES.forEach((s) => {
+      const g = node("g", { class: "sm-g-node" + (critical.has(s.id) ? " sm-crit" : ""), tabindex: "0", role: "button", "data-story": s.id });
+      const title = node("title");
+      title.textContent = s.id + " · " + s.title;
+      const rect = node("rect", { x: pos[s.id].x, y: pos[s.id].y, width: W, height: H, rx: "6" });
+      const text = node("text", { x: pos[s.id].x + W / 2, y: pos[s.id].y + H / 2 + 3.6, "text-anchor": "middle" });
+      text.textContent = s.id;
+      g.append(title, rect, text);
+      g.addEventListener("click", () => select(s.id === selected ? null : s.id));
+      g.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); select(s.id === selected ? null : s.id); }
+      });
+      graph.appendChild(g);
+      graphNodes.push(g);
+    });
+    document.getElementById("sm-graph").appendChild(graph);
+    document.getElementById("sm-graph-key").textContent = "Shaded: the critical path, " + depth +
+      " steps deep. Select a story, and the stories that it depends on turn purple. The stories that it opens get a dashed border.";
+  }
+
+  function buildList() {
+    const steps = [...new Set(STORIES.map((s) => step[s.id]))].sort((a, b) => a - b);
+    steps.forEach((n) => {
+      const h = document.createElement("div");
+      h.className = "sm-step";
+      h.textContent = "Step " + n;
+      list.appendChild(h);
+      STORIES.filter((s) => step[s.id] === n).forEach((s) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "sm-card";
+        b.dataset.story = s.id;
+        b.setAttribute("aria-pressed", "false");
+        const id = document.createElement("span");
+        id.className = "sm-pill";
+        id.textContent = s.id;
+        const title = document.createElement("span");
+        title.className = "sm-card-title";
+        title.textContent = s.title;
+        const value = document.createElement("span");
+        value.className = "sm-card-value";
+        value.textContent = s.value;
+        b.append(id, title, value);
+        b.addEventListener("click", () => select(s.id === selected ? null : s.id));
+        list.appendChild(b);
+        cards.push(b);
+      });
+    });
+  }
+
+  function showStory(id) {
+    const s = byId[id];
+    const count = parts.filter((p) => storiesOf(p).includes(id)).length;
+    detail.replaceChildren();
+    const head = document.createElement("div");
+    head.className = "sm-links";
+    head.append(pill(id));
+    const reset = document.createElement("button");
+    reset.type = "button";
+    reset.className = "sm-reset";
+    reset.textContent = "Show all";
+    reset.addEventListener("click", () => select(null));
+    head.append(reset);
+    const title = document.createElement("p");
+    title.className = "sm-detail-title";
+    title.textContent = s.title;
+    const value = document.createElement("p");
+    value.textContent = s.value;
+    const meta = document.createElement("p");
+    meta.className = "sm-muted";
+    meta.textContent = "Step " + step[id] + " · " + count + " parts of the flow";
+    const pre = [...ancestorsOf(id)].sort();
+    const tone = document.createElement("p");
+    tone.className = "sm-muted";
+    tone.textContent = pre.length
+      ? "On the flow, strong parts belong to this story. Faded parts belong to the stories that it depends on: " + pre.join(", ") + "."
+      : "On the flow, strong parts belong to this story. It depends on no other story.";
+    detail.append(head, title, value, meta, tone);
+    if (s.deps.length) detail.append(linkRow("Depends on", s.deps));
+    const next = dependents(id);
+    if (next.length) detail.append(linkRow("Opens", next));
+  }
+
+  function showPart(part) {
+    const ids = storiesOf(part);
+    detail.replaceChildren();
+    const name = document.createElement("p");
+    name.className = "sm-detail-title";
+    name.textContent = part.dataset.name || "A part of the flow";
+    detail.append(name);
+    if (!ids.length) {
+      const p = document.createElement("p");
+      p.className = "sm-muted";
+      p.textContent = "No story changes this part. It works as today.";
+      detail.append(p);
+      return;
+    }
+    detail.append(linkRow("Stories", ids));
+  }
+
+  function linkRow(label, ids) {
+    const row = document.createElement("div");
+    row.className = "sm-links";
+    const l = document.createElement("span");
+    l.className = "sm-muted";
+    l.textContent = label + ":";
+    row.append(l, ...ids.map((id) => pill(id, (x) => select(x))));
+    return row;
+  }
+
+  function select(id) {
+    selected = id;
+    const pre = id ? ancestorsOf(id) : new Set();
+    const post = id ? descendantsOf(id) : new Set();
+    const inPre = (x) => x === id || pre.has(x);
+    const inPost = (x) => x === id || post.has(x);
+    svg.classList.toggle("sm-focus", !!id);
+    parts.forEach((p) => {
+      const ids = storiesOf(p);
+      const on = !!id && ids.includes(id);
+      p.classList.toggle("sm-on", on);
+      p.classList.toggle("sm-pre", !on && ids.some((x) => pre.has(x)));
+    });
+    chips.forEach((c) => {
+      c.classList.toggle("sm-on", c.dataset.story === id);
+      c.classList.toggle("sm-pre", pre.has(c.dataset.story));
+    });
+    graph.classList.toggle("sm-gfocus", !!id);
+    graphNodes.forEach((g) => {
+      g.classList.toggle("sm-on", g.dataset.story === id);
+      g.classList.toggle("sm-pre", pre.has(g.dataset.story));
+      g.classList.toggle("sm-post", post.has(g.dataset.story));
+    });
+    graphEdges.forEach((e) => {
+      e.classList.toggle("sm-on", !!id && inPre(e.dataset.from) && inPre(e.dataset.to));
+      e.classList.toggle("sm-post", !!id && inPost(e.dataset.from) && post.has(e.dataset.to));
+    });
+    cards.forEach((c) => c.setAttribute("aria-pressed", String(c.dataset.story === id)));
+    if (id) {
+      showStory(id);
+    } else {
+      detail.replaceChildren();
+      const p = document.createElement("p");
+      p.className = "sm-muted";
+      p.textContent = "Select a story or a part of the flow.";
+      detail.append(p);
+    }
+  }
+
+  parts.forEach((p) => p.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const ids = storiesOf(p);
+    const chipped = (p.dataset.chips || "").split(/\s+/).filter(Boolean);
+    const pick = chipped[0] || ids[0] || null;
+    select(pick);
+    showPart(p);
+    if (pick) detail.append(linkRow("Selected", [pick]));
+  }));
+  svg.addEventListener("click", () => select(null));
+
+  buildList();
+  buildGraph();
+  const ready = document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve();
+  ready.then(buildChips, buildChips);
+})();
+</script>
+</body>
+</html>
