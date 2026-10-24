@@ -11,7 +11,13 @@ import (
 	"syscall"
 
 	"github.com/hpcsc/stash/internal/common/config"
+	"github.com/hpcsc/stash/internal/domain/checkpoint/store"
 	"github.com/hpcsc/stash/internal/domain/consumer"
+	"github.com/hpcsc/stash/internal/domain/event/registry"
+	"github.com/hpcsc/stash/internal/domain/event/subscription"
+	"github.com/hpcsc/stash/internal/domain/projection"
+	"github.com/hpcsc/stash/internal/use_cases"
+	"github.com/hpcsc/stash/internal/use_cases/item/items"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -35,7 +41,7 @@ func main() {
 	}
 
 	ctx := runShutdownSignalHandler(context.Background(), logger)
-	failed := run(ctx, consumers(), logger)
+	failed := run(ctx, consumers(pool, logger), logger)
 
 	pool.Close()
 	if failed {
@@ -43,8 +49,16 @@ func main() {
 	}
 }
 
-func consumers() []*consumer.Consumer {
-	return []*consumer.Consumer{}
+func consumers(pool *pgxpool.Pool, logger *slog.Logger) []*consumer.Consumer {
+	reg := registry.New()
+	use_cases.RegisterEvents(reg)
+
+	checkpointStore := store.NewPostgres(pool)
+	eventSubscription := subscription.NewPostgres(pool, reg, logger)
+
+	return []*consumer.Consumer{
+		projection.NewProjector(items.NewProjection(), pool, checkpointStore, eventSubscription, logger),
+	}
 }
 
 func run(parentCtx context.Context, consumers []*consumer.Consumer, logger *slog.Logger) bool {
