@@ -71,6 +71,9 @@ The shaded chain — sign in, capture, then both triage flows, failure handling,
 deployment stories — is the critical path, six steps deep. No other chain runs deeper than
 five.
 
+The Flutter app (Android + Web) stories live in [m2-flutter-app.md](m2-flutter-app.md);
+each pairs with a backend story so the two codebases progress in visible slices.
+
 ## User Stories
 
 ### US-001: Sign in with your account
