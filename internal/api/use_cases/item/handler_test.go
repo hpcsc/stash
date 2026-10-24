@@ -1,0 +1,106 @@
+//go:build unit
+
+package item_test
+
+import (
+	"context"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/hpcsc/stash/internal/api/response"
+	apiTest "github.com/hpcsc/stash/internal/api/test"
+	"github.com/hpcsc/stash/internal/api/use_cases/item"
+	commonTest "github.com/hpcsc/stash/internal/common/test"
+	"github.com/hpcsc/stash/internal/domain/command"
+	"github.com/hpcsc/stash/internal/domain/command/fake"
+	itemCommand "github.com/hpcsc/stash/internal/use_cases/item/command"
+	"github.com/hpcsc/stash/internal/use_cases/item/items"
+	"github.com/stretchr/testify/require"
+)
+
+func TestHandler(t *testing.T) {
+	t.Run("capture", func(t *testing.T) {
+		t.Run("dispatches a capture command and returns the item ID", func(t *testing.T) {
+			handler := fake.NewHandler[itemCommand.CaptureText]()
+			bus := command.NewBus()
+			bus.Register[itemCommand.CaptureText](handler)
+			router := newRouter(bus, fakeReader{})
+
+			w := send(router, "POST", "/items", `{"body": "hello", "sourceApp": "chrome"}`)
+
+			require.Equal(t, http.StatusOK, w.Code)
+			payload := handler.TriggeredWithCommand().Payload
+			require.Equal(t, "hello", payload.Body)
+			require.Equal(t, "chrome", payload.SourceApp)
+			require.False(t, payload.CapturedAt.IsZero())
+			body := commonTest.UnmarshalJson[response.Response](t, w.Body.Bytes())
+			require.Equal(t, payload.ItemID.String(), body.Data.(map[string]any)["id"])
+		})
+
+		t.Run("rejects a body without text", func(t *testing.T) {
+			bus := command.NewBus()
+			bus.Register[itemCommand.CaptureText](fake.NewHandler[itemCommand.CaptureText]())
+			router := newRouter(bus, fakeReader{})
+
+			w := send(router, "POST", "/items", `{}`)
+
+			require.Equal(t, http.StatusBadRequest, w.Code)
+		})
+	})
+
+	t.Run("list", func(t *testing.T) {
+		t.Run("returns the items from the read model", func(t *testing.T) {
+			router := newRouter(command.NewBus(), fakeReader{items: []items.Item{{ID: "1", Body: "hello", CapturedAt: time.Now()}}})
+
+			w := send(router, "GET", "/items", "")
+
+			require.Equal(t, http.StatusOK, w.Code)
+			require.Contains(t, w.Body.String(), `"body":"hello"`)
+		})
+	})
+
+	t.Run("get", func(t *testing.T) {
+		t.Run("returns the item from the read model", func(t *testing.T) {
+			router := newRouter(command.NewBus(), fakeReader{item: &items.Item{ID: "1", Body: "hello"}})
+
+			w := send(router, "GET", "/items/1", "")
+
+			require.Equal(t, http.StatusOK, w.Code)
+			require.Contains(t, w.Body.String(), `"body":"hello"`)
+		})
+
+		t.Run("returns not found when the read model has no item", func(t *testing.T) {
+			router := newRouter(command.NewBus(), fakeReader{})
+
+			w := send(router, "GET", "/items/missing", "")
+
+			require.Equal(t, http.StatusNotFound, w.Code)
+		})
+	})
+}
+
+type fakeReader struct {
+	items []items.Item
+	item  *items.Item
+}
+
+func (f fakeReader) List(context.Context) ([]items.Item, error) {
+	return f.items, nil
+}
+
+func (f fakeReader) ByID(context.Context, string) (*items.Item, error) {
+	return f.item, nil
+}
+
+func newRouter(bus *command.Bus, reader item.ItemReader) http.Handler {
+	return apiTest.NewRouterWithRoutable(item.NewHandler(bus, reader))
+}
+
+func send(router http.Handler, method, path, body string) *httptest.ResponseRecorder {
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, httptest.NewRequest(method, path, strings.NewReader(body)))
+	return w
+}

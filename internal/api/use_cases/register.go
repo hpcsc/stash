@@ -14,11 +14,13 @@ import (
 	"github.com/hpcsc/stash/internal/api/route"
 	"github.com/hpcsc/stash/internal/api/session"
 	apiIdentity "github.com/hpcsc/stash/internal/api/use_cases/identity"
+	apiItem "github.com/hpcsc/stash/internal/api/use_cases/item"
 	"github.com/hpcsc/stash/internal/api/use_cases/root"
 	"github.com/hpcsc/stash/internal/domain/command"
 	"github.com/hpcsc/stash/internal/domain/event/registry"
 	"github.com/hpcsc/stash/internal/domain/event/stream"
 	coreUseCases "github.com/hpcsc/stash/internal/use_cases"
+	"github.com/hpcsc/stash/internal/use_cases/item/items"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -79,6 +81,7 @@ func allRoutes(pool *pgxpool.Pool, issuer *session.Issuer, verifiers map[string]
 	routables := []route.Routable{
 		root.NewHandler(),
 		apiIdentity.NewHandler(bus, verifiers, issuer),
+		apiItem.NewHandler(bus, items.NewQuery(pool)),
 	}
 
 	var routes []*route.Route
