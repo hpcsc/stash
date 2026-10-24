@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-source ./scripts/libs/git-hook-prepush.sh
+source ./server/scripts/libs/git-hook-prepush.sh
 
 remote=${1}
 

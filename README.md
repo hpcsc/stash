@@ -4,6 +4,13 @@ A self-hosted capture inbox: save text, links, images, and files from any app on
 desktop, then sort them into tags or discard them. Event-sourced Go, with the event store and
 its projections both in PostgreSQL.
 
+## Repository
+
+- `server/` — the Go service: the event store, the HTTP API, and the projections. Everything
+  the `US-*` stories build.
+- `app/` — the Flutter client for Android and Web. Everything the `APP-*` stories build.
+- `docs/`, `user-stories/`, `tasks/` — shared: the event model, the stories, and the plans.
+
 ## Status
 
 Google sign-in and text capture are implemented end to end. The event model for the whole
@@ -13,15 +20,15 @@ in `user-stories/stash.md`.
 
 ## Architecture
 
-- `cmd/api` — the HTTP API. Dispatches commands and reads projections. Sign-in verifies a
+- `server/cmd/api` — the HTTP API. Dispatches commands and reads projections. Sign-in verifies a
   Google ID token, records `SignedIn`, and returns a session token; the auth middleware
   validates that token and carries the subject.
-- `cmd/catchup` — projections and reactions. No consumers yet; the items projection arrives
+- `server/cmd/catchup` — projections and reactions. No consumers yet; the items projection arrives
   with the next story.
-- `internal/domain` — the event store, the aggregate/command/event base, projections,
+- `server/internal/domain` — the event store, the aggregate/command/event base, projections,
   reactions, checkpoints, and subscriptions. See
   [docs/event-subscription.md](docs/event-subscription.md).
-- `internal/use_cases/identity` — the sign-in domain: an `Account` aggregate with `SignedIn`
+- `server/internal/use_cases/identity` — the sign-in domain: an `Account` aggregate with `SignedIn`
   and `SignedOut`.
 
 ## Requirements
@@ -86,34 +93,34 @@ task test:integration   # starts a separate Postgres on port 45433
 ```
 
 Unit tests carry the `unit` build tag; integration tests carry the `integration` tag and use
-`.env.integration`.
+`server/.env.integration`.
 
 ## Layout
 
 | Path | Contents |
 | --- | --- |
-| `cmd/api` | The HTTP API. |
-| `cmd/catchup` | The projections and reactions. |
-| `internal/domain` | Events, aggregates, commands, and their bus. |
-| `internal/domain/event/stream` | The write path: append to a stream, read a stream. |
-| `internal/domain/event/subscription` | The read loop and the listener. |
-| `internal/domain/consumer` | The loop for every consumer. |
-| `internal/domain/projection`, `internal/domain/reaction` | The two kinds of consumer. |
-| `internal/domain/checkpoint/store` | Checkpoints in Postgres. |
-| `internal/use_cases/<domain>` | The aggregate, events, commands, and repository of a domain. |
-| `internal/use_cases/<domain>/<use case>` | One use case: its command handler, and its projection or reaction. |
-| `internal/use_cases/register.go` | The registration of event types and command handlers. |
-| `internal/api` | The HTTP server, routes, middleware, and handlers. |
-| `migrations` | The schema. |
+| `server/cmd/api` | The HTTP API. |
+| `server/cmd/catchup` | The projections and reactions. |
+| `server/internal/domain` | Events, aggregates, commands, and their bus. |
+| `server/internal/domain/event/stream` | The write path: append to a stream, read a stream. |
+| `server/internal/domain/event/subscription` | The read loop and the listener. |
+| `server/internal/domain/consumer` | The loop for every consumer. |
+| `server/internal/domain/projection`, `server/internal/domain/reaction` | The two kinds of consumer. |
+| `server/internal/domain/checkpoint/store` | Checkpoints in Postgres. |
+| `server/internal/use_cases/<domain>` | The aggregate, events, commands, and repository of a domain. |
+| `server/internal/use_cases/<domain>/<use case>` | One use case: its command handler, and its projection or reaction. |
+| `server/internal/use_cases/register.go` | The registration of event types and command handlers. |
+| `server/internal/api` | The HTTP server, routes, middleware, and handlers. |
+| `server/migrations` | The schema. |
 | `docs` | The event model and the event-subscription design. |
 
 ## Add an Event
 
 1. Add a struct for the payload to the `event` package of the domain, for example `SignedIn`
-   in `internal/use_cases/identity/event`.
+   in `server/internal/use_cases/identity/event`.
 2. Give the struct an `EventType` method that returns the name of the event type.
 3. Register the struct in the `RegisterEvents` function of the domain, for example in
-   `internal/use_cases/identity/events.go`.
+   `server/internal/use_cases/identity/events.go`.
 
 The store saves the name of the event type with each event. When the store reads the event,
 the registry finds the struct from that name. You can rename the struct, but do not change the
@@ -148,12 +155,12 @@ reads the event.
    method of the aggregate with the new event, for example
    `domain.NewEvent(&event.SignedIn{...})`. `Apply` changes the state from that event.
 2. Add a payload type for the command, for example `SignIn` in
-   `internal/use_cases/identity/command`.
-3. Add a package for the use case, for example `internal/use_cases/identity/signin`. Give it a
+   `server/internal/use_cases/identity/command`.
+3. Add a package for the use case, for example `server/internal/use_cases/identity/signin`. Give it a
    handler type with a `Handle(ctx, domain.Command[SignIn]) error` method. The handler loads
    the aggregate from its repository, calls the method, and saves.
 4. Give the package a `Register` function that calls `bus.Register[SignIn](handler{...})`, and
-   call it from `internal/use_cases/register.go`.
+   call it from `server/internal/use_cases/register.go`.
 
 Send the command with `bus.Dispatch(ctx, domain.NewCommand(SignIn{...}))`. The bus finds the
 handler from the payload type, and calls it again on a concurrency conflict.
@@ -162,7 +169,7 @@ handler from the payload type, and calls it again on a concurrency conflict.
 
 - **A projection:** implement `projection.Interface`. Write to the read model through the
   `pgx.Tx` that `Handle` gets. Add the table in a migration. Add
-  `projection.NewProjector(...)` to the consumers in `cmd/catchup/main.go`.
+  `projection.NewProjector(...)` to the consumers in `server/cmd/catchup/main.go`.
 - **A process manager:** a projection that keeps its state, and appends the requests it
   decides as events in the same transaction, plus a reaction with
   `reaction.StartAtBeginning()` that sends each request.

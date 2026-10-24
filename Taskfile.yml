@@ -1,15 +1,23 @@
 version: '3'
 
 includes:
-  migrate: Taskfile.migrate.yml
-  test: Taskfile.test.yml
-  api: Taskfile.api.yml
-  catchup: Taskfile.catchup.yml
+  migrate:
+    taskfile: server/Taskfile.migrate.yml
+    dir: server
+  test:
+    taskfile: server/Taskfile.test.yml
+    dir: server
+  api:
+    taskfile: server/Taskfile.api.yml
+    dir: server
+  catchup:
+    taskfile: server/Taskfile.catchup.yml
+    dir: server
 
 tasks:
   test:shellcheck:
     cmds:
-      - find ./scripts -type f -name '*.sh' | xargs shellcheck -S error
+      - find ./server/scripts -type f -name '*.sh' | xargs shellcheck -S error
       - shellcheck -S error ./hooks/*
 
   hook:setup:
@@ -21,35 +29,34 @@ tasks:
       - task: test:all
 
   db:cli:
+    dir: server
     dotenv:
       - .env.local
     cmds:
-      - |
-        docker compose -p stash-local exec \
-          db psql -U${DB_USERNAME} -d${DB_NAME}
+      - docker compose -p stash-local exec db psql -U${DB_USERNAME} -d${DB_NAME}
 
   db:query:
     desc: example `task db:query -- 'select * from events'`
     silent: true
+    dir: server
     dotenv:
       - .env.local
     cmds:
-      - |
-        docker compose -p stash-local exec \
-          db psql -U${DB_USERNAME} -d${DB_NAME} -c {{.CLI_ARGS}}
+      - docker compose -p stash-local exec db psql -U${DB_USERNAME} -d${DB_NAME} -c {{.CLI_ARGS}}
 
   run-dependencies:
+    dir: server
     cmds:
       - docker compose --env-file .env.local -f docker-compose.dependencies.yml -p stash-local up -d --wait db
       - docker compose --env-file .env.local -f docker-compose.dependencies.yml -p stash-local up --exit-code-from migrate migrate
       - command -v tmuxp && echo "tmuxp exists" || pip install tmuxp
 
   remove-dependencies:
+    dir: server
     cmds:
       - docker compose --env-file .env.local -f docker-compose.dependencies.yml -p stash-local down
 
   run:
-    deps:
-      - run-dependencies
+    deps: [run-dependencies]
     cmds:
-      - tmuxp load -a .tmuxp.yaml
+      - tmuxp load -a server/.tmuxp.yaml
