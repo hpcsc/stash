@@ -44,10 +44,10 @@ script prints the checklist and the run commands with the values filled in:
 
 ## 2. Backend
 
-Set the API's `GOOGLE_CLIENT_ID` to the web client ID in `server/Taskfile.api.yml`:
+Set the API's `GOOGLE_CLIENT_ID` to the web client ID in `server/.env.local`:
 
-```yaml
-GOOGLE_CLIENT_ID: <id>.apps.googleusercontent.com
+```sh
+GOOGLE_CLIENT_ID=<id>.apps.googleusercontent.com
 ```
 
 Start the stack (Postgres, migrations, `api`, `catchup`):

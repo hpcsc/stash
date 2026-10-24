@@ -2,14 +2,10 @@ version: '3'
 
 tasks:
   run:
+    dotenv:
+      - .env.local
     cmds:
       - go run ./cmd/catchup
-    env:
-      DB_HOST: localhost
-      DB_NAME: events
-      DB_USERNAME: local-user
-      DB_PASSWORD: local-password
-      DB_HOST_PORT: 45432
 
   build:
     cmds:

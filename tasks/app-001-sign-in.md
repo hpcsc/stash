@@ -55,7 +55,7 @@ The "Continue with Google" flow needs a Google Cloud OAuth client:
    - Add the dev origin (e.g. `http://localhost:PORT`) to its authorised JS origins.
 2. Create an **Android** OAuth client ID:
    - Package name `com.example.stash`, SHA-1 of the app's signing key.
-3. Backend: set `GOOGLE_CLIENT_ID` (already the env name in `server/Taskfile.api.yml`).
+3. Backend: set `GOOGLE_CLIENT_ID` in `server/.env.local`.
 4. App: pass `--dart-define=GOOGLE_CLIENT_ID=<web client id>` when running/building.
 
 Without a client ID the app fails the Google sign-in with a clear "not configured" message.

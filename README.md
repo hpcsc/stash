@@ -44,15 +44,17 @@ mise install
 ## Run locally
 
 ```sh
+cp server/.env.local.example server/.env.local   # once
 task run
 ```
 
 Starts Postgres on port 45432, runs the migrations, and opens a tmux window with the `api`
 and `catchup` processes.
 
-The API reads `SESSION_SECRET` and `GOOGLE_CLIENT_ID` from the environment. `task api:run`
-sets development placeholders, so the API starts, but signing in needs a real Google OAuth
-client ID.
+`server/.env.local` (gitignored) holds the local configuration: the database settings and the
+`SESSION_SECRET` and `GOOGLE_CLIENT_ID` placeholders. The API starts with the placeholders,
+but signing in needs a real Google OAuth client ID — see
+[docs/google-sign-in.md](docs/google-sign-in.md).
 
 ## Sign in
 

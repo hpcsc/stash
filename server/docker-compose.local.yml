@@ -20,6 +20,8 @@ services:
       - "3333:3333"
     environment:
       <<: *x-db-config
+      SESSION_SECRET: ${SESSION_SECRET}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
 
   catchup:
     depends_on:
