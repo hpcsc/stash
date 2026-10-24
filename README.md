@@ -6,8 +6,8 @@ its projections both in PostgreSQL.
 
 ## Status
 
-Google sign-in is implemented end to end. The event model for the whole feature lives in
-[docs/event-model-stash.md](docs/event-model-stash.md), with the source in
+Google sign-in and text capture are implemented end to end. The event model for the whole
+feature lives in [docs/event-model-stash.md](docs/event-model-stash.md), with the source in
 `event-model-stash.emod` and the diagram in `event-model-stash.drawio`. The user stories are
 in `user-stories/stash.md`.
 
@@ -62,6 +62,20 @@ Send the token as a bearer on the protected routes:
 
 ```sh
 curl -s -X POST http://127.0.0.1:3333/auth/signout -H "Authorization: Bearer $TOKEN" | jq
+```
+
+## Capture text
+
+The item routes use the session token from sign-in:
+
+```sh
+curl -s -X POST http://127.0.0.1:3333/items \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"body":"remember this","sourceApp":"web"}' | jq
+
+curl -s http://127.0.0.1:3333/items -H "Authorization: Bearer $TOKEN" | jq
+
+curl -s http://127.0.0.1:3333/items/<item-id> -H "Authorization: Bearer $TOKEN" | jq
 ```
 
 ## Test
