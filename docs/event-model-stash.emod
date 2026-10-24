@@ -1,0 +1,935 @@
+emod = 1
+
+model "Stash" {
+  description = "A self-hosted capture inbox: save text, links, images, and files, then keep them into tagged libraries or drop them into a recoverable trash"
+}
+
+actor "User" {
+  description = "The single owner, capturing from web, Android, or a browser extension"
+}
+
+context "Identity" {
+  description = "Sign-in and sign-out with an interchangeable identity provider"
+
+  aggregate "Account" {
+    description = "One user's sign-in state"
+
+    invariants {
+      SignedInOnce  = "an account is signed in at most once"
+      SignedOutOnce = "an account signs out only when signed in"
+    }
+
+    slice "Sign In" {
+      description = "The user authenticates with Google"
+
+      trigger "Sign-in Screen" {
+        description = "Where the user chooses to continue with Google"
+        actor       = User
+      }
+
+      command "SignIn" {
+        description = "Ask to sign in with an identity token"
+
+        fields {
+          idToken = required(string)
+        }
+      }
+
+      event "SignedIn" {
+        description = "The user signed in with a provider"
+
+        fields {
+          userId     = required(uuid)
+          provider   = required(string)
+          signedInAt = required(timestamp)
+        }
+      }
+
+      flow = <<-FLOW
+        command -> event:    SignIn -> SignedIn
+        command -> rejected: SignIn -> SignedInOnce
+      FLOW
+
+      spec "signs the user in" {
+        when = SignIn
+        then = [SignedIn]
+      }
+
+      spec "refuses to sign in when already signed in" {
+        given = [SignedIn]
+        when  = SignIn
+        then  = rejected(SignedInOnce)
+      }
+    }
+
+    slice "Sign Out" {
+      description = "The user signs out"
+
+      trigger "Account Menu" {
+        description = "The account menu with the sign-out action"
+        actor       = User
+      }
+
+      command "SignOut" {
+        description = "Ask to sign out"
+
+        fields {
+          userId = required(uuid)
+        }
+      }
+
+      event "SignedOut" {
+        description = "The user signed out"
+
+        fields {
+          userId      = required(uuid)
+          signedOutAt = required(timestamp)
+        }
+      }
+
+      flow = <<-FLOW
+        command -> event:    SignOut -> SignedOut
+        command -> rejected: SignOut -> SignedOutOnce
+      FLOW
+
+      spec "signs the user out" {
+        given = [SignedIn]
+        when  = SignOut
+        then  = [SignedOut]
+      }
+
+      spec "refuses to sign out when not signed in" {
+        given = [SignedOut]
+        when  = SignOut
+        then  = rejected(SignedOutOnce)
+      }
+    }
+  }
+}
+
+context "Item" {
+  description = "Capture content into an Inbox and triage it into the Library or Trash"
+
+  aggregate "Item" {
+    description = "One item, from capture through triage to deletion"
+
+    invariants {
+      CapturedOnce           = "an item is captured at most once"
+      FileTooLarge           = "a captured file is at most 25 MB"
+      VideoRejected          = "a captured file is not a video"
+      KeepFromInbox          = "an item is kept only from the Inbox"
+      TagFromLibrary         = "only a kept item is tagged"
+      DropFromInboxOrLibrary = "an item is dropped only from the Inbox or Library"
+      RestoreFromTrash       = "an item is restored only from the Trash"
+      DeleteFromTrash        = "an item is deleted only from the Trash"
+      MetadataRecordedOnce   = "link metadata is recorded at most once"
+      ThumbnailRecordedOnce  = "a thumbnail is recorded at most once"
+    }
+
+    slice "Capture Text" {
+      description = "The user saves a piece of text"
+
+      trigger "Save Text" {
+        description = "The capture form's save-text action"
+        actor       = User
+      }
+
+      command "CaptureText" {
+        description = "Ask to save text to the Inbox"
+
+        fields {
+          itemId    = required(uuid)
+          body      = required(string)
+          sourceApp = optional(string)
+          sourceUrl = optional(string)
+        }
+      }
+
+      event "TextCaptured" {
+        description = "Text was saved to the Inbox"
+
+        fields {
+          itemId     = required(uuid)
+          body       = required(string)
+          sourceApp  = optional(string)
+          sourceUrl  = optional(string)
+          capturedAt = required(timestamp)
+        }
+      }
+
+      flow = <<-FLOW
+        command -> event:    CaptureText -> TextCaptured
+        command -> rejected: CaptureText -> CapturedOnce
+      FLOW
+
+      spec "saves text to the Inbox" {
+        when = CaptureText
+        then = [TextCaptured]
+      }
+
+      spec "refuses to capture an item twice" {
+        given = [TextCaptured]
+        when  = CaptureText
+        then  = rejected(CapturedOnce)
+      }
+    }
+
+    slice "Capture Link" {
+      description = "The user saves a link"
+
+      trigger "Save Link" {
+        description = "The capture form's save-link action"
+        actor       = User
+      }
+
+      command "CaptureLink" {
+        description = "Ask to save a link to the Inbox"
+
+        fields {
+          itemId    = required(uuid)
+          url       = required(string)
+          sourceUrl = optional(string)
+        }
+      }
+
+      event "LinkCaptured" {
+        description = "A link was saved to the Inbox"
+
+        fields {
+          itemId     = required(uuid)
+          url        = required(string)
+          sourceUrl  = optional(string)
+          capturedAt = required(timestamp)
+        }
+      }
+
+      flow = <<-FLOW
+        command -> event:    CaptureLink -> LinkCaptured
+        command -> rejected: CaptureLink -> CapturedOnce
+      FLOW
+
+      spec "saves a link to the Inbox" {
+        when = CaptureLink
+        then = [LinkCaptured]
+      }
+
+      spec "refuses to capture an item twice" {
+        given = [LinkCaptured]
+        when  = CaptureLink
+        then  = rejected(CapturedOnce)
+      }
+    }
+
+    slice "Capture Image" {
+      description = "The user saves an image"
+
+      trigger "Save Image" {
+        description = "The capture form's save-image action"
+        actor       = User
+      }
+
+      command "CaptureImage" {
+        description = "Ask to save an image to the Inbox"
+
+        fields {
+          itemId  = required(uuid)
+          fileRef = required(string)
+        }
+      }
+
+      event "ImageCaptured" {
+        description = "An image was saved to the Inbox"
+
+        fields {
+          itemId     = required(uuid)
+          fileRef    = required(string)
+          capturedAt = required(timestamp)
+        }
+      }
+
+      flow = <<-FLOW
+        command -> event:    CaptureImage -> ImageCaptured
+        command -> rejected: CaptureImage -> CapturedOnce
+      FLOW
+
+      spec "saves an image to the Inbox" {
+        when = CaptureImage
+        then = [ImageCaptured]
+      }
+
+      spec "refuses to capture an item twice" {
+        given = [ImageCaptured]
+        when  = CaptureImage
+        then  = rejected(CapturedOnce)
+      }
+    }
+
+    slice "Capture File" {
+      description = "The user saves a file"
+
+      trigger "Save File" {
+        description = "The capture form's save-file action"
+        actor       = User
+      }
+
+      command "CaptureFile" {
+        description = "Ask to save a file to the Inbox"
+
+        fields {
+          itemId   = required(uuid)
+          fileRef  = required(string)
+          fileName = required(string)
+          fileSize = required(int)
+          mimeType = required(string)
+        }
+      }
+
+      event "FileCaptured" {
+        description = "A file was saved to the Inbox"
+
+        fields {
+          itemId     = required(uuid)
+          fileRef    = required(string)
+          fileName   = required(string)
+          fileSize   = required(int)
+          mimeType   = required(string)
+          capturedAt = required(timestamp)
+        }
+      }
+
+      flow = <<-FLOW
+        command -> event:    CaptureFile -> FileCaptured
+        command -> rejected: CaptureFile -> CapturedOnce
+        command -> rejected: CaptureFile -> FileTooLarge
+        command -> rejected: CaptureFile -> VideoRejected
+      FLOW
+
+      spec "saves a file to the Inbox" {
+        when = CaptureFile
+        then = [FileCaptured]
+      }
+
+      spec "refuses to capture an item twice" {
+        given = [FileCaptured]
+        when  = CaptureFile
+        then  = rejected(CapturedOnce)
+      }
+
+      spec "refuses a file larger than 25 MB" {
+        when = CaptureFile({ fileSize = 26 })
+        then = rejected(FileTooLarge)
+      }
+
+      spec "refuses a video" {
+        when = CaptureFile({ mimeType = "video/mp4" })
+        then = rejected(VideoRejected)
+      }
+    }
+
+    slice "View Items" {
+      description = "The captured items: type, content, and source"
+
+      view "ItemsView" {
+        description = "An item that was captured"
+        subscribes  = [TextCaptured, LinkCaptured, ImageCaptured, FileCaptured]
+
+        fields {
+          itemId = required(uuid)
+          type   = required(string)
+        }
+      }
+
+      spec "shows a captured item" {
+        given = [TextCaptured]
+        then  = view(ItemsView)
+      }
+    }
+
+    slice "Fetch Link Metadata" {
+      description = "The title and description of a link are fetched in the background"
+
+      command "RecordLinkMetadata" {
+        description = "Ask to record a link's fetched title and description"
+
+        fields {
+          itemId      = required(uuid)
+          title       = optional(string)
+          description = optional(string)
+        }
+      }
+
+      event "LinkMetadataFetched" {
+        description = "A link's title and description were fetched"
+
+        fields {
+          itemId      = required(uuid)
+          title       = optional(string)
+          description = optional(string)
+          fetchedAt   = required(timestamp)
+        }
+      }
+
+      automation "LinkMetadataReactor" {
+        on      = LinkCaptured
+        reads   = LinksToEnrichView
+        command = RecordLinkMetadata
+      }
+
+      flow = <<-FLOW
+        command -> event:    RecordLinkMetadata -> LinkMetadataFetched
+        command -> rejected: RecordLinkMetadata -> MetadataRecordedOnce
+      FLOW
+
+      spec "fetches a link's title and description" {
+        when = RecordLinkMetadata
+        then = [LinkMetadataFetched]
+      }
+
+      spec "refuses to fetch metadata twice" {
+        given = [LinkMetadataFetched]
+        when  = RecordLinkMetadata
+        then  = rejected(MetadataRecordedOnce)
+      }
+    }
+
+    slice "Generate Thumbnail" {
+      description = "An image thumbnail is generated in the background"
+
+      command "RecordThumbnail" {
+        description = "Ask to record a generated image thumbnail"
+
+        fields {
+          itemId       = required(uuid)
+          thumbnailRef = required(string)
+        }
+      }
+
+      event "ThumbnailGenerated" {
+        description = "An image thumbnail was generated"
+
+        fields {
+          itemId       = required(uuid)
+          thumbnailRef = required(string)
+          generatedAt  = required(timestamp)
+        }
+      }
+
+      automation "ThumbnailReactor" {
+        on      = ImageCaptured
+        reads   = ImagesToThumbnailView
+        command = RecordThumbnail
+      }
+
+      flow = <<-FLOW
+        command -> event:    RecordThumbnail -> ThumbnailGenerated
+        command -> rejected: RecordThumbnail -> ThumbnailRecordedOnce
+      FLOW
+
+      spec "generates an image thumbnail" {
+        when = RecordThumbnail
+        then = [ThumbnailGenerated]
+      }
+
+      spec "refuses to generate a thumbnail twice" {
+        given = [ThumbnailGenerated]
+        when  = RecordThumbnail
+        then  = rejected(ThumbnailRecordedOnce)
+      }
+    }
+
+    slice "Keep Item" {
+      description = "The user keeps an Inbox item into the Library with tags"
+
+      trigger "Inbox Item Detail" {
+        description = "The item detail with the keep action and tag field"
+        actor       = User
+        reads       = ItemsView
+      }
+
+      command "KeepItem" {
+        description = "Ask to move an item into the Library"
+
+        fields {
+          itemId = required(uuid)
+        }
+      }
+
+      event "ItemKept" {
+        description = "An item moved into the Library"
+
+        fields {
+          itemId = required(uuid)
+          keptAt = required(timestamp)
+        }
+      }
+
+      event "ItemTagged" {
+        description = "An item's tags were set to a set"
+
+        fields {
+          itemId   = required(uuid)
+          tags     = required(string)
+          taggedAt = required(timestamp)
+        }
+      }
+
+      flow = <<-FLOW
+        command -> event:    KeepItem -> ItemKept
+        command -> event:    KeepItem -> ItemTagged
+        command -> rejected: KeepItem -> KeepFromInbox
+      FLOW
+
+      spec "keeps an item with tags" {
+        given = [TextCaptured]
+        when  = KeepItem
+        then  = [ItemKept, ItemTagged]
+      }
+
+      spec "refuses to keep an item already kept" {
+        given = [ItemKept]
+        when  = KeepItem
+        then  = rejected(KeepFromInbox)
+      }
+    }
+
+    slice "View Item Tags" {
+      description = "The item-to-tag mapping"
+
+      view "ItemTagsView" {
+        description = "The tags on one item"
+        subscribes  = [ItemTagged]
+
+        fields {
+          itemId = required(uuid)
+          tags   = required(string)
+        }
+      }
+
+      spec "lists an item's tags" {
+        given = [ItemTagged]
+        then  = view(ItemTagsView)
+      }
+    }
+
+    slice "Tag Item" {
+      description = "The user changes an item's tags without moving it"
+
+      trigger "Library Item" {
+        description = "The kept item with the edit-tags action"
+        actor       = User
+        reads       = ItemTagsView
+      }
+
+      command "TagItem" {
+        description = "Ask to set an item's tags"
+
+        fields {
+          itemId = required(uuid)
+          tags   = required(string)
+        }
+      }
+
+      flow = <<-FLOW
+        command -> event:    TagItem -> ItemTagged
+        command -> rejected: TagItem -> TagFromLibrary
+      FLOW
+
+      spec "changes an item's tags" {
+        given = [ItemKept]
+        when  = TagItem
+        then  = [ItemTagged]
+      }
+
+      spec "refuses to tag an item that was never kept" {
+        given = [TextCaptured]
+        when  = TagItem
+        then  = rejected(TagFromLibrary)
+      }
+    }
+
+    slice "Drop Item" {
+      description = "The user drops an item into the Trash"
+
+      trigger "Item Detail" {
+        description = "The item with the drop action"
+        actor       = User
+        reads       = ItemStateView
+      }
+
+      command "DropItem" {
+        description = "Ask to drop an item into the Trash"
+
+        fields {
+          itemId = required(uuid)
+        }
+      }
+
+      event "ItemDropped" {
+        description = "An item moved into the Trash"
+
+        fields {
+          itemId    = required(uuid)
+          droppedAt = required(timestamp)
+        }
+      }
+
+      flow = <<-FLOW
+        command -> event:    DropItem -> ItemDropped
+        command -> rejected: DropItem -> DropFromInboxOrLibrary
+      FLOW
+
+      spec "drops an item into the Trash" {
+        given = [TextCaptured]
+        when  = DropItem
+        then  = [ItemDropped]
+      }
+
+      spec "refuses to drop an item already in the Trash" {
+        given = [ItemDropped]
+        when  = DropItem
+        then  = rejected(DropFromInboxOrLibrary)
+      }
+    }
+
+    slice "Restore Item" {
+      description = "The user restores a trashed item"
+
+      trigger "Restore" {
+        description = "The trash's restore action"
+        actor       = User
+        reads       = ItemStateView
+      }
+
+      command "RestoreItem" {
+        description = "Ask to return an item from the Trash"
+
+        fields {
+          itemId = required(uuid)
+        }
+      }
+
+      event "ItemRestored" {
+        description = "An item returned from the Trash"
+
+        fields {
+          itemId     = required(uuid)
+          restoredTo = required(string)
+          restoredAt = required(timestamp)
+        }
+      }
+
+      flow = <<-FLOW
+        command -> event:    RestoreItem -> ItemRestored
+        command -> rejected: RestoreItem -> RestoreFromTrash
+      FLOW
+
+      spec "restores a trashed item" {
+        given = [ItemDropped]
+        when  = RestoreItem
+        then  = [ItemRestored]
+      }
+
+      spec "refuses to restore an item not in the Trash" {
+        given = [TextCaptured]
+        when  = RestoreItem
+        then  = rejected(RestoreFromTrash)
+      }
+    }
+
+    slice "Delete Item" {
+      description = "The user permanently deletes a trashed item, or the trash is emptied"
+
+      trigger "Delete Permanently" {
+        description = "The trash's delete action"
+        actor       = User
+        reads       = ItemStateView
+      }
+
+      command "DeleteItem" {
+        description = "Ask to permanently delete an item"
+
+        fields {
+          itemId = required(uuid)
+        }
+      }
+
+      event "ItemDeleted" {
+        description = "An item is permanently gone"
+
+        fields {
+          itemId    = required(uuid)
+          deletedAt = required(timestamp)
+        }
+      }
+
+      automation "EmptyTrashReactor" {
+        on      = TrashEmptied
+        reads   = TrashToPurgeView
+        command = DeleteItem
+      }
+
+      flow = <<-FLOW
+        command -> event:    DeleteItem -> ItemDeleted
+        command -> rejected: DeleteItem -> DeleteFromTrash
+      FLOW
+
+      spec "permanently deletes a trashed item" {
+        given = [ItemDropped]
+        when  = DeleteItem
+        then  = [ItemDeleted]
+      }
+
+      spec "refuses to delete an item not in the Trash" {
+        given = [TextCaptured]
+        when  = DeleteItem
+        then  = rejected(DeleteFromTrash)
+      }
+    }
+
+    slice "View Item State" {
+      description = "The triage state of each item"
+
+      view "ItemStateView" {
+        description = "Where an item currently is: inbox, library, or trash"
+        subscribes  = [ItemKept, ItemDropped, ItemRestored, ItemDeleted]
+
+        fields {
+          itemId = required(uuid)
+          state  = required(string)
+        }
+      }
+
+      spec "shows a kept item's state" {
+        given = [ItemKept]
+        then  = view(ItemStateView)
+      }
+    }
+
+    slice "View Links To Enrich" {
+      description = "The links that still need their metadata fetched"
+
+      view "LinksToEnrichView" {
+        description = "Links captured without fetched metadata"
+        subscribes  = [LinkCaptured, LinkMetadataFetched]
+
+        fields {
+          itemId = required(uuid)
+          url    = required(string)
+        }
+      }
+
+      spec "lists a link without metadata" {
+        given = [LinkCaptured]
+        then  = view(LinksToEnrichView)
+      }
+    }
+
+    slice "View Images To Thumbnail" {
+      description = "The images that still need a thumbnail"
+
+      view "ImagesToThumbnailView" {
+        description = "Images captured without a thumbnail"
+        subscribes  = [ImageCaptured, ThumbnailGenerated]
+
+        fields {
+          itemId = required(uuid)
+        }
+      }
+
+      spec "lists an image without a thumbnail" {
+        given = [ImageCaptured]
+        then  = view(ImagesToThumbnailView)
+      }
+    }
+
+    slice "View Trash To Purge" {
+      description = "The items an empty-trash still needs to delete"
+
+      view "TrashToPurgeView" {
+        description = "Items named in an empty-trash that are not yet deleted"
+        subscribes  = [TrashEmptied, ItemDeleted]
+
+        fields {
+          itemId = required(uuid)
+        }
+      }
+
+      spec "lists an item still to purge" {
+        given = [ItemDeleted]
+        then  = view(TrashToPurgeView)
+      }
+    }
+  }
+
+  aggregate "Trash" {
+    description = "The bulk empty-trash action over the trash set"
+
+    invariants {
+      TrashNotEmpty = "the trash holds at least one item when it is emptied"
+    }
+
+    slice "Empty Trash" {
+      description = "The user empties the trash in one action"
+
+      trigger "Empty Trash" {
+        description = "The trash's empty action"
+        actor       = User
+        reads       = ItemStateView
+      }
+
+      command "EmptyTrash" {
+        description = "Ask to empty the trash"
+
+        fields {
+          itemIds = required(string)
+        }
+      }
+
+      event "TrashEmptied" {
+        description = "The trash was emptied in one action"
+
+        fields {
+          itemIds   = required(string)
+          emptiedAt = required(timestamp)
+        }
+      }
+
+      flow = <<-FLOW
+        command -> event:    EmptyTrash -> TrashEmptied
+        command -> rejected: EmptyTrash -> TrashNotEmpty
+      FLOW
+
+      spec "empties the trash" {
+        when = EmptyTrash
+        then = [TrashEmptied]
+      }
+
+      spec "refuses to empty an empty trash" {
+        when = EmptyTrash({ itemIds = "" })
+        then = rejected(TrashNotEmpty)
+      }
+    }
+  }
+}
+
+context "Tag" {
+  description = "Tags that organize the Library"
+
+  aggregate "Tag" {
+    description = "One tag, its name unique ignoring case"
+
+    invariants {
+      TagNameTaken = "a tag name is unique, ignoring case"
+    }
+
+    slice "Create Tag" {
+      description = "The user creates a tag"
+
+      trigger "New Tag" {
+        description = "The tags screen's new-tag action"
+        actor       = User
+        reads       = TagsView
+      }
+
+      command "CreateTag" {
+        description = "Ask to create a tag"
+
+        fields {
+          tagId = required(uuid)
+          name  = required(string)
+        }
+      }
+
+      event "TagCreated" {
+        description = "A tag was created"
+
+        fields {
+          tagId     = required(uuid)
+          name      = required(string)
+          createdAt = required(timestamp)
+        }
+      }
+
+      flow = <<-FLOW
+        command -> event:    CreateTag -> TagCreated
+        command -> rejected: CreateTag -> TagNameTaken
+      FLOW
+
+      spec "creates a tag" {
+        when = CreateTag
+        then = [TagCreated]
+      }
+
+      spec "refuses a duplicate tag name" {
+        given = [TagCreated]
+        when  = CreateTag
+        then  = rejected(TagNameTaken)
+      }
+    }
+
+    slice "Rename Tag" {
+      description = "The user renames a tag"
+
+      trigger "Rename Tag" {
+        description = "The tags screen's rename action"
+        actor       = User
+        reads       = TagsView
+      }
+
+      command "RenameTag" {
+        description = "Ask to rename a tag"
+
+        fields {
+          tagId = required(uuid)
+          name  = required(string)
+        }
+      }
+
+      event "TagRenamed" {
+        description = "A tag was renamed"
+
+        fields {
+          tagId     = required(uuid)
+          name      = required(string)
+          renamedAt = required(timestamp)
+        }
+      }
+
+      flow = <<-FLOW
+        command -> event:    RenameTag -> TagRenamed
+        command -> rejected: RenameTag -> TagNameTaken
+      FLOW
+
+      spec "renames a tag" {
+        given = [TagCreated]
+        when  = RenameTag
+        then  = [TagRenamed]
+      }
+
+      spec "refuses a duplicate tag name" {
+        given = [TagCreated]
+        when  = RenameTag
+        then  = rejected(TagNameTaken)
+      }
+    }
+
+    slice "View Tags" {
+      description = "The tag list"
+
+      view "TagsView" {
+        description = "Every tag with its current name"
+        subscribes  = [TagCreated, TagRenamed]
+
+        fields {
+          tagId = required(uuid)
+          name  = required(string)
+        }
+      }
+
+      spec "lists a renamed tag" {
+        given = [TagCreated, TagRenamed]
+        then  = view(TagsView)
+      }
+    }
+  }
+}

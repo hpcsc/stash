@@ -81,7 +81,7 @@ current page (`link`), and a right-clicked image (`image`) — posting to the sa
 │  Flutter app (Android+Web)  │  JSON  │  Go service (event-sourced, Postgres)      │
 │  - share target (Android)   │ ─────► │  cmd/api      HTTP API (chi, token auth)   │
 │  - Inbox/Library/Trash UI   │ HTTPS  │  cmd/catchup  projections + reactions       │
-│  - offline queue (drift)    │        │  internal/use_cases/item, tag              │
+│  - offline queue (drift)    │        │  use_cases/account, item, trash, tag       │
 └─────────────────────────────┘        │  events table (append-only) + read models  │
 ┌─────────────────────────────┐        │  storage: Disk / S3 (file bytes)          │
 │  Browser extension          │  JSON  └───────────────────────────────────────────┘
@@ -106,7 +106,8 @@ share-target (`receive_sharing_intent`) so Stash appears in the system share she
 drift-backed offline queue posts to the API when connectivity returns. Web runs the same
 triage/search UI.
 
-**Auth** — token middleware (from the template) for the Flutter app and the extension.
+**Auth** — token middleware (from the template) for the Flutter app and the extension;
+sign-in and sign-out are recorded as `SignedIn` / `SignedOut` events.
 
 ## 7. Data model
 
@@ -127,14 +128,17 @@ CREATE TABLE events (
 );
 ```
 
-**Streams & events** — one stream per aggregate, `item-<uuid>` and `tag-<uuid>`:
+**Streams & events** — one stream per aggregate (`account-<userId>`, `item-<uuid>`,
+`trash-<userId>`, `tag-<uuid>`):
 
 ```
-item:  ItemCaptured  ItemKept  ItemRetagged  ItemDropped  ItemRestored  ItemDeleted
-tag:   TagCreated    TagRenamed
+account: SignedIn  SignedOut
+item:    TextCaptured  LinkCaptured  ImageCaptured  FileCaptured  LinkMetadataFetched  ThumbnailGenerated  ItemKept  ItemTagged  ItemDropped  ItemRestored  ItemDeleted
+trash:   TrashEmptied
+tag:     TagCreated  TagRenamed
 ```
 
-Event types are namespaced (`stash.item-captured`, `stash.tag-created`, …).
+Event types are namespaced (`stash.text-captured`, `stash.tag-created`, …).
 
 **Read models** (projections written by `cmd/catchup`):
 
@@ -148,7 +152,7 @@ items
 tags
   id, name
 
-item_tags            -- many-to-many, from ItemKept / ItemRetagged
+item_tags            -- many-to-many, from ItemTagged
   item_id, tag_id
 ```
 
@@ -163,11 +167,12 @@ Commands dispatch to the domain and append events; reads query the read models:
 
 ```
 POST /api/v1/items                Capture (multipart for image/file; JSON for text/link)
-POST /api/v1/items/{id}/keep      Keep (assign tags)
-POST /api/v1/items/{id}/retag     Retag
+POST /api/v1/items/{id}/keep      Keep (move to Library; assign tags)
+POST /api/v1/items/{id}/retag     Retag (change tags)
 POST /api/v1/items/{id}/drop      Drop
 POST /api/v1/items/{id}/restore   Restore
 POST /api/v1/items/{id}/delete    Delete (permanent, from Trash)
+POST /api/v1/trash/empty          Empty trash
 POST /api/v1/tags                 CreateTag
 POST /api/v1/tags/{id}/rename     RenameTag
 
@@ -176,7 +181,8 @@ GET  /api/v1/items/{id}
 GET  /api/v1/tags
 ```
 
-Auth is the token middleware from the template.
+Auth is the token middleware from the template; sign-in and sign-out are recorded as
+`SignedIn` / `SignedOut` events on the account aggregate.
 
 ## 9. Triage UX
 
