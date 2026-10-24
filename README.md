@@ -1,63 +1,68 @@
-# stash
+# Stash
 
-A base for an event-sourced Go application that keeps its events in Postgres. Consumers read the events
-with a loop that wakes on a `LISTEN/NOTIFY` signal, so the application needs no other event store.
+A self-hosted capture inbox: save text, links, images, and files from any app on a phone or
+desktop, then sort them into tags or discard them. Event-sourced Go, with the event store and
+its projections both in PostgreSQL.
 
-The repository contains:
+## Status
 
-- **An event store in one Postgres table:** optimistic concurrency for each stream, and a global order
-  that a late commit cannot break.
-- **A subscription with a read loop and a signal:** no catch-up mode and no live mode, and no event lost
-  at a switch.
-- **One consumer loop for every kind of consumer:**
-  - Projections save each batch and its checkpoint in one transaction.
-  - Reactions start at the end of the store and save the checkpoint after each event.
-- **An example domain:** a bank account with an HTTP API, a balance projection, and a welcome bonus
-  reaction that sends a command.
+Google sign-in is implemented end to end. The event model for the whole feature lives in
+[docs/event-model-stash.md](docs/event-model-stash.md), with the source in
+`event-model-stash.emod` and the diagram in `event-model-stash.drawio`. The user stories are
+in `user-stories/stash.md`.
 
-[docs/event-subscription.md](docs/event-subscription.md) explains the design: the write path, the read
-loop, and how to choose the kind of consumer.
+## Architecture
+
+- `cmd/api` — the HTTP API. Dispatches commands and reads projections. Sign-in verifies a
+  Google ID token, records `SignedIn`, and returns a session token; the auth middleware
+  validates that token and carries the subject.
+- `cmd/catchup` — projections and reactions. No consumers yet; the items projection arrives
+  with the next story.
+- `internal/domain` — the event store, the aggregate/command/event base, projections,
+  reactions, checkpoints, and subscriptions. See
+  [docs/event-subscription.md](docs/event-subscription.md).
+- `internal/use_cases/identity` — the sign-in domain: an `Account` aggregate with `SignedIn`
+  and `SignedOut`.
 
 ## Requirements
 
-- [mise](https://mise.jdx.dev/) for Go, `task`, `migrate`, `gotestsum`, `shellcheck` and `govulncheck`
-- Docker, `jq` and `tmuxp`
+- [mise](https://mise.jdx.dev/) for Go, `task`, `migrate`, `gotestsum`, `shellcheck`, and
+  `govulncheck`
+- Docker, `jq`, and `tmuxp`
 
 ```sh
 mise install
 ```
 
-## Run the Example
+## Run locally
 
 ```sh
 task run
 ```
 
-This starts Postgres on port 45432, runs the migrations, and opens a tmux window with the `api` and
-`catchup` processes.
+Starts Postgres on port 45432, runs the migrations, and opens a tmux window with the `api`
+and `catchup` processes.
 
-In another terminal:
+The API reads `SESSION_SECRET` and `GOOGLE_CLIENT_ID` from the environment. `task api:run`
+sets development placeholders, so the API starts, but signing in needs a real Google OAuth
+client ID.
+
+## Sign in
+
+Get a Google ID token whose audience is your client ID — the
+[OAuth 2.0 Playground](https://developers.google.com/oauthplayground) is the quickest way —
+then:
 
 ```sh
-task api:open-account -- alice          # returns the new account ID
-export ID=<the account ID>
-task api:deposit -- 500
-task api:withdraw -- 200
-task api:get-account                    # balance 1300: 500 - 200, plus the welcome bonus of 1000
-task api:close-account                  # a closed account rejects deposits and withdrawals
+TOKEN=$(curl -s -X POST http://127.0.0.1:3333/auth/signin \
+  -d '{"provider":"google","idToken":"<google-id-token>"}' | jq -r .data.token)
 ```
 
-The balance comes from the `account_balances` read model, so it can show the change a short time after
-the command.
+Send the token as a bearer on the protected routes:
 
-Other tasks:
-
-| Task | What it does |
-| --- | --- |
-| `task db:cli` | Opens `psql` on the local database. |
-| `task db:query -- 'select * from events'` | Runs one query on the local database. |
-| `task remove-dependencies` | Stops the local database and deletes its container. |
-| `task migrate:create -- <name>` | Creates a new migration in `migrations/`. |
+```sh
+curl -s -X POST http://127.0.0.1:3333/auth/signout -H "Authorization: Bearer $TOKEN" | jq
+```
 
 ## Test
 
@@ -66,53 +71,44 @@ task test:unit
 task test:integration   # starts a separate Postgres on port 45433
 ```
 
-Unit tests have the `unit` build tag. Integration tests have the `integration` build tag and use the
-values in `.env.integration`.
-
-## Replace the Example
-
-Replace the account example with your own domain:
-
-- `internal/use_cases/account`: the aggregate, the events, the commands, and one package for each use case
-- `internal/use_cases/register.go`: the registration of the event types and the command handlers
-- `internal/api/use_cases/account`: the HTTP handler
-- the migrations of the read model: `account_balances` and its status column
-- the consumers in `cmd/catchup/main.go`, and the routes in `internal/api/use_cases/register.go`
+Unit tests carry the `unit` build tag; integration tests carry the `integration` tag and use
+`.env.integration`.
 
 ## Layout
 
 | Path | Contents |
 | --- | --- |
-| `cmd/api` | The HTTP API. It sends commands and reads the read models. |
-| `cmd/catchup` | The process that runs the projections and the reactions. |
-| `internal/domain` | Events, aggregates, commands and their bus. |
+| `cmd/api` | The HTTP API. |
+| `cmd/catchup` | The projections and reactions. |
+| `internal/domain` | Events, aggregates, commands, and their bus. |
 | `internal/domain/event/stream` | The write path: append to a stream, read a stream. |
 | `internal/domain/event/subscription` | The read loop and the listener. |
 | `internal/domain/consumer` | The loop for every consumer. |
 | `internal/domain/projection`, `internal/domain/reaction` | The two kinds of consumer. |
 | `internal/domain/checkpoint/store` | Checkpoints in Postgres. |
-| `internal/use_cases/<domain>` | The aggregate of a domain, its events, its commands and its repository. |
+| `internal/use_cases/<domain>` | The aggregate, events, commands, and repository of a domain. |
 | `internal/use_cases/<domain>/<use case>` | One use case: its command handler, and its projection or reaction. |
-| `internal/use_cases/register.go` | The registration of every event type and every command handler. |
-| `internal/api` | The HTTP server, routes, middleware and handlers. |
-| `migrations` | The schema. The `migrate` container applies it at start. |
+| `internal/use_cases/register.go` | The registration of event types and command handlers. |
+| `internal/api` | The HTTP server, routes, middleware, and handlers. |
+| `migrations` | The schema. |
+| `docs` | The event model and the event-subscription design. |
 
 ## Add an Event
 
-1. Add a struct for the payload to the `event` package of the domain, for example `MoneyDeposited` in
-   `internal/use_cases/account/event`.
+1. Add a struct for the payload to the `event` package of the domain, for example `SignedIn`
+   in `internal/use_cases/identity/event`.
 2. Give the struct an `EventType` method that returns the name of the event type.
 3. Register the struct in the `RegisterEvents` function of the domain, for example in
-   `internal/use_cases/account/events.go`.
+   `internal/use_cases/identity/events.go`.
 
-The store saves the name of the event type with each event. When the store reads the event, the registry
-finds the struct from that name. You can rename the struct, but do not change the name of the event type
-after the store has an event of that type.
+The store saves the name of the event type with each event. When the store reads the event,
+the registry finds the struct from that name. You can rename the struct, but do not change the
+name of the event type after the store has an event of that type.
 
 ## Change an Event
 
-Each saved event keeps the schema version of its payload struct. A registration with no schema version
-has version 1.
+Each saved event keeps the schema version of its payload struct. A registration with no schema
+version has version 1.
 
 | Change | What to do |
 | --- | --- |
@@ -121,44 +117,46 @@ has version 1.
 | Rename or remove a field, or change what a field means | Change the struct. Increase the schema version, and give an upcast. |
 
 ```go
-reg.Register[event.MoneyDeposited](registry.WithSchemaVersion(2, upcastMoneyDeposited))
+reg.Register[event.SignedIn](registry.WithSchemaVersion(2, upcastSignedIn))
 ```
 
-The upcast gets the schema version and the data of an older event, and returns the data in the current
-shape. The registry calls it before it parses the data.
+The upcast gets the schema version and the data of an older event, and returns the data in the
+current shape. The registry calls it before it parses the data.
 
 When an old build reads an event with a newer schema version, the registry returns
-`registry.ErrNewerSchemaVersion`, and the read loop stops. Therefore an old `catchup` stops during a
-deploy, and does not write wrong data to a read model. The `catchup` of the new build reads the event.
+`registry.ErrNewerSchemaVersion`, and the read loop stops. Therefore an old `catchup` stops
+during a deploy, and does not write wrong data to a read model. The `catchup` of the new build
+reads the event.
 
 ## Add a Command
 
-1. Add a method to the aggregate. The method checks the rule and calls the private `record` method of the
-   aggregate with the new event, for example `domain.NewEvent(&event.MoneyDeposited{...})`. `Apply`
-   changes the state from that event.
-2. Add a payload type for the command, for example `Deposit` in `internal/use_cases/account/command`.
-3. Add a package for the use case, for example `internal/use_cases/account/deposit`. Give it a handler type
-   with a `Handle(ctx, domain.Command[Deposit]) error` method. The handler loads the aggregate from its
-   repository, calls the method, and saves.
-4. Give the package a `Register` function that calls `bus.Register[Deposit](handler{...})`, and call it
-   from `internal/use_cases/register.go`.
+1. Add a method to the aggregate. The method checks the rule and calls the private `record`
+   method of the aggregate with the new event, for example
+   `domain.NewEvent(&event.SignedIn{...})`. `Apply` changes the state from that event.
+2. Add a payload type for the command, for example `SignIn` in
+   `internal/use_cases/identity/command`.
+3. Add a package for the use case, for example `internal/use_cases/identity/signin`. Give it a
+   handler type with a `Handle(ctx, domain.Command[SignIn]) error` method. The handler loads
+   the aggregate from its repository, calls the method, and saves.
+4. Give the package a `Register` function that calls `bus.Register[SignIn](handler{...})`, and
+   call it from `internal/use_cases/register.go`.
 
-Send the command with `bus.Dispatch(ctx, domain.NewCommand(Deposit{...}))`. The bus finds the handler from
-the payload type, and calls it again on a concurrency conflict.
+Send the command with `bus.Dispatch(ctx, domain.NewCommand(SignIn{...}))`. The bus finds the
+handler from the payload type, and calls it again on a concurrency conflict.
 
 ## Add a Consumer
 
-- **A projection:** implement `projection.Interface`. Write to the read model through the `pgx.Tx` that
-  `Handle` gets. Add the table in a migration. Add `projection.NewProjector(...)` to the consumers in
-  `cmd/catchup/main.go`.
-- **A process manager:** a projection that keeps its state, and appends the requests it decides as
-  events in the same transaction, plus a reaction with `reaction.StartAtBeginning()` that sends each
-  request.
-- **A reaction:** implement `reaction.Interface`, or use `external.NewHttpReaction`. Make the effect
-  safe to repeat. A message to another service is a contract, not an event, as
-  [docs/event-subscription.md](docs/event-subscription.md) tells. A reaction that sends a command takes the command ID from `dispatch.CommandIDFor`, as
-  `welcomebonus.Reaction` does. Add `reaction.NewReactor(...)` to the consumers in `cmd/catchup/main.go`.
+- **A projection:** implement `projection.Interface`. Write to the read model through the
+  `pgx.Tx` that `Handle` gets. Add the table in a migration. Add
+  `projection.NewProjector(...)` to the consumers in `cmd/catchup/main.go`.
+- **A process manager:** a projection that keeps its state, and appends the requests it
+  decides as events in the same transaction, plus a reaction with
+  `reaction.StartAtBeginning()` that sends each request.
+- **A reaction:** implement `reaction.Interface`, or use `external.NewHttpReaction`. Make the
+  effect safe to repeat. A message to another service is a contract, not an event, as
+  [docs/event-subscription.md](docs/event-subscription.md) tells. A reaction that sends a
+  command takes the command ID from `dispatch.CommandIDFor`.
 
-The name of each consumer is the key of its checkpoint. Do not rename a consumer after it runs in
-production: a projection with a new name rebuilds from the beginning, and a reaction with a new name
-starts again at the end of the store.
+The name of each consumer is the key of its checkpoint. Do not rename a consumer after it runs
+in production: a projection with a new name rebuilds from the beginning, and a reaction with a
+new name starts again at the end of the store.

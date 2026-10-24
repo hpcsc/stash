@@ -29,7 +29,7 @@ tasks:
           db psql -U${DB_USERNAME} -d${DB_NAME}
 
   db:query:
-    desc: example `task db:query -- 'select * from account_balances'`
+    desc: example `task db:query -- 'select * from events'`
     silent: true
     dotenv:
       - .env.local
