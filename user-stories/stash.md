@@ -21,11 +21,15 @@ recoverable), and text and links are searchable. A story map for this feature li
 ```mermaid
 flowchart LR
     A["US-001<br/>Sign in"]
+    A1["APP-001<br/>Sign-in screen"]
     B["US-002<br/>Capture text"]
+    B1["APP-002<br/>Inbox + capture"]
     C["US-003<br/>Capture link"]
     D["US-004<br/>Capture image/file"]
     E["US-005<br/>Keep to Library"]
+    E1["APP-003<br/>Library"]
     F["US-006<br/>Drop to Trash"]
+    F1["APP-004<br/>Trash"]
     G["US-007<br/>Organize with tags"]
     H["US-008<br/>Search"]
     I["US-009<br/>Warn duplicates"]
@@ -38,7 +42,9 @@ flowchart LR
     P["US-016<br/>Self-host deploy"]
     Q["US-017<br/>Cloud deploy"]
 
+    A --> A1
     A --> B
+    B --> B1
     B --> C
     B --> D
     B --> E
@@ -50,9 +56,11 @@ flowchart LR
     D --> J
     D --> L
     D --> N
+    E --> E1
     E --> G
     E --> H
     E --> O
+    F --> F1
     F --> O
     J --> K
     L --> M
@@ -60,7 +68,9 @@ flowchart LR
     P --> Q
 
     classDef critical fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937
+    classDef app fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#1f2937
     class A,B,E,F,O,P,Q critical
+    class A1,B1,E1,F1 app
 ```
 
 Everything blocks on signing in, and then on the first text capture: four stories fan out
@@ -71,8 +81,9 @@ The shaded chain — sign in, capture, then both triage flows, failure handling,
 deployment stories — is the critical path, six steps deep. No other chain runs deeper than
 five.
 
-The Flutter app (Android + Web) stories live in [m2-flutter-app.md](m2-flutter-app.md);
-each pairs with a backend story so the two codebases progress in visible slices.
+The blue `APP-*` stories are the Flutter client (Android + Web). Each sits right after the
+backend story it depends on, so the two codebases progress in visible slices — a slice is
+done only when both its endpoint and its screen work.
 
 ## User Stories
 
@@ -93,6 +104,20 @@ private to me and I can reach it from every device.
 provider as interchangeable so another provider (for example another OpenID Connect
 provider) can be added later without reworking the rest of the app.
 
+### APP-001: Sign in from the app
+
+**Description:** As a user, I want to sign in with Google from the web app and the Android
+app so I can reach my stash from either.
+
+**Acceptance Criteria:**
+- [ ] The web app shows a "Continue with Google" button that completes the sign-in.
+- [ ] The Android app signs in with the same Google account.
+- [ ] After signing in, the app stores the session token and stays signed in across restarts.
+- [ ] Signing out returns to the sign-in screen and stops showing my items.
+- [ ] A request made while signed out shows a sign-in prompt, not a broken screen.
+
+**Depends on:** US-001
+
 ### US-002: Capture text into the Inbox
 
 **Description:** As a user, I want to save a piece of text so that it lands in my Inbox for
@@ -105,6 +130,19 @@ me to triage later.
 - [ ] Opening an inbox item shows its full text.
 
 **Depends on:** US-001
+
+### APP-002: See the Inbox and capture text
+
+**Description:** As a user, I want to see my Inbox and save a piece of text so I can triage
+it later.
+
+**Acceptance Criteria:**
+- [ ] The Inbox lists my unsorted items, newest first.
+- [ ] I can save a piece of text and see it appear in the Inbox.
+- [ ] Tapping an Inbox item shows its full text and, when known, the app it came from.
+- [ ] An empty Inbox shows a friendly message.
+
+**Depends on:** US-002
 
 ### US-003: Capture a link into the Inbox
 
@@ -149,6 +187,17 @@ moves to my Library, organized for later.
 
 **Depends on:** US-002
 
+### APP-003: Keep items into the Library
+
+**Description:** As a user, I want to keep an Inbox item with tags so it moves to my Library.
+
+**Acceptance Criteria:**
+- [ ] A Keep action on an Inbox item assigns tags and moves it to the Library.
+- [ ] The Library lists my kept items with their tags.
+- [ ] I can change an item's tags without moving it out of the Library.
+
+**Depends on:** US-005
+
 ### US-006: Drop items to Trash and recover them
 
 **Description:** As a user, I want to drop items I don't want and still be able to get them
@@ -165,6 +214,18 @@ back so that triage is fast and never destructive.
 permanently deleted or the Trash is emptied.
 
 **Depends on:** US-002
+
+### APP-004: Drop items and recover from the Trash
+
+**Description:** As a user, I want to drop items and recover them so triage is never
+destructive.
+
+**Acceptance Criteria:**
+- [ ] A Drop action moves an item to the Trash.
+- [ ] The Trash lists my dropped items.
+- [ ] I can restore a trashed item, permanently delete it, and empty the Trash.
+
+**Depends on:** US-006
 
 ### US-007: Organize with tags
 
