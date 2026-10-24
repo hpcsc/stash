@@ -56,7 +56,9 @@ client ID.
 
 ## Sign in
 
-Get a Google ID token whose audience is your client ID — the
+To set up a real Google client and test the Flutter app end to end, see
+[docs/google-sign-in.md](docs/google-sign-in.md). To sign in against the API alone, get a
+Google ID token whose audience is your client ID — the
 [OAuth 2.0 Playground](https://developers.google.com/oauthplayground) is the quickest way —
 then:
 
