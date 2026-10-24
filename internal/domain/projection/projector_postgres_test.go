@@ -26,6 +26,7 @@ func TestProjectorWithPostgres(t *testing.T) {
 	t.Run("handle", func(t *testing.T) {
 		t.Run("commits the read model rows and the checkpoint together", func(t *testing.T) {
 			pool := test.NewDBPool(t)
+			createTestTable(t, pool)
 			checkpointStore := store.NewPostgres(pool)
 			writer := newRowWriter(t, "fail")
 			sub := subscription.NewFake().WithEventChannel(closedChannel(
@@ -44,6 +45,7 @@ func TestProjectorWithPostgres(t *testing.T) {
 
 		t.Run("rolls back the read model rows and the checkpoint together when a handler fails", func(t *testing.T) {
 			pool := test.NewDBPool(t)
+			createTestTable(t, pool)
 			checkpointStore := store.NewPostgres(pool)
 			writer := newRowWriter(t, "fail")
 			sub := subscription.NewFake().WithEventChannel(closedChannel(
@@ -78,7 +80,7 @@ func newRowWriter(t *testing.T, failOn string) *rowWriter {
 
 func (r *rowWriter) Handle(ctx context.Context, tx pgx.Tx, evt *domain.Event) error {
 	if _, err := tx.Exec(ctx,
-		"INSERT INTO account_balances (id, owner, balance, version) VALUES ($1, $2, 0, 1)",
+		"INSERT INTO projector_test_rows (id, owner, balance, version) VALUES ($1, $2, 0, 1)",
 		uuid.NewString(), r.owner,
 	); err != nil {
 		return err
@@ -103,6 +105,18 @@ func rowEvent(sequence uint64, value string) domain.Event {
 
 func countRows(t *testing.T, pool *pgxpool.Pool, owner string) int64 {
 	var count int64
-	require.NoError(t, pool.QueryRow(context.Background(), "SELECT COUNT(*) FROM account_balances WHERE owner = $1", owner).Scan(&count))
+	require.NoError(t, pool.QueryRow(context.Background(), "SELECT COUNT(*) FROM projector_test_rows WHERE owner = $1", owner).Scan(&count))
 	return count
+}
+
+func createTestTable(t *testing.T, pool *pgxpool.Pool) {
+	_, err := pool.Exec(context.Background(), `
+		CREATE TABLE IF NOT EXISTS projector_test_rows (
+			id UUID NOT NULL,
+			owner TEXT NOT NULL,
+			balance BIGINT NOT NULL,
+			version BIGINT NOT NULL
+		)
+	`)
+	require.NoError(t, err)
 }

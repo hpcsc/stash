@@ -1,1 +1,0 @@
-ALTER TABLE account_balances ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'open';

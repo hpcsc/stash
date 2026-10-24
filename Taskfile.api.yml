@@ -1,41 +1,6 @@
 version: '3'
 
-vars:
-  API: http://127.0.0.1:3333
-  AUTH: "Authorization: Bearer valid-token"
-
 tasks:
-  open-account:
-    desc: "usage: task api:open-account -- owner-name"
-    cmds:
-      - |
-        curl -s -X POST "{{.API}}/accounts" -H "{{.AUTH}}" \
-          -d '{"owner": "{{default "alice" .CLI_ARGS}}"}' | jq
-
-  deposit:
-    desc: "usage: ID=<account-id> task api:deposit -- 500"
-    cmds:
-      - |
-        curl -s -X POST "{{.API}}/accounts/${ID}/deposits" -H "{{.AUTH}}" \
-          -d '{"amount": {{default "500" .CLI_ARGS}}}' | jq
-
-  withdraw:
-    desc: "usage: ID=<account-id> task api:withdraw -- 200"
-    cmds:
-      - |
-        curl -s -X POST "{{.API}}/accounts/${ID}/withdrawals" -H "{{.AUTH}}" \
-          -d '{"amount": {{default "200" .CLI_ARGS}}}' | jq
-
-  close-account:
-    desc: "usage: ID=<account-id> task api:close-account"
-    cmds:
-      - curl -s -X POST "{{.API}}/accounts/${ID}/close" -H "{{.AUTH}}" | jq
-
-  get-account:
-    desc: "usage: ID=<account-id> task api:get-account"
-    cmds:
-      - curl -s "{{.API}}/accounts/${ID}" -H "{{.AUTH}}" | jq
-
   run:
     cmds:
       - go run ./cmd/api

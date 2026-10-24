@@ -11,17 +11,7 @@ import (
 	"syscall"
 
 	"github.com/hpcsc/stash/internal/common/config"
-	"github.com/hpcsc/stash/internal/domain/checkpoint/store"
-	"github.com/hpcsc/stash/internal/domain/command"
 	"github.com/hpcsc/stash/internal/domain/consumer"
-	"github.com/hpcsc/stash/internal/domain/event/registry"
-	"github.com/hpcsc/stash/internal/domain/event/stream"
-	"github.com/hpcsc/stash/internal/domain/event/subscription"
-	"github.com/hpcsc/stash/internal/domain/projection"
-	"github.com/hpcsc/stash/internal/domain/reaction"
-	"github.com/hpcsc/stash/internal/use_cases"
-	"github.com/hpcsc/stash/internal/use_cases/account/balance"
-	"github.com/hpcsc/stash/internal/use_cases/account/welcomebonus"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -45,7 +35,7 @@ func main() {
 	}
 
 	ctx := runShutdownSignalHandler(context.Background(), logger)
-	failed := run(ctx, consumers(pool, logger), logger)
+	failed := run(ctx, consumers(), logger)
 
 	pool.Close()
 	if failed {
@@ -53,21 +43,8 @@ func main() {
 	}
 }
 
-func consumers(pool *pgxpool.Pool, logger *slog.Logger) []*consumer.Consumer {
-	reg := registry.New()
-	use_cases.RegisterEvents(reg)
-
-	eventStream := stream.NewPostgres(pool, reg)
-	bus := command.NewBus()
-	use_cases.RegisterHandlers(bus, eventStream)
-
-	checkpointStore := store.NewPostgres(pool)
-	eventSubscription := subscription.NewPostgres(pool, reg, logger)
-
-	return []*consumer.Consumer{
-		projection.NewProjector(balance.NewProjection(), pool, checkpointStore, eventSubscription, logger),
-		reaction.NewReactor(welcomebonus.NewReaction(bus), checkpointStore, eventSubscription, logger),
-	}
+func consumers() []*consumer.Consumer {
+	return []*consumer.Consumer{}
 }
 
 func run(parentCtx context.Context, consumers []*consumer.Consumer, logger *slog.Logger) bool {
