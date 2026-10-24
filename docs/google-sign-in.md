@@ -10,6 +10,14 @@ One Google client ID — a **Web application** OAuth client — is used everywhe
 `clientId`, the Android `serverClientId`, and the API's `GOOGLE_CLIENT_ID`. Every platform then
 produces an ID token with the same `aud`, and the API accepts them all.
 
+The Google Cloud steps below have no public API, so they are done in the console; a helper
+script prints the checklist and the run commands with the values filled in:
+
+```sh
+./scripts/google-auth-setup.sh                    # console checklist
+./scripts/google-auth-setup.sh --client-id <id>   # wiring, given the client id
+```
+
 ## 1. Google Cloud (one-time)
 
 1. Create (or reuse) a project at https://console.cloud.google.com.

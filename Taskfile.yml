@@ -19,6 +19,7 @@ tasks:
     cmds:
       - find ./server/scripts -type f -name '*.sh' | xargs shellcheck -S error
       - shellcheck -S error ./hooks/*
+      - shellcheck -S error ./scripts/*.sh
 
   hook:setup:
     cmds:
