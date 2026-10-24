@@ -1,5 +1,6 @@
 [tools]
 go = "1.27.1"
+flutter = "3.47.8"
 "aqua:go-task/task" = "3.42.1"
 "aqua:gotestyourself/gotestsum" = "1.12.1"
 "aqua:koalaman/shellcheck" = "0.10.0"

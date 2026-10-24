@@ -1,16 +1,17 @@
-# Stash app (Flutter)
+# stash
 
-The client: one Flutter codebase for Android and Web, against the Go service in `../server`.
+A new Flutter project.
 
-## Scaffold
+## Getting Started
 
-Flutter is not installed in this environment. Create the project with:
+This project is a starting point for a Flutter application.
 
-```sh
-flutter create .
-```
+A few resources to get you started if this is your first Flutter project:
 
-## Stories
+- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
+- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
+- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
 
-This app delivers the `APP-*` stories in `../user-stories/stash.md` — sign-in, the Inbox,
-the Library, and the Trash — each paired with its backend story.
+For help getting started with Flutter development, view the
+[online documentation](https://docs.flutter.dev/), which offers tutorials,
+samples, guidance on mobile development, and a full API reference.
