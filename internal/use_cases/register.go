@@ -7,15 +7,21 @@ import (
 	"github.com/hpcsc/stash/internal/use_cases/identity"
 	"github.com/hpcsc/stash/internal/use_cases/identity/signin"
 	"github.com/hpcsc/stash/internal/use_cases/identity/signout"
+	"github.com/hpcsc/stash/internal/use_cases/item"
+	"github.com/hpcsc/stash/internal/use_cases/item/capturetext"
 )
 
 func RegisterEvents(reg *registry.OfEvents) {
 	identity.RegisterEvents(reg)
+	item.RegisterEvents(reg)
 }
 
 func RegisterHandlers(bus *command.Bus, stream event.Stream) {
 	identities := identity.NewRepository(stream)
+	items := item.NewRepository(stream)
 
 	signin.Register(bus, identities)
 	signout.Register(bus, identities)
+
+	capturetext.Register(bus, items)
 }
