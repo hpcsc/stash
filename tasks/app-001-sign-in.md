@@ -54,7 +54,7 @@ The "Continue with Google" flow needs a Google Cloud OAuth client:
 1. Create a **Web application** OAuth client ID. This is the value of `GOOGLE_CLIENT_ID`.
    - Add the dev origin (e.g. `http://localhost:PORT`) to its authorised JS origins.
 2. Create an **Android** OAuth client ID:
-   - Package name `com.example.stash`, SHA-1 of the app's signing key.
+   - Package name `au.pnguyen.stash`, SHA-1 of the app's signing key.
 3. Backend: set `GOOGLE_CLIENT_ID` in `server/.env.local`.
 4. App: pass `--dart-define=GOOGLE_CLIENT_ID=<web client id>` when running/building.
 

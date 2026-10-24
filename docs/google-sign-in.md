@@ -21,9 +21,9 @@ script prints the checklist and the run commands with the values filled in:
 ## 1. Google Cloud (one-time)
 
 1. Create (or reuse) a project at https://console.cloud.google.com.
-2. Configure the **OAuth consent screen**: user type **External**, add your email as a **test
-   user**. Sign-in only needs the non-sensitive `openid`, `email`, and `profile` scopes.
-3. Create two OAuth 2.0 client IDs:
+2. In the project sidebar, **APIs & Services → OAuth consent screen**: fill in the app name and
+   support email, then set **Audience** to **External**.
+3. On the **Clients** page, create two OAuth 2.0 client IDs:
 
    **Web application** — this is `GOOGLE_CLIENT_ID`.
 
@@ -33,7 +33,7 @@ script prints the checklist and the run commands with the values filled in:
 
    **Android**
 
-   - Package name `com.example.stash`.
+   - Package name `au.pnguyen.stash`.
    - SHA-1 of the signing key. For the debug key:
 
      ```sh
