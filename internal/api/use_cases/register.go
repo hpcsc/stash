@@ -1,14 +1,20 @@
 package use_cases
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/hpcsc/stash/internal/api"
+	"github.com/hpcsc/stash/internal/api/google"
 	"github.com/hpcsc/stash/internal/api/middleware"
 	"github.com/hpcsc/stash/internal/api/route"
+	"github.com/hpcsc/stash/internal/api/session"
 	apiAccount "github.com/hpcsc/stash/internal/api/use_cases/account"
+	apiIdentity "github.com/hpcsc/stash/internal/api/use_cases/identity"
 	"github.com/hpcsc/stash/internal/api/use_cases/root"
 	"github.com/hpcsc/stash/internal/domain/command"
 	"github.com/hpcsc/stash/internal/domain/event/registry"
@@ -19,13 +25,28 @@ import (
 )
 
 func Register(router chi.Router, cfg *api.Config, pool *pgxpool.Pool, logger *slog.Logger) error {
-	authMiddleware, err := middleware.NewAuthMiddleware(cfg.TokenPath)
+	if cfg.SessionSecret == "" {
+		return errors.New("SESSION_SECRET must be set")
+	}
+	if cfg.GoogleClientID == "" {
+		return errors.New("GOOGLE_CLIENT_ID must be set")
+	}
+
+	issuer := session.New([]byte(cfg.SessionSecret), session.DefaultTTL)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	googleVerifier, err := google.New(ctx, cfg.GoogleClientID)
 	if err != nil {
 		return err
 	}
 
+	authMiddleware := middleware.NewAuthMiddleware(issuer)
+
+	verifiers := map[string]apiIdentity.IDTokenVerifier{"google": googleVerifier}
+
 	var publicRoutes, protectedRoutes []*route.Route
-	for _, r := range allRoutes(pool) {
+	for _, r := range allRoutes(pool, issuer, verifiers) {
 		if r.IsPublic() {
 			publicRoutes = append(publicRoutes, r)
 		} else if r.IsProtected() {
@@ -50,7 +71,7 @@ func Register(router chi.Router, cfg *api.Config, pool *pgxpool.Pool, logger *sl
 	return nil
 }
 
-func allRoutes(pool *pgxpool.Pool) []*route.Route {
+func allRoutes(pool *pgxpool.Pool, issuer *session.Issuer, verifiers map[string]apiIdentity.IDTokenVerifier) []*route.Route {
 	reg := registry.New()
 	coreUseCases.RegisterEvents(reg)
 
@@ -59,6 +80,7 @@ func allRoutes(pool *pgxpool.Pool) []*route.Route {
 
 	routables := []route.Routable{
 		root.NewHandler(),
+		apiIdentity.NewHandler(bus, verifiers, issuer),
 		apiAccount.NewHandler(bus, balance.NewQuery(pool)),
 	}
 

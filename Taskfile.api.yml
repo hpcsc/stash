@@ -40,7 +40,8 @@ tasks:
     cmds:
       - go run ./cmd/api
     env:
-      TOKEN_PATH: local/api/token
+      SESSION_SECRET: local-dev-secret
+      GOOGLE_CLIENT_ID: local-dev-client-id
       DB_HOST: localhost
       DB_NAME: events
       DB_USERNAME: local-user

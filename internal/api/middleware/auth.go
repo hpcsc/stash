@@ -1,28 +1,43 @@
 package middleware
 
 import (
-	"fmt"
+	"context"
+	"encoding/json"
 	"net/http"
-	"os"
 	"strings"
+
+	"github.com/hpcsc/stash/internal/api/response"
+	"github.com/hpcsc/stash/internal/api/session"
 )
 
-func NewAuthMiddleware(tokenPath string) (func(http.Handler) http.Handler, error) {
-	token, err := os.ReadFile(tokenPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read token at %s: %w", tokenPath, err)
-	}
+type subjectContextKey struct{}
 
+func NewAuthMiddleware(issuer *session.Issuer) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
-		fn := func(w http.ResponseWriter, r *http.Request) {
-			authHeader := r.Header.Get("Authorization")
-			tokenFromHeader := strings.TrimPrefix(authHeader, "Bearer ")
-			if tokenFromHeader == strings.TrimSuffix(string(token), "\n") {
-				next.ServeHTTP(w, r)
-			} else {
-				w.WriteHeader(http.StatusForbidden)
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			token := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
+			subject, err := issuer.Verify(token)
+			if err != nil {
+				writeUnauthorized(w)
+				return
 			}
-		}
-		return http.HandlerFunc(fn)
-	}, nil
+
+			next.ServeHTTP(w, r.WithContext(WithSubject(r.Context(), subject)))
+		})
+	}
+}
+
+func WithSubject(ctx context.Context, subject string) context.Context {
+	return context.WithValue(ctx, subjectContextKey{}, subject)
+}
+
+func SubjectFromContext(ctx context.Context) string {
+	subject, _ := ctx.Value(subjectContextKey{}).(string)
+	return subject
+}
+
+func writeUnauthorized(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusUnauthorized)
+	_ = json.NewEncoder(w).Encode(response.Fail("sign in to continue"))
 }

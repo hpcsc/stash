@@ -1,24 +1,27 @@
+//go:build unit
+
 package middleware_test
 
 import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/hpcsc/stash/internal/api/middleware"
+	"github.com/hpcsc/stash/internal/api/session"
 	"github.com/stretchr/testify/require"
 )
 
 func TestAuthMiddleware(t *testing.T) {
-	newRouter := func(t *testing.T) chi.Router {
+	issuer := session.New([]byte("test-secret"), time.Hour)
+
+	newRouter := func() chi.Router {
 		router := chi.NewRouter()
 
-		authMiddleware, err := middleware.NewAuthMiddleware("testdata/valid-token")
-		require.NoError(t, err)
-
 		router.Group(func(r chi.Router) {
-			r.Use(authMiddleware)
+			r.Use(middleware.NewAuthMiddleware(issuer))
 			r.Get("/protected", func(w http.ResponseWriter, r *http.Request) {
 				w.Write([]byte("success"))
 			})
@@ -27,31 +30,32 @@ func TestAuthMiddleware(t *testing.T) {
 		return router
 	}
 
-	t.Run("return error when unable to read token file", func(t *testing.T) {
-		_, err := middleware.NewAuthMiddleware("invalid-path")
-		require.ErrorContains(t, err, "failed to read token")
-	})
-
-	t.Run("return Forbidden when token from Authorization header not matches", func(t *testing.T) {
-		router := newRouter(t)
+	t.Run("returns Unauthorized when the token is missing", func(t *testing.T) {
 		w := httptest.NewRecorder()
 
-		req, err := http.NewRequest("GET", "/protected", nil)
-		require.NoError(t, err)
+		newRouter().ServeHTTP(w, httptest.NewRequest("GET", "/protected", nil))
+
+		require.Equal(t, http.StatusUnauthorized, w.Code)
+	})
+
+	t.Run("returns Unauthorized when the token is invalid", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		req := httptest.NewRequest("GET", "/protected", nil)
 		req.Header.Set("Authorization", "Bearer invalid-token")
-		router.ServeHTTP(w, req)
 
-		require.Equal(t, http.StatusForbidden, w.Code)
+		newRouter().ServeHTTP(w, req)
+
+		require.Equal(t, http.StatusUnauthorized, w.Code)
 	})
 
-	t.Run("return Ok when token from Authorization header matches", func(t *testing.T) {
-		router := newRouter(t)
+	t.Run("returns Ok and sets the subject when the token is valid", func(t *testing.T) {
 		w := httptest.NewRecorder()
-
-		req, err := http.NewRequest("GET", "/protected", nil)
+		token, err := issuer.Issue("google-oauth2-123")
 		require.NoError(t, err)
-		req.Header.Set("Authorization", "Bearer valid-token")
-		router.ServeHTTP(w, req)
+		req := httptest.NewRequest("GET", "/protected", nil)
+		req.Header.Set("Authorization", "Bearer "+token)
+
+		newRouter().ServeHTTP(w, req)
 
 		require.Equal(t, http.StatusOK, w.Code)
 		require.Equal(t, "success", w.Body.String())
