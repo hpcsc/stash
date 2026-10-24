@@ -25,13 +25,13 @@ Timeline: `SignedIn` → `SignedOut`
 
 | Event | Description | Key data |
 |---|---|---|
-| `SignedIn` | The user authenticated with Google | userId, provider |
-| `SignedOut` | The user signed out | userId |
+| `SignedIn` | The user authenticated with Google | subject, provider |
+| `SignedOut` | The user signed out | subject |
 
 | Command | Actor | Produces | Refused when |
 |---|---|---|---|
-| `SignIn` | User | `SignedIn` | `SignedInOnce` (already signed in) |
-| `SignOut` | User | `SignedOut` | `SignedOutOnce` (not signed in) |
+| `SignIn` | User | `SignedIn` | `AlreadySignedIn` |
+| `SignOut` | User | `SignedOut` | `NotSignedIn` |
 
 Google is the identity provider; the provider is interchangeable. "Refuse while signed out"
 is middleware, not an event.

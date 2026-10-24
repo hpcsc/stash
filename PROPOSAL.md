@@ -128,8 +128,8 @@ CREATE TABLE events (
 );
 ```
 
-**Streams & events** — one stream per aggregate (`account-<userId>`, `item-<uuid>`,
-`trash-<userId>`, `tag-<uuid>`):
+**Streams & events** — one stream per aggregate (`identity-<subject>`, `item-<uuid>`,
+`trash-<subject>`, `tag-<uuid>`):
 
 ```
 account: SignedIn  SignedOut

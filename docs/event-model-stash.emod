@@ -15,8 +15,8 @@ context "Identity" {
     description = "One user's sign-in state"
 
     invariants {
-      SignedInOnce  = "an account is signed in at most once"
-      SignedOutOnce = "an account signs out only when signed in"
+      AlreadySignedIn = "an account is already signed in"
+      NotSignedIn     = "an account is not signed in"
     }
 
     slice "Sign In" {
@@ -28,10 +28,11 @@ context "Identity" {
       }
 
       command "SignIn" {
-        description = "Ask to sign in with an identity token"
+        description = "Ask to sign in with a verified identity"
 
         fields {
-          idToken = required(string)
+          subject  = required(string)
+          provider = required(string)
         }
       }
 
@@ -39,15 +40,14 @@ context "Identity" {
         description = "The user signed in with a provider"
 
         fields {
-          userId     = required(uuid)
-          provider   = required(string)
-          signedInAt = required(timestamp)
+          subject  = required(string)
+          provider = required(string)
         }
       }
 
       flow = <<-FLOW
         command -> event:    SignIn -> SignedIn
-        command -> rejected: SignIn -> SignedInOnce
+        command -> rejected: SignIn -> AlreadySignedIn
       FLOW
 
       spec "signs the user in" {
@@ -58,7 +58,7 @@ context "Identity" {
       spec "refuses to sign in when already signed in" {
         given = [SignedIn]
         when  = SignIn
-        then  = rejected(SignedInOnce)
+        then  = rejected(AlreadySignedIn)
       }
     }
 
@@ -74,7 +74,7 @@ context "Identity" {
         description = "Ask to sign out"
 
         fields {
-          userId = required(uuid)
+          subject = required(string)
         }
       }
 
@@ -82,14 +82,13 @@ context "Identity" {
         description = "The user signed out"
 
         fields {
-          userId      = required(uuid)
-          signedOutAt = required(timestamp)
+          subject = required(string)
         }
       }
 
       flow = <<-FLOW
         command -> event:    SignOut -> SignedOut
-        command -> rejected: SignOut -> SignedOutOnce
+        command -> rejected: SignOut -> NotSignedIn
       FLOW
 
       spec "signs the user out" {
@@ -101,7 +100,7 @@ context "Identity" {
       spec "refuses to sign out when not signed in" {
         given = [SignedOut]
         when  = SignOut
-        then  = rejected(SignedOutOnce)
+        then  = rejected(NotSignedIn)
       }
     }
   }

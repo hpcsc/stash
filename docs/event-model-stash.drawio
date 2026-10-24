@@ -6,16 +6,16 @@
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
         <mxCell id="2" value="Wireframes" style="swimlane;horizontal=0;startSize=30;container=1;collapsible=0;rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
-          <mxGeometry x="40" y="60" width="7380" height="190" as="geometry" />
+          <mxGeometry x="40" y="60" width="7380" height="202" as="geometry" />
         </mxCell>
         <mxCell id="3" value="Commands / Views" style="swimlane;horizontal=0;startSize=30;container=1;collapsible=0;rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
-          <mxGeometry x="40" y="280" width="7380" height="190" as="geometry" />
+          <mxGeometry x="40" y="292" width="7380" height="202" as="geometry" />
         </mxCell>
         <mxCell id="4" value="Events" style="swimlane;horizontal=0;startSize=30;container=1;collapsible=0;rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
-          <mxGeometry x="40" y="500" width="7380" height="190" as="geometry" />
+          <mxGeometry x="40" y="524" width="7380" height="202" as="geometry" />
         </mxCell>
         <mxCell id="5" value="External Systems" style="swimlane;horizontal=0;startSize=30;container=1;collapsible=0;rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
-          <mxGeometry x="40" y="720" width="7380" height="190" as="geometry" />
+          <mxGeometry x="40" y="756" width="7380" height="202" as="geometry" />
         </mxCell>
         <object label="Identity" tooltip="Sign-in and sign-out with an interchangeable identity provider" id="6">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontStyle=1;" vertex="1" parent="1">
@@ -38,16 +38,16 @@
           </mxCell>
         </object>
         <mxCell id="10" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#333333;strokeColor=#333333;" vertex="1" parent="9">
-          <mxGeometry x="68" y="148" width="224" height="6" as="geometry" />
+          <mxGeometry x="8" y="6" width="224" height="6" as="geometry" />
         </mxCell>
-        <object label="SignIn" tooltip="Ask to sign in with an identity token" id="11">
+        <object label="SignIn" tooltip="Ask to sign in with a verified identity" id="11">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontFamily=Helvetica;" vertex="1" parent="1">
-            <mxGeometry x="50" y="362" width="240" height="55" as="geometry" />
+            <mxGeometry x="50" y="374" width="240" height="55" as="geometry" />
           </mxCell>
         </object>
         <object label="SignedIn" tooltip="The user signed in with a provider" id="12">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontFamily=Helvetica;" vertex="1" parent="1">
-            <mxGeometry x="50" y="582" width="126" height="55" as="geometry" />
+            <mxGeometry x="50" y="606" width="126" height="55" as="geometry" />
           </mxCell>
         </object>
         <object label="Account Menu (User)" tooltip="The account menu with the sign-out action" id="13">
@@ -56,16 +56,16 @@
           </mxCell>
         </object>
         <mxCell id="14" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#333333;strokeColor=#333333;" vertex="1" parent="13">
-          <mxGeometry x="388" y="148" width="224" height="6" as="geometry" />
+          <mxGeometry x="8" y="6" width="224" height="6" as="geometry" />
         </mxCell>
         <object label="SignOut" tooltip="Ask to sign out" id="15">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontFamily=Helvetica;" vertex="1" parent="1">
-            <mxGeometry x="370" y="362" width="240" height="55" as="geometry" />
+            <mxGeometry x="370" y="374" width="240" height="55" as="geometry" />
           </mxCell>
         </object>
         <object label="SignedOut" tooltip="The user signed out" id="16">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontFamily=Helvetica;" vertex="1" parent="1">
-            <mxGeometry x="370" y="582" width="126" height="55" as="geometry" />
+            <mxGeometry x="370" y="606" width="126" height="55" as="geometry" />
           </mxCell>
         </object>
         <object label="Save Text (User)" tooltip="The capture form&apos;s save-text action" id="17">
@@ -74,16 +74,16 @@
           </mxCell>
         </object>
         <mxCell id="18" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#333333;strokeColor=#333333;" vertex="1" parent="17">
-          <mxGeometry x="738" y="148" width="224" height="6" as="geometry" />
+          <mxGeometry x="8" y="6" width="224" height="6" as="geometry" />
         </mxCell>
         <object label="CaptureText" tooltip="Ask to save text to the Inbox" id="19">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontFamily=Helvetica;" vertex="1" parent="1">
-            <mxGeometry x="720" y="362" width="240" height="55" as="geometry" />
+            <mxGeometry x="720" y="374" width="240" height="55" as="geometry" />
           </mxCell>
         </object>
         <object label="TextCaptured" tooltip="Text was saved to the Inbox" id="20">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontFamily=Helvetica;" vertex="1" parent="1">
-            <mxGeometry x="720" y="582" width="126" height="55" as="geometry" />
+            <mxGeometry x="720" y="606" width="126" height="55" as="geometry" />
           </mxCell>
         </object>
         <object label="Save Link (User)" tooltip="The capture form&apos;s save-link action" id="21">
@@ -92,16 +92,16 @@
           </mxCell>
         </object>
         <mxCell id="22" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#333333;strokeColor=#333333;" vertex="1" parent="21">
-          <mxGeometry x="1058" y="148" width="224" height="6" as="geometry" />
+          <mxGeometry x="8" y="6" width="224" height="6" as="geometry" />
         </mxCell>
         <object label="CaptureLink" tooltip="Ask to save a link to the Inbox" id="23">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontFamily=Helvetica;" vertex="1" parent="1">
-            <mxGeometry x="1040" y="362" width="240" height="55" as="geometry" />
+            <mxGeometry x="1040" y="374" width="240" height="55" as="geometry" />
           </mxCell>
         </object>
         <object label="LinkCaptured" tooltip="A link was saved to the Inbox" id="24">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontFamily=Helvetica;" vertex="1" parent="1">
-            <mxGeometry x="1040" y="582" width="126" height="55" as="geometry" />
+            <mxGeometry x="1040" y="606" width="126" height="55" as="geometry" />
           </mxCell>
         </object>
         <object label="Save Image (User)" tooltip="The capture form&apos;s save-image action" id="25">
@@ -110,16 +110,16 @@
           </mxCell>
         </object>
         <mxCell id="26" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#333333;strokeColor=#333333;" vertex="1" parent="25">
-          <mxGeometry x="1378" y="148" width="224" height="6" as="geometry" />
+          <mxGeometry x="8" y="6" width="224" height="6" as="geometry" />
         </mxCell>
         <object label="CaptureImage" tooltip="Ask to save an image to the Inbox" id="27">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontFamily=Helvetica;" vertex="1" parent="1">
-            <mxGeometry x="1360" y="362" width="240" height="55" as="geometry" />
+            <mxGeometry x="1360" y="374" width="240" height="55" as="geometry" />
           </mxCell>
         </object>
         <object label="ImageCaptured" tooltip="An image was saved to the Inbox" id="28">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontFamily=Helvetica;" vertex="1" parent="1">
-            <mxGeometry x="1360" y="582" width="126" height="55" as="geometry" />
+            <mxGeometry x="1360" y="606" width="126" height="55" as="geometry" />
           </mxCell>
         </object>
         <object label="Save File (User)" tooltip="The capture form&apos;s save-file action" id="29">
@@ -128,48 +128,48 @@
           </mxCell>
         </object>
         <mxCell id="30" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#333333;strokeColor=#333333;" vertex="1" parent="29">
-          <mxGeometry x="1698" y="148" width="224" height="6" as="geometry" />
+          <mxGeometry x="8" y="6" width="224" height="6" as="geometry" />
         </mxCell>
         <object label="CaptureFile" tooltip="Ask to save a file to the Inbox" id="31">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontFamily=Helvetica;" vertex="1" parent="1">
-            <mxGeometry x="1680" y="362" width="240" height="55" as="geometry" />
+            <mxGeometry x="1680" y="374" width="240" height="55" as="geometry" />
           </mxCell>
         </object>
         <object label="FileCaptured" tooltip="A file was saved to the Inbox" id="32">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontFamily=Helvetica;" vertex="1" parent="1">
-            <mxGeometry x="1680" y="582" width="59" height="55" as="geometry" />
+            <mxGeometry x="1680" y="606" width="59" height="55" as="geometry" />
           </mxCell>
         </object>
         <object label="ItemsView" tooltip="An item that was captured" id="33">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontFamily=Helvetica;" vertex="1" parent="1">
-            <mxGeometry x="2000" y="362" width="240" height="55" as="geometry" />
+            <mxGeometry x="2000" y="374" width="240" height="55" as="geometry" />
           </mxCell>
         </object>
         <object label="RecordLinkMetadata" tooltip="Ask to record a link&apos;s fetched title and description" id="34">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontFamily=Helvetica;" vertex="1" parent="1">
-            <mxGeometry x="2320" y="362" width="240" height="55" as="geometry" />
+            <mxGeometry x="2320" y="374" width="240" height="55" as="geometry" />
           </mxCell>
         </object>
         <object label="LinkMetadataFetched" tooltip="A link&apos;s title and description were fetched" id="35">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontFamily=Helvetica;" vertex="1" parent="1">
-            <mxGeometry x="2320" y="582" width="126" height="55" as="geometry" />
+            <mxGeometry x="2320" y="606" width="126" height="55" as="geometry" />
           </mxCell>
         </object>
-        <mxCell id="36" value="⚙ LinkMetadataReactor" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontFamily=Helvetica;" vertex="1" parent="1">
-          <mxGeometry x="2320" y="423" width="240" height="41" as="geometry" />
+        <mxCell id="36" value="LinkMetadataReactor" style="shape=stencil(tJffjqsgEMZfhXBfFNj1T6K+C7G0muNqg57T7tufAA6C26sNXGmh4efMfHwMzTqIh0Sz+JItvkuhMHq2mOcYDfYh1ofstxbfxpe8YrRuavkjn+N1G1o8zoNU44a7pl/mWfbbuMxr1jW3Rcm7Wv7O1655iG3omq/ln0SvFlNGKEbfLS4JZTjrmmmcwwn9zLpGqB4pPU44Rup7f3ldxGtcL2rZhGa1OMdoEuouL0L1l9sk7mZofUr52H9SbJbn5MMsn5MqwBak8MdjY0tS+1E5LIxDGoBb6c/UXPPye25FPtkO4KVPZozkpZnhpOIJQmac1DQAOHRBqEUXJK9ToB2gJDU/RV1wM0Mp+agSZJwxUlWWcKo1g1rTNNJmNbGlNhr3wW5CizwB2AWmX8JsQy72mfjJhnIaob8VmVV6SpVZqftwp337pwRwt30dwXmK2/M2PQlcxbmZKfA7P2OngsfyUbBpo2kfDL4OE7HB7lg6afyYgFzETrYxqqCcwDbullJlxp/fisx4eqD9yOgDANv3iJqX4Z6PnHFzFr/1s73UNI24devh2zRg3fju67GtBKI6nVdHGk7nVbQ0Qx3hKP4hLji+U2kL+g8AO70n6onchj23RMcmhz4ttouc++1+WlaZeQ35J9QiaBE44Pkv8Tn2V69CBUdeff92CC2zV47bOE32tqLH/CtJZu483f8AAAD//w==);aspect=fixed;html=1;fillColor=#16201b;strokeColor=none;labelPosition=center;verticalLabelPosition=bottom;align=center;verticalAlign=top;spacing=0;fontFamily=Helvetica;fontColor=#16201b;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="2426" y="435" width="28" height="28" as="geometry" />
         </mxCell>
         <object label="RecordThumbnail" tooltip="Ask to record a generated image thumbnail" id="37">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontFamily=Helvetica;" vertex="1" parent="1">
-            <mxGeometry x="2640" y="362" width="240" height="55" as="geometry" />
+            <mxGeometry x="2640" y="374" width="240" height="55" as="geometry" />
           </mxCell>
         </object>
         <object label="ThumbnailGenerated" tooltip="An image thumbnail was generated" id="38">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontFamily=Helvetica;" vertex="1" parent="1">
-            <mxGeometry x="2640" y="582" width="126" height="55" as="geometry" />
+            <mxGeometry x="2640" y="606" width="126" height="55" as="geometry" />
           </mxCell>
         </object>
-        <mxCell id="39" value="⚙ ThumbnailReactor" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontFamily=Helvetica;" vertex="1" parent="1">
-          <mxGeometry x="2640" y="423" width="240" height="41" as="geometry" />
+        <mxCell id="39" value="ThumbnailReactor" style="shape=stencil(tJffjqsgEMZfhXBfFNj1T6K+C7G0muNqg57T7tufAA6C26sNXGmh4efMfHwMzTqIh0Sz+JItvkuhMHq2mOcYDfYh1ofstxbfxpe8YrRuavkjn+N1G1o8zoNU44a7pl/mWfbbuMxr1jW3Rcm7Wv7O1655iG3omq/ln0SvFlNGKEbfLS4JZTjrmmmcwwn9zLpGqB4pPU44Rup7f3ldxGtcL2rZhGa1OMdoEuouL0L1l9sk7mZofUr52H9SbJbn5MMsn5MqwBak8MdjY0tS+1E5LIxDGoBb6c/UXPPye25FPtkO4KVPZozkpZnhpOIJQmac1DQAOHRBqEUXJK9ToB2gJDU/RV1wM0Mp+agSZJwxUlWWcKo1g1rTNNJmNbGlNhr3wW5CizwB2AWmX8JsQy72mfjJhnIaob8VmVV6SpVZqftwp337pwRwt30dwXmK2/M2PQlcxbmZKfA7P2OngsfyUbBpo2kfDL4OE7HB7lg6afyYgFzETrYxqqCcwDbullJlxp/fisx4eqD9yOgDANv3iJqX4Z6PnHFzFr/1s73UNI24devh2zRg3fju67GtBKI6nVdHGk7nVbQ0Qx3hKP4hLji+U2kL+g8AO70n6onchj23RMcmhz4ttouc++1+WlaZeQ35J9QiaBE44Pkv8Tn2V69CBUdeff92CC2zV47bOE32tqLH/CtJZu483f8AAAD//w==);aspect=fixed;html=1;fillColor=#16201b;strokeColor=none;labelPosition=center;verticalLabelPosition=bottom;align=center;verticalAlign=top;spacing=0;fontFamily=Helvetica;fontColor=#16201b;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="2746" y="435" width="28" height="28" as="geometry" />
         </mxCell>
         <object label="Inbox Item Detail (User)" tooltip="The item detail with the keep action and tag field" id="40">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#333333;fontFamily=Helvetica;" vertex="1" parent="1">
@@ -177,26 +177,26 @@
           </mxCell>
         </object>
         <mxCell id="41" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#333333;strokeColor=#333333;" vertex="1" parent="40">
-          <mxGeometry x="2978" y="148" width="224" height="6" as="geometry" />
+          <mxGeometry x="8" y="6" width="224" height="6" as="geometry" />
         </mxCell>
         <object label="KeepItem" tooltip="Ask to move an item into the Library" id="42">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontFamily=Helvetica;" vertex="1" parent="1">
-            <mxGeometry x="2960" y="362" width="240" height="55" as="geometry" />
+            <mxGeometry x="2960" y="374" width="240" height="55" as="geometry" />
           </mxCell>
         </object>
         <object label="ItemKept" tooltip="An item moved into the Library" id="43">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontFamily=Helvetica;" vertex="1" parent="1">
-            <mxGeometry x="2960" y="582" width="81" height="55" as="geometry" />
+            <mxGeometry x="2960" y="606" width="81" height="55" as="geometry" />
           </mxCell>
         </object>
         <object label="ItemTagged" tooltip="An item&apos;s tags were set to a set" id="44">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontFamily=Helvetica;" vertex="1" parent="1">
-            <mxGeometry x="3049" y="582" width="81" height="55" as="geometry" />
+            <mxGeometry x="3049" y="606" width="81" height="55" as="geometry" />
           </mxCell>
         </object>
         <object label="ItemTagsView" tooltip="The tags on one item" id="45">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontFamily=Helvetica;" vertex="1" parent="1">
-            <mxGeometry x="3280" y="362" width="240" height="55" as="geometry" />
+            <mxGeometry x="3280" y="374" width="240" height="55" as="geometry" />
           </mxCell>
         </object>
         <object label="Library Item (User)" tooltip="The kept item with the edit-tags action" id="46">
@@ -205,11 +205,11 @@
           </mxCell>
         </object>
         <mxCell id="47" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#333333;strokeColor=#333333;" vertex="1" parent="46">
-          <mxGeometry x="3618" y="148" width="224" height="6" as="geometry" />
+          <mxGeometry x="8" y="6" width="224" height="6" as="geometry" />
         </mxCell>
         <object label="TagItem" tooltip="Ask to set an item&apos;s tags" id="48">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontFamily=Helvetica;" vertex="1" parent="1">
-            <mxGeometry x="3600" y="362" width="240" height="55" as="geometry" />
+            <mxGeometry x="3600" y="374" width="240" height="55" as="geometry" />
           </mxCell>
         </object>
         <object label="Item Detail (User)" tooltip="The item with the drop action" id="49">
@@ -218,16 +218,16 @@
           </mxCell>
         </object>
         <mxCell id="50" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#333333;strokeColor=#333333;" vertex="1" parent="49">
-          <mxGeometry x="3938" y="148" width="224" height="6" as="geometry" />
+          <mxGeometry x="8" y="6" width="224" height="6" as="geometry" />
         </mxCell>
         <object label="DropItem" tooltip="Ask to drop an item into the Trash" id="51">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontFamily=Helvetica;" vertex="1" parent="1">
-            <mxGeometry x="3920" y="362" width="240" height="55" as="geometry" />
+            <mxGeometry x="3920" y="374" width="240" height="55" as="geometry" />
           </mxCell>
         </object>
         <object label="ItemDropped" tooltip="An item moved into the Trash" id="52">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontFamily=Helvetica;" vertex="1" parent="1">
-            <mxGeometry x="3920" y="582" width="126" height="55" as="geometry" />
+            <mxGeometry x="3920" y="606" width="126" height="55" as="geometry" />
           </mxCell>
         </object>
         <object label="Restore (User)" tooltip="The trash&apos;s restore action" id="53">
@@ -236,16 +236,16 @@
           </mxCell>
         </object>
         <mxCell id="54" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#333333;strokeColor=#333333;" vertex="1" parent="53">
-          <mxGeometry x="4258" y="148" width="224" height="6" as="geometry" />
+          <mxGeometry x="8" y="6" width="224" height="6" as="geometry" />
         </mxCell>
         <object label="RestoreItem" tooltip="Ask to return an item from the Trash" id="55">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontFamily=Helvetica;" vertex="1" parent="1">
-            <mxGeometry x="4240" y="362" width="240" height="55" as="geometry" />
+            <mxGeometry x="4240" y="374" width="240" height="55" as="geometry" />
           </mxCell>
         </object>
         <object label="ItemRestored" tooltip="An item returned from the Trash" id="56">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontFamily=Helvetica;" vertex="1" parent="1">
-            <mxGeometry x="4240" y="582" width="126" height="55" as="geometry" />
+            <mxGeometry x="4240" y="606" width="126" height="55" as="geometry" />
           </mxCell>
         </object>
         <object label="Delete Permanently (User)" tooltip="The trash&apos;s delete action" id="57">
@@ -254,39 +254,39 @@
           </mxCell>
         </object>
         <mxCell id="58" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#333333;strokeColor=#333333;" vertex="1" parent="57">
-          <mxGeometry x="4578" y="148" width="224" height="6" as="geometry" />
+          <mxGeometry x="8" y="6" width="224" height="6" as="geometry" />
         </mxCell>
         <object label="DeleteItem" tooltip="Ask to permanently delete an item" id="59">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontFamily=Helvetica;" vertex="1" parent="1">
-            <mxGeometry x="4560" y="362" width="240" height="55" as="geometry" />
+            <mxGeometry x="4560" y="374" width="240" height="55" as="geometry" />
           </mxCell>
         </object>
         <object label="ItemDeleted" tooltip="An item is permanently gone" id="60">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontFamily=Helvetica;" vertex="1" parent="1">
-            <mxGeometry x="4560" y="582" width="126" height="55" as="geometry" />
+            <mxGeometry x="4560" y="606" width="126" height="55" as="geometry" />
           </mxCell>
         </object>
-        <mxCell id="61" value="⚙ EmptyTrashReactor" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontFamily=Helvetica;" vertex="1" parent="1">
-          <mxGeometry x="4560" y="423" width="240" height="41" as="geometry" />
+        <mxCell id="61" value="EmptyTrashReactor" style="shape=stencil(tJffjqsgEMZfhXBfFNj1T6K+C7G0muNqg57T7tufAA6C26sNXGmh4efMfHwMzTqIh0Sz+JItvkuhMHq2mOcYDfYh1ofstxbfxpe8YrRuavkjn+N1G1o8zoNU44a7pl/mWfbbuMxr1jW3Rcm7Wv7O1655iG3omq/ln0SvFlNGKEbfLS4JZTjrmmmcwwn9zLpGqB4pPU44Rup7f3ldxGtcL2rZhGa1OMdoEuouL0L1l9sk7mZofUr52H9SbJbn5MMsn5MqwBak8MdjY0tS+1E5LIxDGoBb6c/UXPPye25FPtkO4KVPZozkpZnhpOIJQmac1DQAOHRBqEUXJK9ToB2gJDU/RV1wM0Mp+agSZJwxUlWWcKo1g1rTNNJmNbGlNhr3wW5CizwB2AWmX8JsQy72mfjJhnIaob8VmVV6SpVZqftwp337pwRwt30dwXmK2/M2PQlcxbmZKfA7P2OngsfyUbBpo2kfDL4OE7HB7lg6afyYgFzETrYxqqCcwDbullJlxp/fisx4eqD9yOgDANv3iJqX4Z6PnHFzFr/1s73UNI24devh2zRg3fju67GtBKI6nVdHGk7nVbQ0Qx3hKP4hLji+U2kL+g8AO70n6onchj23RMcmhz4ttouc++1+WlaZeQ35J9QiaBE44Pkv8Tn2V69CBUdeff92CC2zV47bOE32tqLH/CtJZu483f8AAAD//w==);aspect=fixed;html=1;fillColor=#16201b;strokeColor=none;labelPosition=center;verticalLabelPosition=bottom;align=center;verticalAlign=top;spacing=0;fontFamily=Helvetica;fontColor=#16201b;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="4666" y="435" width="28" height="28" as="geometry" />
         </mxCell>
         <object label="ItemStateView" tooltip="Where an item currently is: inbox, library, or trash" id="62">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontFamily=Helvetica;" vertex="1" parent="1">
-            <mxGeometry x="4880" y="362" width="240" height="55" as="geometry" />
+            <mxGeometry x="4880" y="374" width="240" height="55" as="geometry" />
           </mxCell>
         </object>
         <object label="LinksToEnrichView" tooltip="Links captured without fetched metadata" id="63">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontFamily=Helvetica;" vertex="1" parent="1">
-            <mxGeometry x="5200" y="362" width="240" height="55" as="geometry" />
+            <mxGeometry x="5200" y="374" width="240" height="55" as="geometry" />
           </mxCell>
         </object>
         <object label="ImagesToThumbnailView" tooltip="Images captured without a thumbnail" id="64">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontFamily=Helvetica;" vertex="1" parent="1">
-            <mxGeometry x="5520" y="362" width="240" height="55" as="geometry" />
+            <mxGeometry x="5520" y="374" width="240" height="55" as="geometry" />
           </mxCell>
         </object>
         <object label="TrashToPurgeView" tooltip="Items named in an empty-trash that are not yet deleted" id="65">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontFamily=Helvetica;" vertex="1" parent="1">
-            <mxGeometry x="5840" y="362" width="240" height="55" as="geometry" />
+            <mxGeometry x="5840" y="374" width="240" height="55" as="geometry" />
           </mxCell>
         </object>
         <object label="Empty Trash (User)" tooltip="The trash&apos;s empty action" id="66">
@@ -295,16 +295,16 @@
           </mxCell>
         </object>
         <mxCell id="67" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#333333;strokeColor=#333333;" vertex="1" parent="66">
-          <mxGeometry x="6178" y="148" width="224" height="6" as="geometry" />
+          <mxGeometry x="8" y="6" width="224" height="6" as="geometry" />
         </mxCell>
         <object label="EmptyTrash" tooltip="Ask to empty the trash" id="68">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontFamily=Helvetica;" vertex="1" parent="1">
-            <mxGeometry x="6160" y="362" width="240" height="55" as="geometry" />
+            <mxGeometry x="6160" y="374" width="240" height="55" as="geometry" />
           </mxCell>
         </object>
         <object label="TrashEmptied" tooltip="The trash was emptied in one action" id="69">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontFamily=Helvetica;" vertex="1" parent="1">
-            <mxGeometry x="6160" y="582" width="126" height="55" as="geometry" />
+            <mxGeometry x="6160" y="606" width="126" height="55" as="geometry" />
           </mxCell>
         </object>
         <object label="New Tag (User)" tooltip="The tags screen&apos;s new-tag action" id="70">
@@ -313,16 +313,16 @@
           </mxCell>
         </object>
         <mxCell id="71" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#333333;strokeColor=#333333;" vertex="1" parent="70">
-          <mxGeometry x="6528" y="148" width="224" height="6" as="geometry" />
+          <mxGeometry x="8" y="6" width="224" height="6" as="geometry" />
         </mxCell>
         <object label="CreateTag" tooltip="Ask to create a tag" id="72">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontFamily=Helvetica;" vertex="1" parent="1">
-            <mxGeometry x="6510" y="362" width="240" height="55" as="geometry" />
+            <mxGeometry x="6510" y="374" width="240" height="55" as="geometry" />
           </mxCell>
         </object>
         <object label="TagCreated" tooltip="A tag was created" id="73">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontFamily=Helvetica;" vertex="1" parent="1">
-            <mxGeometry x="6510" y="582" width="126" height="55" as="geometry" />
+            <mxGeometry x="6510" y="606" width="126" height="55" as="geometry" />
           </mxCell>
         </object>
         <object label="Rename Tag (User)" tooltip="The tags screen&apos;s rename action" id="74">
@@ -331,111 +331,111 @@
           </mxCell>
         </object>
         <mxCell id="75" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#333333;strokeColor=#333333;" vertex="1" parent="74">
-          <mxGeometry x="6848" y="148" width="224" height="6" as="geometry" />
+          <mxGeometry x="8" y="6" width="224" height="6" as="geometry" />
         </mxCell>
         <object label="RenameTag" tooltip="Ask to rename a tag" id="76">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontFamily=Helvetica;" vertex="1" parent="1">
-            <mxGeometry x="6830" y="362" width="240" height="55" as="geometry" />
+            <mxGeometry x="6830" y="374" width="240" height="55" as="geometry" />
           </mxCell>
         </object>
         <object label="TagRenamed" tooltip="A tag was renamed" id="77">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontFamily=Helvetica;" vertex="1" parent="1">
-            <mxGeometry x="6830" y="582" width="126" height="55" as="geometry" />
+            <mxGeometry x="6830" y="606" width="126" height="55" as="geometry" />
           </mxCell>
         </object>
         <object label="TagsView" tooltip="Every tag with its current name" id="78">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontFamily=Helvetica;" vertex="1" parent="1">
-            <mxGeometry x="7150" y="362" width="240" height="55" as="geometry" />
+            <mxGeometry x="7150" y="374" width="240" height="55" as="geometry" />
           </mxCell>
         </object>
-        <object label="SignedInOnce" tooltip="an account is signed in at most once" id="79">
+        <object label="AlreadySignedIn" tooltip="an account is already signed in" id="79">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;dashed=1;fontFamily=Helvetica;" vertex="1" parent="1">
-            <mxGeometry x="184" y="582" width="126" height="55" as="geometry" />
+            <mxGeometry x="184" y="606" width="126" height="55" as="geometry" />
           </mxCell>
         </object>
-        <object label="SignedOutOnce" tooltip="an account signs out only when signed in" id="80">
+        <object label="NotSignedIn" tooltip="an account is not signed in" id="80">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;dashed=1;fontFamily=Helvetica;" vertex="1" parent="1">
-            <mxGeometry x="504" y="582" width="126" height="55" as="geometry" />
+            <mxGeometry x="504" y="606" width="126" height="55" as="geometry" />
           </mxCell>
         </object>
         <object label="CapturedOnce" tooltip="an item is captured at most once" id="81">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;dashed=1;fontFamily=Helvetica;" vertex="1" parent="1">
-            <mxGeometry x="854" y="582" width="126" height="55" as="geometry" />
+            <mxGeometry x="854" y="606" width="126" height="55" as="geometry" />
           </mxCell>
         </object>
         <object label="CapturedOnce" tooltip="an item is captured at most once" id="82">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;dashed=1;fontFamily=Helvetica;" vertex="1" parent="1">
-            <mxGeometry x="1174" y="582" width="126" height="55" as="geometry" />
+            <mxGeometry x="1174" y="606" width="126" height="55" as="geometry" />
           </mxCell>
         </object>
         <object label="CapturedOnce" tooltip="an item is captured at most once" id="83">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;dashed=1;fontFamily=Helvetica;" vertex="1" parent="1">
-            <mxGeometry x="1494" y="582" width="126" height="55" as="geometry" />
+            <mxGeometry x="1494" y="606" width="126" height="55" as="geometry" />
           </mxCell>
         </object>
         <object label="CapturedOnce" tooltip="an item is captured at most once" id="84">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;dashed=1;fontFamily=Helvetica;" vertex="1" parent="1">
-            <mxGeometry x="1747" y="582" width="59" height="55" as="geometry" />
+            <mxGeometry x="1747" y="606" width="59" height="55" as="geometry" />
           </mxCell>
         </object>
         <object label="FileTooLarge" tooltip="a captured file is at most 25 MB" id="85">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;dashed=1;fontFamily=Helvetica;" vertex="1" parent="1">
-            <mxGeometry x="1814" y="582" width="59" height="55" as="geometry" />
+            <mxGeometry x="1814" y="606" width="59" height="55" as="geometry" />
           </mxCell>
         </object>
         <object label="VideoRejected" tooltip="a captured file is not a video" id="86">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;dashed=1;fontFamily=Helvetica;" vertex="1" parent="1">
-            <mxGeometry x="1881" y="582" width="59" height="55" as="geometry" />
+            <mxGeometry x="1881" y="606" width="59" height="55" as="geometry" />
           </mxCell>
         </object>
         <object label="MetadataRecordedOnce" tooltip="link metadata is recorded at most once" id="87">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;dashed=1;fontFamily=Helvetica;" vertex="1" parent="1">
-            <mxGeometry x="2454" y="582" width="126" height="55" as="geometry" />
+            <mxGeometry x="2454" y="606" width="126" height="55" as="geometry" />
           </mxCell>
         </object>
         <object label="ThumbnailRecordedOnce" tooltip="a thumbnail is recorded at most once" id="88">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;dashed=1;fontFamily=Helvetica;" vertex="1" parent="1">
-            <mxGeometry x="2774" y="582" width="126" height="55" as="geometry" />
+            <mxGeometry x="2774" y="606" width="126" height="55" as="geometry" />
           </mxCell>
         </object>
         <object label="KeepFromInbox" tooltip="an item is kept only from the Inbox" id="89">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;dashed=1;fontFamily=Helvetica;" vertex="1" parent="1">
-            <mxGeometry x="3138" y="582" width="81" height="55" as="geometry" />
+            <mxGeometry x="3138" y="606" width="81" height="55" as="geometry" />
           </mxCell>
         </object>
         <object label="TagFromLibrary" tooltip="only a kept item is tagged" id="90">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;dashed=1;fontFamily=Helvetica;" vertex="1" parent="1">
-            <mxGeometry x="3600" y="582" width="240" height="55" as="geometry" />
+            <mxGeometry x="3600" y="606" width="240" height="55" as="geometry" />
           </mxCell>
         </object>
         <object label="DropFromInboxOrLibrary" tooltip="an item is dropped only from the Inbox or Library" id="91">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;dashed=1;fontFamily=Helvetica;" vertex="1" parent="1">
-            <mxGeometry x="4054" y="582" width="126" height="55" as="geometry" />
+            <mxGeometry x="4054" y="606" width="126" height="55" as="geometry" />
           </mxCell>
         </object>
         <object label="RestoreFromTrash" tooltip="an item is restored only from the Trash" id="92">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;dashed=1;fontFamily=Helvetica;" vertex="1" parent="1">
-            <mxGeometry x="4374" y="582" width="126" height="55" as="geometry" />
+            <mxGeometry x="4374" y="606" width="126" height="55" as="geometry" />
           </mxCell>
         </object>
         <object label="DeleteFromTrash" tooltip="an item is deleted only from the Trash" id="93">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;dashed=1;fontFamily=Helvetica;" vertex="1" parent="1">
-            <mxGeometry x="4694" y="582" width="126" height="55" as="geometry" />
+            <mxGeometry x="4694" y="606" width="126" height="55" as="geometry" />
           </mxCell>
         </object>
         <object label="TrashNotEmpty" tooltip="the trash holds at least one item when it is emptied" id="94">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;dashed=1;fontFamily=Helvetica;" vertex="1" parent="1">
-            <mxGeometry x="6294" y="582" width="126" height="55" as="geometry" />
+            <mxGeometry x="6294" y="606" width="126" height="55" as="geometry" />
           </mxCell>
         </object>
         <object label="TagNameTaken" tooltip="a tag name is unique, ignoring case" id="95">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;dashed=1;fontFamily=Helvetica;" vertex="1" parent="1">
-            <mxGeometry x="6644" y="582" width="126" height="55" as="geometry" />
+            <mxGeometry x="6644" y="606" width="126" height="55" as="geometry" />
           </mxCell>
         </object>
         <object label="TagNameTaken" tooltip="a tag name is unique, ignoring case" id="96">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;dashed=1;fontFamily=Helvetica;" vertex="1" parent="1">
-            <mxGeometry x="6964" y="582" width="126" height="55" as="geometry" />
+            <mxGeometry x="6964" y="606" width="126" height="55" as="geometry" />
           </mxCell>
         </object>
         <mxCell id="97" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;fontFamily=Helvetica;strokeColor=#333333;endArrow=classic;" edge="1" parent="1" source="11" target="12">
@@ -501,32 +501,32 @@
         <mxCell id="117" style="edgeStyle=orthogonalEdgeStyle;html=1;fontFamily=Helvetica;strokeColor=#82b366;fontSize=10;endArrow=classic;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=1;entryDx=0;entryDy=0;curved=1;" edge="1" parent="1" source="20" target="33">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="886" y="609" />
-              <mxPoint x="2000" y="609" />
+              <mxPoint x="886" y="633" />
+              <mxPoint x="2000" y="633" />
             </Array>
           </mxGeometry>
         </mxCell>
         <mxCell id="118" style="edgeStyle=orthogonalEdgeStyle;html=1;fontFamily=Helvetica;strokeColor=#82b366;fontSize=10;endArrow=classic;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=1;entryDx=0;entryDy=0;curved=1;" edge="1" parent="1" source="24" target="33">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="1206" y="609" />
-              <mxPoint x="2000" y="609" />
+              <mxPoint x="1206" y="633" />
+              <mxPoint x="2000" y="633" />
             </Array>
           </mxGeometry>
         </mxCell>
         <mxCell id="119" style="edgeStyle=orthogonalEdgeStyle;html=1;fontFamily=Helvetica;strokeColor=#82b366;fontSize=10;endArrow=classic;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=1;entryDx=0;entryDy=0;curved=1;" edge="1" parent="1" source="28" target="33">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="1526" y="609" />
-              <mxPoint x="2000" y="609" />
+              <mxPoint x="1526" y="633" />
+              <mxPoint x="2000" y="633" />
             </Array>
           </mxGeometry>
         </mxCell>
         <mxCell id="120" style="edgeStyle=orthogonalEdgeStyle;html=1;fontFamily=Helvetica;strokeColor=#82b366;fontSize=10;endArrow=classic;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=1;entryDx=0;entryDy=0;curved=1;" edge="1" parent="1" source="32" target="33">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="1779" y="609" />
-              <mxPoint x="2000" y="609" />
+              <mxPoint x="1779" y="633" />
+              <mxPoint x="2000" y="633" />
             </Array>
           </mxGeometry>
         </mxCell>
@@ -539,8 +539,8 @@
         <mxCell id="123" style="edgeStyle=orthogonalEdgeStyle;html=1;fontFamily=Helvetica;strokeColor=#9B59B6;fontSize=10;endArrow=classic;exitX=1;exitY=0.5;exitDx=0;exitDy=0;curved=1;" edge="1" parent="1" source="24" target="36">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="1206" y="609" />
-              <mxPoint x="1206" y="443" />
+              <mxPoint x="1206" y="633" />
+              <mxPoint x="1206" y="449" />
             </Array>
           </mxGeometry>
         </mxCell>
@@ -559,8 +559,8 @@
         <mxCell id="128" style="edgeStyle=orthogonalEdgeStyle;html=1;fontFamily=Helvetica;strokeColor=#9B59B6;fontSize=10;endArrow=classic;exitX=1;exitY=0.5;exitDx=0;exitDy=0;curved=1;" edge="1" parent="1" source="28" target="39">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="1526" y="609" />
-              <mxPoint x="1526" y="443" />
+              <mxPoint x="1526" y="633" />
+              <mxPoint x="1526" y="449" />
             </Array>
           </mxGeometry>
         </mxCell>
@@ -588,8 +588,8 @@
         <mxCell id="136" style="edgeStyle=orthogonalEdgeStyle;html=1;fontFamily=Helvetica;strokeColor=#82b366;fontSize=10;endArrow=classic;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=1;entryDx=0;entryDy=0;curved=1;" edge="1" parent="1" source="44" target="45">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="3170" y="609" />
-              <mxPoint x="3280" y="609" />
+              <mxPoint x="3170" y="633" />
+              <mxPoint x="3280" y="633" />
             </Array>
           </mxGeometry>
         </mxCell>
@@ -644,8 +644,8 @@
         <mxCell id="153" style="edgeStyle=orthogonalEdgeStyle;html=1;fontFamily=Helvetica;strokeColor=#9B59B6;fontSize=10;endArrow=classic;exitX=1;exitY=0.5;exitDx=0;exitDy=0;curved=1;" edge="1" parent="1" source="69" target="61">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="6326" y="609" />
-              <mxPoint x="6326" y="443" />
+              <mxPoint x="6326" y="633" />
+              <mxPoint x="6326" y="449" />
             </Array>
           </mxGeometry>
         </mxCell>
@@ -658,80 +658,80 @@
         <mxCell id="156" style="edgeStyle=orthogonalEdgeStyle;html=1;fontFamily=Helvetica;strokeColor=#82b366;fontSize=10;endArrow=classic;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=1;entryDx=0;entryDy=0;curved=1;" edge="1" parent="1" source="43" target="62">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="3081" y="609" />
-              <mxPoint x="4880" y="609" />
+              <mxPoint x="3081" y="633" />
+              <mxPoint x="4880" y="633" />
             </Array>
           </mxGeometry>
         </mxCell>
         <mxCell id="157" style="edgeStyle=orthogonalEdgeStyle;html=1;fontFamily=Helvetica;strokeColor=#82b366;fontSize=10;endArrow=classic;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=1;entryDx=0;entryDy=0;curved=1;" edge="1" parent="1" source="52" target="62">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="4086" y="609" />
-              <mxPoint x="4880" y="609" />
+              <mxPoint x="4086" y="633" />
+              <mxPoint x="4880" y="633" />
             </Array>
           </mxGeometry>
         </mxCell>
         <mxCell id="158" style="edgeStyle=orthogonalEdgeStyle;html=1;fontFamily=Helvetica;strokeColor=#82b366;fontSize=10;endArrow=classic;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=1;entryDx=0;entryDy=0;curved=1;" edge="1" parent="1" source="56" target="62">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="4406" y="609" />
-              <mxPoint x="4880" y="609" />
+              <mxPoint x="4406" y="633" />
+              <mxPoint x="4880" y="633" />
             </Array>
           </mxGeometry>
         </mxCell>
         <mxCell id="159" style="edgeStyle=orthogonalEdgeStyle;html=1;fontFamily=Helvetica;strokeColor=#82b366;fontSize=10;endArrow=classic;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=1;entryDx=0;entryDy=0;curved=1;" edge="1" parent="1" source="60" target="62">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="4726" y="609" />
-              <mxPoint x="4880" y="609" />
+              <mxPoint x="4726" y="633" />
+              <mxPoint x="4880" y="633" />
             </Array>
           </mxGeometry>
         </mxCell>
         <mxCell id="160" style="edgeStyle=orthogonalEdgeStyle;html=1;fontFamily=Helvetica;strokeColor=#82b366;fontSize=10;endArrow=classic;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=1;entryDx=0;entryDy=0;curved=1;" edge="1" parent="1" source="24" target="63">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="1206" y="609" />
-              <mxPoint x="5200" y="609" />
+              <mxPoint x="1206" y="633" />
+              <mxPoint x="5200" y="633" />
             </Array>
           </mxGeometry>
         </mxCell>
         <mxCell id="161" style="edgeStyle=orthogonalEdgeStyle;html=1;fontFamily=Helvetica;strokeColor=#82b366;fontSize=10;endArrow=classic;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=1;entryDx=0;entryDy=0;curved=1;" edge="1" parent="1" source="35" target="63">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="2486" y="609" />
-              <mxPoint x="5200" y="609" />
+              <mxPoint x="2486" y="633" />
+              <mxPoint x="5200" y="633" />
             </Array>
           </mxGeometry>
         </mxCell>
         <mxCell id="162" style="edgeStyle=orthogonalEdgeStyle;html=1;fontFamily=Helvetica;strokeColor=#82b366;fontSize=10;endArrow=classic;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=1;entryDx=0;entryDy=0;curved=1;" edge="1" parent="1" source="28" target="64">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="1526" y="609" />
-              <mxPoint x="5520" y="609" />
+              <mxPoint x="1526" y="633" />
+              <mxPoint x="5520" y="633" />
             </Array>
           </mxGeometry>
         </mxCell>
         <mxCell id="163" style="edgeStyle=orthogonalEdgeStyle;html=1;fontFamily=Helvetica;strokeColor=#82b366;fontSize=10;endArrow=classic;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=1;entryDx=0;entryDy=0;curved=1;" edge="1" parent="1" source="38" target="64">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="2806" y="609" />
-              <mxPoint x="5520" y="609" />
+              <mxPoint x="2806" y="633" />
+              <mxPoint x="5520" y="633" />
             </Array>
           </mxGeometry>
         </mxCell>
         <mxCell id="164" style="edgeStyle=orthogonalEdgeStyle;html=1;fontFamily=Helvetica;strokeColor=#82b366;fontSize=10;endArrow=classic;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=1;entryDx=0;entryDy=0;curved=1;" edge="1" parent="1" source="69" target="65">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="6326" y="609" />
-              <mxPoint x="5840" y="609" />
+              <mxPoint x="6326" y="633" />
+              <mxPoint x="5840" y="633" />
             </Array>
           </mxGeometry>
         </mxCell>
         <mxCell id="165" style="edgeStyle=orthogonalEdgeStyle;html=1;fontFamily=Helvetica;strokeColor=#82b366;fontSize=10;endArrow=classic;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=1;entryDx=0;entryDy=0;curved=1;" edge="1" parent="1" source="60" target="65">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="4726" y="609" />
-              <mxPoint x="5840" y="609" />
+              <mxPoint x="4726" y="633" />
+              <mxPoint x="5840" y="633" />
             </Array>
           </mxGeometry>
         </mxCell>
@@ -774,90 +774,90 @@
         <mxCell id="178" style="edgeStyle=orthogonalEdgeStyle;html=1;fontFamily=Helvetica;strokeColor=#82b366;fontSize=10;endArrow=classic;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=1;entryDx=0;entryDy=0;curved=1;" edge="1" parent="1" source="73" target="78">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="6676" y="609" />
-              <mxPoint x="7150" y="609" />
+              <mxPoint x="6676" y="633" />
+              <mxPoint x="7150" y="633" />
             </Array>
           </mxGeometry>
         </mxCell>
         <mxCell id="179" style="edgeStyle=orthogonalEdgeStyle;html=1;fontFamily=Helvetica;strokeColor=#82b366;fontSize=10;endArrow=classic;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=1;entryDx=0;entryDy=0;curved=1;" edge="1" parent="1" source="77" target="78">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="6996" y="609" />
-              <mxPoint x="7150" y="609" />
+              <mxPoint x="6996" y="633" />
+              <mxPoint x="7150" y="633" />
             </Array>
           </mxGeometry>
         </mxCell>
         <mxCell id="180" value="Specs" style="swimlane;horizontal=0;startSize=30;container=1;collapsible=0;rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
-          <mxGeometry x="40" y="940" width="7380" height="256" as="geometry" />
+          <mxGeometry x="40" y="988" width="7380" height="256" as="geometry" />
         </mxCell>
-        <mxCell id="181" value="&quot;signs the user in&quot;\nwhen SignIn\nthen [SignedIn]\n&quot;refuses to sign in when already signed in&quot;\ngiven [SignedIn]\nwhen SignIn\nthen rejected SignedInOnce" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="50" y="982" width="260" height="118" as="geometry" />
+        <mxCell id="181" value="&quot;signs the user in&quot;&#xa;when SignIn&#xa;then [SignedIn]&#xa;&quot;refuses to sign in when already signed in&quot;&#xa;given [SignedIn]&#xa;when SignIn&#xa;then rejected AlreadySignedIn" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="50" y="1030" width="260" height="118" as="geometry" />
         </mxCell>
-        <mxCell id="182" value="&quot;signs the user out&quot;\ngiven [SignedIn]\nwhen SignOut\nthen [SignedOut]\n&quot;refuses to sign out when not signed in&quot;\ngiven [SignedOut]\nwhen SignOut\nthen rejected SignedOutOnce" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="370" y="982" width="260" height="132" as="geometry" />
+        <mxCell id="182" value="&quot;signs the user out&quot;&#xa;given [SignedIn]&#xa;when SignOut&#xa;then [SignedOut]&#xa;&quot;refuses to sign out when not signed in&quot;&#xa;given [SignedOut]&#xa;when SignOut&#xa;then rejected NotSignedIn" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="370" y="1030" width="260" height="132" as="geometry" />
         </mxCell>
-        <mxCell id="183" value="&quot;saves text to the Inbox&quot;\nwhen CaptureText\nthen [TextCaptured]\n&quot;refuses to capture an item twice&quot;\ngiven [TextCaptured]\nwhen CaptureText\nthen rejected CapturedOnce" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="720" y="982" width="260" height="118" as="geometry" />
+        <mxCell id="183" value="&quot;saves text to the Inbox&quot;&#xa;when CaptureText&#xa;then [TextCaptured]&#xa;&quot;refuses to capture an item twice&quot;&#xa;given [TextCaptured]&#xa;when CaptureText&#xa;then rejected CapturedOnce" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="720" y="1030" width="260" height="118" as="geometry" />
         </mxCell>
-        <mxCell id="184" value="&quot;saves a link to the Inbox&quot;\nwhen CaptureLink\nthen [LinkCaptured]\n&quot;refuses to capture an item twice&quot;\ngiven [LinkCaptured]\nwhen CaptureLink\nthen rejected CapturedOnce" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="1040" y="982" width="260" height="118" as="geometry" />
+        <mxCell id="184" value="&quot;saves a link to the Inbox&quot;&#xa;when CaptureLink&#xa;then [LinkCaptured]&#xa;&quot;refuses to capture an item twice&quot;&#xa;given [LinkCaptured]&#xa;when CaptureLink&#xa;then rejected CapturedOnce" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1040" y="1030" width="260" height="118" as="geometry" />
         </mxCell>
-        <mxCell id="185" value="&quot;saves an image to the Inbox&quot;\nwhen CaptureImage\nthen [ImageCaptured]\n&quot;refuses to capture an item twice&quot;\ngiven [ImageCaptured]\nwhen CaptureImage\nthen rejected CapturedOnce" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="1360" y="982" width="260" height="118" as="geometry" />
+        <mxCell id="185" value="&quot;saves an image to the Inbox&quot;&#xa;when CaptureImage&#xa;then [ImageCaptured]&#xa;&quot;refuses to capture an item twice&quot;&#xa;given [ImageCaptured]&#xa;when CaptureImage&#xa;then rejected CapturedOnce" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1360" y="1030" width="260" height="118" as="geometry" />
         </mxCell>
-        <mxCell id="186" value="&quot;saves a file to the Inbox&quot;\nwhen CaptureFile\nthen [FileCaptured]\n&quot;refuses to capture an item twice&quot;\ngiven [FileCaptured]\nwhen CaptureFile\nthen rejected CapturedOnce\n&quot;refuses a file larger than 25 MB&quot;\nwhen CaptureFile\nthen rejected FileTooLarge\n&quot;refuses a video&quot;\nwhen CaptureFile\nthen rejected VideoRejected" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="1680" y="982" width="260" height="202" as="geometry" />
+        <mxCell id="186" value="&quot;saves a file to the Inbox&quot;&#xa;when CaptureFile&#xa;then [FileCaptured]&#xa;&quot;refuses to capture an item twice&quot;&#xa;given [FileCaptured]&#xa;when CaptureFile&#xa;then rejected CapturedOnce&#xa;&quot;refuses a file larger than 25 MB&quot;&#xa;when CaptureFile&#xa;then rejected FileTooLarge&#xa;&quot;refuses a video&quot;&#xa;when CaptureFile&#xa;then rejected VideoRejected" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1680" y="1030" width="260" height="202" as="geometry" />
         </mxCell>
-        <mxCell id="187" value="&quot;shows a captured item&quot;\ngiven [TextCaptured]\nthen view ItemsView" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="2000" y="982" width="260" height="62" as="geometry" />
+        <mxCell id="187" value="&quot;shows a captured item&quot;&#xa;given [TextCaptured]&#xa;then view ItemsView" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="2000" y="1030" width="260" height="62" as="geometry" />
         </mxCell>
-        <mxCell id="188" value="&quot;fetches a link&apos;s title and description&quot;\nwhen RecordLinkMetadata\nthen [LinkMetadataFetched]\n&quot;refuses to fetch metadata twice&quot;\ngiven [LinkMetadataFetched]\nwhen RecordLinkMetadata\nthen rejected MetadataRecordedOnce" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="2320" y="982" width="260" height="118" as="geometry" />
+        <mxCell id="188" value="&quot;fetches a link&apos;s title and description&quot;&#xa;when RecordLinkMetadata&#xa;then [LinkMetadataFetched]&#xa;&quot;refuses to fetch metadata twice&quot;&#xa;given [LinkMetadataFetched]&#xa;when RecordLinkMetadata&#xa;then rejected MetadataRecordedOnce" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="2320" y="1030" width="260" height="118" as="geometry" />
         </mxCell>
-        <mxCell id="189" value="&quot;generates an image thumbnail&quot;\nwhen RecordThumbnail\nthen [ThumbnailGenerated]\n&quot;refuses to generate a thumbnail twice&quot;\ngiven [ThumbnailGenerated]\nwhen RecordThumbnail\nthen rejected ThumbnailRecordedOnce" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="2640" y="982" width="260" height="118" as="geometry" />
+        <mxCell id="189" value="&quot;generates an image thumbnail&quot;&#xa;when RecordThumbnail&#xa;then [ThumbnailGenerated]&#xa;&quot;refuses to generate a thumbnail twice&quot;&#xa;given [ThumbnailGenerated]&#xa;when RecordThumbnail&#xa;then rejected ThumbnailRecordedOnce" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="2640" y="1030" width="260" height="118" as="geometry" />
         </mxCell>
-        <mxCell id="190" value="&quot;keeps an item with tags&quot;\ngiven [TextCaptured]\nwhen KeepItem\nthen [ItemKept, ItemTagged]\n&quot;refuses to keep an item already kept&quot;\ngiven [ItemKept]\nwhen KeepItem\nthen rejected KeepFromInbox" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="2960" y="982" width="260" height="132" as="geometry" />
+        <mxCell id="190" value="&quot;keeps an item with tags&quot;&#xa;given [TextCaptured]&#xa;when KeepItem&#xa;then [ItemKept, ItemTagged]&#xa;&quot;refuses to keep an item already kept&quot;&#xa;given [ItemKept]&#xa;when KeepItem&#xa;then rejected KeepFromInbox" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="2960" y="1030" width="260" height="132" as="geometry" />
         </mxCell>
-        <mxCell id="191" value="&quot;lists an item&apos;s tags&quot;\ngiven [ItemTagged]\nthen view ItemTagsView" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="3280" y="982" width="260" height="62" as="geometry" />
+        <mxCell id="191" value="&quot;lists an item&apos;s tags&quot;&#xa;given [ItemTagged]&#xa;then view ItemTagsView" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="3280" y="1030" width="260" height="62" as="geometry" />
         </mxCell>
-        <mxCell id="192" value="&quot;changes an item&apos;s tags&quot;\ngiven [ItemKept]\nwhen TagItem\nthen [ItemTagged]\n&quot;refuses to tag an item that was never kept&quot;\ngiven [TextCaptured]\nwhen TagItem\nthen rejected TagFromLibrary" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="3600" y="982" width="260" height="132" as="geometry" />
+        <mxCell id="192" value="&quot;changes an item&apos;s tags&quot;&#xa;given [ItemKept]&#xa;when TagItem&#xa;then [ItemTagged]&#xa;&quot;refuses to tag an item that was never kept&quot;&#xa;given [TextCaptured]&#xa;when TagItem&#xa;then rejected TagFromLibrary" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="3600" y="1030" width="260" height="132" as="geometry" />
         </mxCell>
-        <mxCell id="193" value="&quot;drops an item into the Trash&quot;\ngiven [TextCaptured]\nwhen DropItem\nthen [ItemDropped]\n&quot;refuses to drop an item already in the\nTrash&quot;\ngiven [ItemDropped]\nwhen DropItem\nthen rejected DropFromInboxOrLibrary" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="3920" y="982" width="260" height="146" as="geometry" />
+        <mxCell id="193" value="&quot;drops an item into the Trash&quot;&#xa;given [TextCaptured]&#xa;when DropItem&#xa;then [ItemDropped]&#xa;&quot;refuses to drop an item already in the&#xa;Trash&quot;&#xa;given [ItemDropped]&#xa;when DropItem&#xa;then rejected DropFromInboxOrLibrary" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="3920" y="1030" width="260" height="146" as="geometry" />
         </mxCell>
-        <mxCell id="194" value="&quot;restores a trashed item&quot;\ngiven [ItemDropped]\nwhen RestoreItem\nthen [ItemRestored]\n&quot;refuses to restore an item not in the\nTrash&quot;\ngiven [TextCaptured]\nwhen RestoreItem\nthen rejected RestoreFromTrash" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="4240" y="982" width="260" height="146" as="geometry" />
+        <mxCell id="194" value="&quot;restores a trashed item&quot;&#xa;given [ItemDropped]&#xa;when RestoreItem&#xa;then [ItemRestored]&#xa;&quot;refuses to restore an item not in the&#xa;Trash&quot;&#xa;given [TextCaptured]&#xa;when RestoreItem&#xa;then rejected RestoreFromTrash" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="4240" y="1030" width="260" height="146" as="geometry" />
         </mxCell>
-        <mxCell id="195" value="&quot;permanently deletes a trashed item&quot;\ngiven [ItemDropped]\nwhen DeleteItem\nthen [ItemDeleted]\n&quot;refuses to delete an item not in the Trash&quot;\ngiven [TextCaptured]\nwhen DeleteItem\nthen rejected DeleteFromTrash" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="4560" y="982" width="260" height="132" as="geometry" />
+        <mxCell id="195" value="&quot;permanently deletes a trashed item&quot;&#xa;given [ItemDropped]&#xa;when DeleteItem&#xa;then [ItemDeleted]&#xa;&quot;refuses to delete an item not in the Trash&quot;&#xa;given [TextCaptured]&#xa;when DeleteItem&#xa;then rejected DeleteFromTrash" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="4560" y="1030" width="260" height="132" as="geometry" />
         </mxCell>
-        <mxCell id="196" value="&quot;shows a kept item&apos;s state&quot;\ngiven [ItemKept]\nthen view ItemStateView" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="4880" y="982" width="260" height="62" as="geometry" />
+        <mxCell id="196" value="&quot;shows a kept item&apos;s state&quot;&#xa;given [ItemKept]&#xa;then view ItemStateView" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="4880" y="1030" width="260" height="62" as="geometry" />
         </mxCell>
-        <mxCell id="197" value="&quot;lists a link without metadata&quot;\ngiven [LinkCaptured]\nthen view LinksToEnrichView" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="5200" y="982" width="260" height="62" as="geometry" />
+        <mxCell id="197" value="&quot;lists a link without metadata&quot;&#xa;given [LinkCaptured]&#xa;then view LinksToEnrichView" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="5200" y="1030" width="260" height="62" as="geometry" />
         </mxCell>
-        <mxCell id="198" value="&quot;lists an image without a thumbnail&quot;\ngiven [ImageCaptured]\nthen view ImagesToThumbnailView" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="5520" y="982" width="260" height="62" as="geometry" />
+        <mxCell id="198" value="&quot;lists an image without a thumbnail&quot;&#xa;given [ImageCaptured]&#xa;then view ImagesToThumbnailView" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="5520" y="1030" width="260" height="62" as="geometry" />
         </mxCell>
-        <mxCell id="199" value="&quot;lists an item still to purge&quot;\ngiven [ItemDeleted]\nthen view TrashToPurgeView" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="5840" y="982" width="260" height="62" as="geometry" />
+        <mxCell id="199" value="&quot;lists an item still to purge&quot;&#xa;given [ItemDeleted]&#xa;then view TrashToPurgeView" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="5840" y="1030" width="260" height="62" as="geometry" />
         </mxCell>
-        <mxCell id="200" value="&quot;empties the trash&quot;\nwhen EmptyTrash\nthen [TrashEmptied]\n&quot;refuses to empty an empty trash&quot;\nwhen EmptyTrash\nthen rejected TrashNotEmpty" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="6160" y="982" width="260" height="104" as="geometry" />
+        <mxCell id="200" value="&quot;empties the trash&quot;&#xa;when EmptyTrash&#xa;then [TrashEmptied]&#xa;&quot;refuses to empty an empty trash&quot;&#xa;when EmptyTrash&#xa;then rejected TrashNotEmpty" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="6160" y="1030" width="260" height="104" as="geometry" />
         </mxCell>
-        <mxCell id="201" value="&quot;creates a tag&quot;\nwhen CreateTag\nthen [TagCreated]\n&quot;refuses a duplicate tag name&quot;\ngiven [TagCreated]\nwhen CreateTag\nthen rejected TagNameTaken" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="6510" y="982" width="260" height="118" as="geometry" />
+        <mxCell id="201" value="&quot;creates a tag&quot;&#xa;when CreateTag&#xa;then [TagCreated]&#xa;&quot;refuses a duplicate tag name&quot;&#xa;given [TagCreated]&#xa;when CreateTag&#xa;then rejected TagNameTaken" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="6510" y="1030" width="260" height="118" as="geometry" />
         </mxCell>
-        <mxCell id="202" value="&quot;renames a tag&quot;\ngiven [TagCreated]\nwhen RenameTag\nthen [TagRenamed]\n&quot;refuses a duplicate tag name&quot;\ngiven [TagCreated]\nwhen RenameTag\nthen rejected TagNameTaken" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="6830" y="982" width="260" height="132" as="geometry" />
+        <mxCell id="202" value="&quot;renames a tag&quot;&#xa;given [TagCreated]&#xa;when RenameTag&#xa;then [TagRenamed]&#xa;&quot;refuses a duplicate tag name&quot;&#xa;given [TagCreated]&#xa;when RenameTag&#xa;then rejected TagNameTaken" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="6830" y="1030" width="260" height="132" as="geometry" />
         </mxCell>
-        <mxCell id="203" value="&quot;lists a renamed tag&quot;\ngiven [TagCreated, TagRenamed]\nthen view TagsView" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="7150" y="982" width="260" height="62" as="geometry" />
+        <mxCell id="203" value="&quot;lists a renamed tag&quot;&#xa;given [TagCreated, TagRenamed]&#xa;then view TagsView" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="7150" y="1030" width="260" height="62" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>
