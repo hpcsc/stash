@@ -196,7 +196,8 @@
 <header class="sm-head">
   <h1>Stash: stories on the flow</h1>
   <p>Each chip names the story that adds or changes that part of the flow. Select a story to light up its
-    parts, or select a part to see its stories. The stories are in
+    parts, or select a part to see its stories. The <code>APP-*</code> stories are the Flutter client: they
+    appear in the list and the dependency graph but have no parts on this flow. The stories are in
     <a href="stash.md">stash.md</a>.</p>
 </header>
 
@@ -476,11 +477,15 @@
 // One entry for each story: value is the "so that" of the story, as one sentence. deps lists its Depends on.
 const STORIES = [
   { id: "US-001", title: "Sign in with your account", value: "My stash is private and reachable from every device.", deps: [] },
+  { id: "APP-001", title: "Sign in from the app", value: "I sign in with Google and stay signed in across restarts.", deps: ["US-001"] },
   { id: "US-002", title: "Capture text into the Inbox", value: "Text I save lands in my Inbox for triage.", deps: ["US-001"] },
+  { id: "APP-002", title: "See the Inbox and capture text", value: "I see my Inbox, save text, and open an item's full text.", deps: ["US-002"] },
   { id: "US-003", title: "Capture a link into the Inbox", value: "I keep the URL and what the page is about.", deps: ["US-002"] },
   { id: "US-004", title: "Capture an image or file into the Inbox", value: "I can keep a photo or file like any item.", deps: ["US-002"] },
   { id: "US-005", title: "Keep items into the Library", value: "Kept items leave my Inbox for a tagged Library.", deps: ["US-002"] },
+  { id: "APP-003", title: "Keep items into the Library", value: "I keep an Inbox item with tags and see it in my Library.", deps: ["US-005"] },
   { id: "US-006", title: "Drop items to Trash and recover them", value: "Triage is fast and never destructive.", deps: ["US-002"] },
+  { id: "APP-004", title: "Drop items and recover from the Trash", value: "I drop items and recover them from the Trash.", deps: ["US-006"] },
   { id: "US-007", title: "Organize with tags", value: "My Library stays findable as it grows.", deps: ["US-005"] },
   { id: "US-008", title: "Search text and links", value: "I find something I kept without browsing.", deps: ["US-003", "US-005"] },
   { id: "US-009", title: "Warn on duplicate captures", value: "I don't unknowingly keep copies.", deps: ["US-003"] },
