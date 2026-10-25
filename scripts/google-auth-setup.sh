@@ -53,8 +53,9 @@ if [[ -z "$client_id" ]]; then
   echo "Then re-run with the web client ID to print the wiring:"
   echo "  $0 --client-id <id>.apps.googleusercontent.com"
 else
-  echo "Backend — set in server/.env.local:"
-  echo "  GOOGLE_CLIENT_ID=$client_id"
+  echo "Set the client ID:"
+  echo "  server/.env.local:  GOOGLE_CLIENT_ID=$client_id"
+  echo "  web/.env.local:     VITE_GOOGLE_CLIENT_ID=$client_id"
   echo
   echo "Run the app:"
   echo "  web:     cd web && npm run dev -- --port $web_port"

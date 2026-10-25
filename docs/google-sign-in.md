@@ -60,13 +60,20 @@ The API listens on `:3333`. `SESSION_SECRET` can stay at its local-dev value.
 
 ## 3. Web (Svelte)
 
+Set the Google client ID in `web/.env.local`:
+
+```sh
+VITE_GOOGLE_CLIENT_ID=<id>.apps.googleusercontent.com
+```
+
+Then run the dev server and open `http://127.0.0.1:8080`:
+
 ```sh
 cd web
 npm run dev -- --port 8080
 ```
 
-Open `http://127.0.0.1:8080`. Google sign-in for the web lands with the web `APP-*` stories;
-the API base URL comes from `VITE_API_BASE_URL` (`web/.env.local`).
+The API base URL comes from `VITE_API_BASE_URL` (default `http://127.0.0.1:3333`).
 
 ## 4. Android
 
