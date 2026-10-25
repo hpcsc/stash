@@ -8,7 +8,8 @@ its projections both in PostgreSQL.
 
 - `server/` — the Go service: the event store, the HTTP API, and the projections. Everything
   the `US-*` stories build.
-- `app/` — the Flutter client for Android and Web. Everything the `APP-*` stories build.
+- `web/` — the Svelte + TypeScript web app (triage and search).
+- `app/` — the Flutter client for Android (share target + offline queue).
 - `docs/`, `user-stories/`, `tasks/` — shared: the event model, the stories, and the plans.
 
 ## Status
