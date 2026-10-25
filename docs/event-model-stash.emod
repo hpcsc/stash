@@ -15,8 +15,9 @@ context "Identity" {
     description = "One user's sign-in state"
 
     invariants {
-      AlreadySignedIn = "an account is already signed in"
-      NotSignedIn     = "an account is not signed in"
+      NotSignedIn      = "an account is not signed in"
+      SubjectRequired  = "a sign-in must have a subject"
+      ProviderRequired = "a sign-in must have a provider"
     }
 
     slice "Sign In" {
@@ -47,7 +48,8 @@ context "Identity" {
 
       flow = <<-FLOW
         command -> event:    SignIn -> SignedIn
-        command -> rejected: SignIn -> AlreadySignedIn
+        command -> rejected: SignIn -> SubjectRequired
+        command -> rejected: SignIn -> ProviderRequired
       FLOW
 
       spec "signs the user in" {
@@ -55,10 +57,20 @@ context "Identity" {
         then = [SignedIn]
       }
 
-      spec "refuses to sign in when already signed in" {
+      spec "refuses an empty subject" {
+        when = SignIn({ subject = "" })
+        then = rejected(SubjectRequired)
+      }
+
+      spec "refuses an empty provider" {
+        when = SignIn({ provider = "" })
+        then = rejected(ProviderRequired)
+      }
+
+      spec "signing in again when already signed in records no event" {
         given = [SignedIn]
         when  = SignIn
-        then  = rejected(AlreadySignedIn)
+        then  = []
       }
     }
 

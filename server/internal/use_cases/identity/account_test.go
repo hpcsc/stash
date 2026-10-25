@@ -22,10 +22,10 @@ func TestAccount(t *testing.T) {
 			require.Equal(t, subject, a.ID())
 		})
 
-		t.Run("rejects a second sign-in while signed in", func(t *testing.T) {
+		t.Run("a second sign-in while signed in records no event", func(t *testing.T) {
 			a := given(signedIn())
 
-			require.ErrorIs(t, a.SignIn(subject, "google"), identity.ErrAlreadySignedIn)
+			require.NoError(t, a.SignIn(subject, "google"))
 			require.Empty(t, a.Recorded())
 		})
 

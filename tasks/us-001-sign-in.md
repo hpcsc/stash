@@ -13,7 +13,7 @@
 
 `docs/event-model-stash.emod` — Identity context, `Account` aggregate:
 
-- `SignIn → SignedIn`, invariant `SignedInOnce` (already signed in).
+- `SignIn → SignedIn`, idempotent (re-authentication works without a new event).
 - `SignOut → SignedOut`, invariant `SignedOutOnce` (not signed in).
 
 ## Codebase patterns to follow
@@ -55,7 +55,7 @@
 3. **Add the `Account` aggregate** with `SignIn()` / `SignOut()` and the two invariants,
    plus `TestAccount`.
    - `internal/use_cases/identity/account.go`, `account_test.go`.
-   - `SignedInOnce`: sign-in is refused when already signed in. `SignedOutOnce`: sign-out is
+   - `SignedInOnce`: sign-in is idempotent — re-authentication issues a fresh session token without a new event. `SignedOutOnce`: sign-out is
      refused when not signed in. Stream prefix must not collide with the bank example's
      `account-<uuid>`; use `identity-<id>`.
 

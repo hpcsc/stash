@@ -8,10 +8,7 @@ import (
 	"github.com/hpcsc/stash/internal/use_cases/identity/event"
 )
 
-var (
-	ErrAlreadySignedIn = errors.New("already signed in")
-	ErrNotSignedIn     = errors.New("not signed in")
-)
+var ErrNotSignedIn = errors.New("not signed in")
 
 var _ domain.Aggregate = (*Account)(nil)
 
@@ -32,14 +29,16 @@ func (a *Account) ID() string {
 }
 
 func (a *Account) SignIn(subject, provider string) error {
-	if a.signedIn {
-		return ErrAlreadySignedIn
-	}
 	if subject == "" {
 		return errors.New("subject must not be empty")
 	}
 	if provider == "" {
 		return errors.New("provider must not be empty")
+	}
+	if a.signedIn {
+		// Already signed in: a re-authentication, which only refreshes the
+		// session token. It records no new SignedIn event.
+		return nil
 	}
 
 	a.record(domain.NewEvent(&event.SignedIn{

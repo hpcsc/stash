@@ -30,7 +30,7 @@ Timeline: `SignedIn` → `SignedOut`
 
 | Command | Actor | Produces | Refused when |
 |---|---|---|---|
-| `SignIn` | User | `SignedIn` | `AlreadySignedIn` |
+| `SignIn` | User | `SignedIn` | empty subject, empty provider |
 | `SignOut` | User | `SignedOut` | `NotSignedIn` |
 
 Google is the identity provider; the provider is interchangeable. "Refuse while signed out"
