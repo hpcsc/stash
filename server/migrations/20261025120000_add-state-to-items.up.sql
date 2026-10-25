@@ -1,0 +1,2 @@
+ALTER TABLE items ADD COLUMN IF NOT EXISTS state TEXT NOT NULL DEFAULT 'inbox';
+CREATE INDEX IF NOT EXISTS idx_items_state ON items (state);

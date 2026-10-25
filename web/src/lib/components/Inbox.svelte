@@ -15,7 +15,7 @@
 
   onMount(async () => {
     try {
-      items = await listItems()
+      items = await listItems(['inbox'])
     } catch (e) {
       error = e instanceof Error ? e.message : 'Failed to load the inbox'
     } finally {
@@ -29,7 +29,7 @@
     try {
       const id = await captureText(body)
       items = [
-        { id, type: 'text', body, capturedAt: new Date().toISOString() },
+        { id, type: 'text', body, state: 'inbox', capturedAt: new Date().toISOString() },
         ...items,
       ]
     } catch (e) {

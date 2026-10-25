@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/hpcsc/stash/internal/api/response"
 	apiTest "github.com/hpcsc/stash/internal/api/test"
 	"github.com/hpcsc/stash/internal/api/use_cases/item"
@@ -80,6 +81,54 @@ func TestHandler(t *testing.T) {
 			require.Equal(t, http.StatusNotFound, w.Code)
 		})
 	})
+
+	t.Run("keep", func(t *testing.T) {
+		t.Run("dispatches a keep command", func(t *testing.T) {
+			handler := fake.NewHandler[itemCommand.Keep]()
+			bus := command.NewBus()
+			bus.Register[itemCommand.Keep](handler)
+			router := newRouter(bus, fakeReader{})
+
+			w := send(router, "POST", "/items/6f1c2a54-7b0e-4f6a-9a51-2d8f0c3e9b71/keep", "")
+
+			require.Equal(t, http.StatusOK, w.Code)
+			require.Equal(t, uuid.MustParse("6f1c2a54-7b0e-4f6a-9a51-2d8f0c3e9b71"), handler.TriggeredWithCommand().Payload.ItemID)
+		})
+
+		t.Run("rejects an invalid item id", func(t *testing.T) {
+			bus := command.NewBus()
+			bus.Register[itemCommand.Keep](fake.NewHandler[itemCommand.Keep]())
+			router := newRouter(bus, fakeReader{})
+
+			w := send(router, "POST", "/items/not-a-uuid/keep", "")
+
+			require.Equal(t, http.StatusBadRequest, w.Code)
+		})
+	})
+
+	t.Run("drop", func(t *testing.T) {
+		t.Run("dispatches a drop command", func(t *testing.T) {
+			handler := fake.NewHandler[itemCommand.Drop]()
+			bus := command.NewBus()
+			bus.Register[itemCommand.Drop](handler)
+			router := newRouter(bus, fakeReader{})
+
+			w := send(router, "POST", "/items/6f1c2a54-7b0e-4f6a-9a51-2d8f0c3e9b71/drop", "")
+
+			require.Equal(t, http.StatusOK, w.Code)
+			require.Equal(t, uuid.MustParse("6f1c2a54-7b0e-4f6a-9a51-2d8f0c3e9b71"), handler.TriggeredWithCommand().Payload.ItemID)
+		})
+
+		t.Run("rejects an invalid item id", func(t *testing.T) {
+			bus := command.NewBus()
+			bus.Register[itemCommand.Drop](fake.NewHandler[itemCommand.Drop]())
+			router := newRouter(bus, fakeReader{})
+
+			w := send(router, "POST", "/items/not-a-uuid/drop", "")
+
+			require.Equal(t, http.StatusBadRequest, w.Code)
+		})
+	})
 }
 
 type fakeReader struct {
@@ -87,7 +136,7 @@ type fakeReader struct {
 	item  *items.Item
 }
 
-func (f fakeReader) List(context.Context) ([]items.Item, error) {
+func (f fakeReader) List(_ context.Context, _ ...string) ([]items.Item, error) {
 	return f.items, nil
 }
 

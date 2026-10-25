@@ -42,6 +42,68 @@ func TestItem(t *testing.T) {
 			require.Empty(t, i.Recorded())
 		})
 	})
+
+	t.Run("keep", func(t *testing.T) {
+		t.Run("keeps an inbox item", func(t *testing.T) {
+			i := given(captured())
+
+			require.NoError(t, i.Keep(keepCmd()))
+
+			require.Equal(t, &event.ItemKept{ItemID: itemID}, onlyRecorded(t, i).Payload)
+		})
+
+		t.Run("rejects keeping an item that is not captured", func(t *testing.T) {
+			var i item.Item
+
+			require.ErrorIs(t, i.Keep(keepCmd()), item.ErrNotCaptured)
+			require.Empty(t, i.Recorded())
+		})
+
+		t.Run("rejects keeping an already-kept item", func(t *testing.T) {
+			i := given(captured(), kept())
+
+			require.ErrorIs(t, i.Keep(keepCmd()), item.ErrAlreadyKept)
+			require.Empty(t, i.Recorded())
+		})
+
+		t.Run("rejects keeping a dropped item", func(t *testing.T) {
+			i := given(captured(), dropped())
+
+			require.ErrorIs(t, i.Keep(keepCmd()), item.ErrAlreadyDropped)
+			require.Empty(t, i.Recorded())
+		})
+	})
+
+	t.Run("drop", func(t *testing.T) {
+		t.Run("drops an inbox item", func(t *testing.T) {
+			i := given(captured())
+
+			require.NoError(t, i.Drop(dropCmd()))
+
+			require.Equal(t, &event.ItemDropped{ItemID: itemID}, onlyRecorded(t, i).Payload)
+		})
+
+		t.Run("rejects dropping an item that is not captured", func(t *testing.T) {
+			var i item.Item
+
+			require.ErrorIs(t, i.Drop(dropCmd()), item.ErrNotCaptured)
+			require.Empty(t, i.Recorded())
+		})
+
+		t.Run("rejects dropping an already-dropped item", func(t *testing.T) {
+			i := given(captured(), dropped())
+
+			require.ErrorIs(t, i.Drop(dropCmd()), item.ErrAlreadyDropped)
+			require.Empty(t, i.Recorded())
+		})
+
+		t.Run("rejects dropping a kept item", func(t *testing.T) {
+			i := given(captured(), kept())
+
+			require.ErrorIs(t, i.Drop(dropCmd()), item.ErrAlreadyKept)
+			require.Empty(t, i.Recorded())
+		})
+	})
 }
 
 var (
@@ -51,6 +113,14 @@ var (
 
 func captureText() command.CaptureText {
 	return command.CaptureText{ItemID: itemID, Body: "hello", SourceApp: "chrome", SourceURL: "https://example.com", CapturedAt: capturedAt}
+}
+
+func keepCmd() command.Keep {
+	return command.Keep{ItemID: itemID}
+}
+
+func dropCmd() command.Drop {
+	return command.Drop{ItemID: itemID}
 }
 
 func given(history ...domain.Event) *item.Item {
@@ -64,6 +134,14 @@ func given(history ...domain.Event) *item.Item {
 
 func captured() domain.Event {
 	return domain.NewEvent(&event.TextCaptured{ItemID: itemID, Body: "hello", CapturedAt: capturedAt})
+}
+
+func kept() domain.Event {
+	return domain.NewEvent(&event.ItemKept{ItemID: itemID})
+}
+
+func dropped() domain.Event {
+	return domain.NewEvent(&event.ItemDropped{ItemID: itemID})
 }
 
 func onlyRecorded(t *testing.T, i *item.Item) domain.Event {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -14,6 +15,7 @@ type Item struct {
 	ID         string    `json:"id"`
 	Type       string    `json:"type"`
 	Body       string    `json:"body"`
+	State      string    `json:"state"`
 	SourceApp  string    `json:"sourceApp,omitempty"`
 	SourceURL  string    `json:"sourceUrl,omitempty"`
 	CapturedAt time.Time `json:"capturedAt"`
@@ -27,12 +29,23 @@ type Query struct {
 	pool *pgxpool.Pool
 }
 
-func (q *Query) List(ctx context.Context) ([]Item, error) {
-	rows, err := q.pool.Query(ctx, `
-		SELECT id::text, type, body, source_app, source_url, captured_at
+func (q *Query) List(ctx context.Context, states ...string) ([]Item, error) {
+	query := `
+		SELECT id::text, type, body, state, source_app, source_url, captured_at
 		FROM items
-		ORDER BY captured_at DESC
-	`)
+	`
+	var args []any
+	if len(states) > 0 {
+		placeholders := make([]string, len(states))
+		for i, s := range states {
+			placeholders[i] = fmt.Sprintf("$%d", i+1)
+			args = append(args, s)
+		}
+		query += fmt.Sprintf(" WHERE state IN (%s)", strings.Join(placeholders, ", "))
+	}
+	query += " ORDER BY captured_at DESC"
+
+	rows, err := q.pool.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list items: %w", err)
 	}
@@ -40,7 +53,7 @@ func (q *Query) List(ctx context.Context) ([]Item, error) {
 
 	return pgx.CollectRows(rows, func(r pgx.CollectableRow) (Item, error) {
 		var i Item
-		err := r.Scan(&i.ID, &i.Type, &i.Body, &i.SourceApp, &i.SourceURL, &i.CapturedAt)
+		err := r.Scan(&i.ID, &i.Type, &i.Body, &i.State, &i.SourceApp, &i.SourceURL, &i.CapturedAt)
 		return i, err
 	})
 }
@@ -48,10 +61,10 @@ func (q *Query) List(ctx context.Context) ([]Item, error) {
 func (q *Query) ByID(ctx context.Context, id string) (*Item, error) {
 	var i Item
 	err := q.pool.QueryRow(ctx, `
-		SELECT id::text, type, body, source_app, source_url, captured_at
+		SELECT id::text, type, body, state, source_app, source_url, captured_at
 		FROM items
 		WHERE id = $1
-	`, id).Scan(&i.ID, &i.Type, &i.Body, &i.SourceApp, &i.SourceURL, &i.CapturedAt)
+	`, id).Scan(&i.ID, &i.Type, &i.Body, &i.State, &i.SourceApp, &i.SourceURL, &i.CapturedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}

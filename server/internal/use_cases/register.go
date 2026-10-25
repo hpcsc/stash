@@ -9,6 +9,8 @@ import (
 	"github.com/hpcsc/stash/internal/use_cases/identity/signout"
 	"github.com/hpcsc/stash/internal/use_cases/item"
 	"github.com/hpcsc/stash/internal/use_cases/item/capturetext"
+	"github.com/hpcsc/stash/internal/use_cases/item/drop"
+	"github.com/hpcsc/stash/internal/use_cases/item/keep"
 )
 
 func RegisterEvents(reg *registry.OfEvents) {
@@ -24,4 +26,6 @@ func RegisterHandlers(bus *command.Bus, stream event.Stream) {
 	signout.Register(bus, identities)
 
 	capturetext.Register(bus, items)
+	keep.Register(bus, items)
+	drop.Register(bus, items)
 }

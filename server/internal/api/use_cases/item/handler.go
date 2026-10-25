@@ -22,7 +22,7 @@ import (
 )
 
 type ItemReader interface {
-	List(ctx context.Context) ([]items.Item, error)
+	List(ctx context.Context, states ...string) ([]items.Item, error)
 	ByID(ctx context.Context, id string) (*items.Item, error)
 }
 
@@ -47,6 +47,8 @@ func (h *handler) Routes() []*route.Route {
 		route.Protected("POST", "/items", h.capture),
 		route.Protected("GET", "/items", h.list),
 		route.Protected("GET", "/items/{id}", h.get),
+		route.Protected("POST", "/items/{id}/keep", h.keep),
+		route.Protected("POST", "/items/{id}/drop", h.dropItem),
 	}
 }
 
@@ -71,7 +73,8 @@ func (h *handler) capture(w http.ResponseWriter, req *http.Request) {
 }
 
 func (h *handler) list(w http.ResponseWriter, req *http.Request) {
-	all, err := h.items.List(req.Context())
+	states := req.URL.Query()["state"]
+	all, err := h.items.List(req.Context(), states...)
 	if err != nil {
 		_ = h.renderer.JSON(w, http.StatusInternalServerError, response.Fail(err.Error()))
 		return
@@ -95,6 +98,34 @@ func (h *handler) get(w http.ResponseWriter, req *http.Request) {
 	}
 
 	_ = h.renderer.JSON(w, http.StatusOK, response.SucceedWithData(i))
+}
+
+func (h *handler) keep(w http.ResponseWriter, req *http.Request) {
+	id, err := uuid.Parse(chi.URLParam(req, "id"))
+	if err != nil {
+		_ = h.renderer.JSON(w, http.StatusBadRequest, response.Fail("invalid item id"))
+		return
+	}
+
+	if !h.dispatch(w, req, itemCommand.Keep{ItemID: id}) {
+		return
+	}
+
+	_ = h.renderer.JSON(w, http.StatusOK, response.Succeed())
+}
+
+func (h *handler) dropItem(w http.ResponseWriter, req *http.Request) {
+	id, err := uuid.Parse(chi.URLParam(req, "id"))
+	if err != nil {
+		_ = h.renderer.JSON(w, http.StatusBadRequest, response.Fail("invalid item id"))
+		return
+	}
+
+	if !h.dispatch(w, req, itemCommand.Drop{ItemID: id}) {
+		return
+	}
+
+	_ = h.renderer.JSON(w, http.StatusOK, response.Succeed())
 }
 
 func (h *handler) decode(w http.ResponseWriter, req *http.Request, body any) bool {

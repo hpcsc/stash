@@ -11,6 +11,9 @@ import (
 )
 
 var ErrAlreadyCaptured = errors.New("item is already captured")
+var ErrAlreadyKept = errors.New("item is already kept")
+var ErrAlreadyDropped = errors.New("item is already dropped")
+var ErrNotCaptured = errors.New("item has not been captured")
 
 var _ domain.Aggregate = (*Item)(nil)
 
@@ -21,7 +24,8 @@ func StreamID(id uuid.UUID) string {
 type Item struct {
 	domain.AggregateBase
 
-	id uuid.UUID
+	id    uuid.UUID
+	state string
 }
 
 func (i *Item) ID() uuid.UUID {
@@ -46,10 +50,49 @@ func (i *Item) CaptureText(cmd command.CaptureText) error {
 	return nil
 }
 
+func (i *Item) Keep(cmd command.Keep) error {
+	if i.id == uuid.Nil {
+		return ErrNotCaptured
+	}
+	if i.state == "kept" {
+		return ErrAlreadyKept
+	}
+	if i.state == "dropped" {
+		return ErrAlreadyDropped
+	}
+
+	i.record(domain.NewEvent(&event.ItemKept{
+		ItemID: cmd.ItemID,
+	}))
+	return nil
+}
+
+func (i *Item) Drop(cmd command.Drop) error {
+	if i.id == uuid.Nil {
+		return ErrNotCaptured
+	}
+	if i.state == "dropped" {
+		return ErrAlreadyDropped
+	}
+	if i.state == "kept" {
+		return ErrAlreadyKept
+	}
+
+	i.record(domain.NewEvent(&event.ItemDropped{
+		ItemID: cmd.ItemID,
+	}))
+	return nil
+}
+
 func (i *Item) Apply(e domain.Event) {
 	switch p := e.Payload.(type) {
 	case *event.TextCaptured:
 		i.id = p.ItemID
+		i.state = "inbox"
+	case *event.ItemKept:
+		i.state = "kept"
+	case *event.ItemDropped:
+		i.state = "dropped"
 	}
 }
 

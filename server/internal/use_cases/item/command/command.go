@@ -13,3 +13,11 @@ type CaptureText struct {
 	SourceURL  string
 	CapturedAt time.Time
 }
+
+type Keep struct {
+	ItemID uuid.UUID
+}
+
+type Drop struct {
+	ItemID uuid.UUID
+}

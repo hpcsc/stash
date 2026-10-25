@@ -53,7 +53,7 @@ describe('client', () => {
         jsonResponse({
           successful: true,
           messages: [],
-          data: [{ id: '1', type: 'text', body: 'hello', capturedAt: '2026-01-01T00:00:00Z' }],
+          data: [{ id: '1', type: 'text', body: 'hello', state: 'inbox', capturedAt: '2026-01-01T00:00:00Z' }],
         }),
       ),
     )

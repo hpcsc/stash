@@ -7,4 +7,6 @@ import (
 
 func RegisterEvents(reg *registry.OfEvents) {
 	reg.Register[event.TextCaptured]()
+	reg.Register[event.ItemKept]()
+	reg.Register[event.ItemDropped]()
 }

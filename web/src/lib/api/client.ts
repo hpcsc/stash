@@ -52,13 +52,15 @@ export interface Item {
   id: string
   type: string
   body: string
+  state?: string
   sourceApp?: string
   sourceUrl?: string
   capturedAt: string
 }
 
-export async function listItems(): Promise<Item[]> {
-  const envelope = await request('GET', '/items')
+export async function listItems(states?: string[]): Promise<Item[]> {
+  const qs = states?.length ? `?${states.map((s) => `state=${encodeURIComponent(s)}`).join('&')}` : ''
+  const envelope = await request('GET', `/items${qs}`)
   return envelope.data as Item[]
 }
 

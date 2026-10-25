@@ -1,0 +1,2 @@
+DROP INDEX IF EXISTS idx_items_state;
+ALTER TABLE items DROP COLUMN IF EXISTS state;

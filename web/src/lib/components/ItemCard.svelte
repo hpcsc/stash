@@ -45,18 +45,20 @@
       <span class="source">{item.sourceApp}</span>
     {/if}
     <div class="spacer"></div>
-    <div class="actions">
-      <span role="button" tabindex="0" class="action-btn keep" onclick={handleKeep} onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleKeep(e as unknown as MouseEvent) }} title="Keep">
-        <svg width="20" height="20" viewBox="0 0 16 16" fill="none">
-          <path d="M3 8.5l3 3 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
-      </span>
-      <span role="button" tabindex="0" class="action-btn drop" onclick={handleDrop} onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleDrop(e as unknown as MouseEvent) }} title="Drop">
-        <svg width="20" height="20" viewBox="0 0 16 16" fill="none">
-          <path d="M3 4h10M5.5 4v8a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1V4M6.5 4V3a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
-      </span>
-    </div>
+    {#if !item.state || item.state === 'inbox'}
+      <div class="actions">
+        <span role="button" tabindex="0" class="action-btn keep" onclick={handleKeep} onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleKeep(e as unknown as MouseEvent) }} title="Keep">
+          <svg width="20" height="20" viewBox="0 0 16 16" fill="none">
+            <path d="M3 8.5l3 3 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </span>
+        <span role="button" tabindex="0" class="action-btn drop" onclick={handleDrop} onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleDrop(e as unknown as MouseEvent) }} title="Drop">
+          <svg width="20" height="20" viewBox="0 0 16 16" fill="none">
+            <path d="M3 4h10M5.5 4v8a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1V4M6.5 4V3a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </span>
+      </div>
+    {/if}
   </div>
 </button>
 
