@@ -81,7 +81,7 @@ The shaded chain — sign in, capture, then both triage flows, failure handling,
 deployment stories — is the critical path, six steps deep. No other chain runs deeper than
 five.
 
-The blue `APP-*` stories are the Flutter client (Android + Web). Each sits right after the
+The blue `APP-*` stories are the web app (Svelte) and the Flutter app (Android). Each sits right after the
 backend story it depends on, so the two codebases progress in visible slices — a slice is
 done only when both its endpoint and its screen work.
 

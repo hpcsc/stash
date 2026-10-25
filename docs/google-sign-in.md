@@ -1,6 +1,6 @@
 # Google sign-in setup
 
-How to point Stash at a real Google OAuth client and test sign-in from the Flutter app.
+How to point Stash at a real Google OAuth client and test sign-in from the web app or the Android app.
 
 The flow: the app obtains a Google ID token, posts it to `POST /auth/signin`, and the API
 validates the token's audience (`aud`) against `GOOGLE_CLIENT_ID`, records `SignedIn`, and
@@ -58,17 +58,15 @@ task run
 
 The API listens on `:3333`. `SESSION_SECRET` can stay at its local-dev value.
 
-## 3. Web
+## 3. Web (Svelte)
 
 ```sh
-cd app
-flutter run -d chrome --web-port 8080 \
-  --dart-define=GOOGLE_CLIENT_ID=<id>.apps.googleusercontent.com
+cd web
+npm run dev -- --port 8080
 ```
 
-Open `http://localhost:8080`, choose **Continue with Google**, pick the test user, and you land
-on the Inbox. Reload to confirm the session survives a restart (the token is restored from
-secure storage).
+Open `http://127.0.0.1:8080`. Google sign-in for the web lands with the web `APP-*` stories;
+the API base URL comes from `VITE_API_BASE_URL` (`web/.env.local`).
 
 ## 4. Android
 
@@ -89,7 +87,7 @@ On a physical device, replace `10.0.2.2` with the machine's LAN (or Tailscale) I
 
 | Symptom | Cause |
 | --- | --- |
-| "Google sign-in is not configured" | `--dart-define=GOOGLE_CLIENT_ID` was not passed to the app. |
+| "Google sign-in is not configured" | The Google client ID was not passed to the app. |
 | `401 sign-in failed` from the API | The ID token's `aud` does not match `GOOGLE_CLIENT_ID`. Use the same web client ID for the web `clientId`, the Android `serverClientId`, and the API. |
 | Web popup blocked / "origin not allowed" | The dev origin is not in the web client's authorised JavaScript origins. |
 | Android sign-in error | SHA-1 mismatch with the Android client, or the emulator has no Play services. |

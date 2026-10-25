@@ -57,6 +57,6 @@ else
   echo "  GOOGLE_CLIENT_ID=$client_id"
   echo
   echo "Run the app:"
-  echo "  web:     cd app && flutter run -d chrome --web-port $web_port --dart-define=GOOGLE_CLIENT_ID=$client_id"
+  echo "  web:     cd web && npm run dev -- --port $web_port"
   echo "  android: cd app && flutter run -d <emulator> --dart-define=GOOGLE_CLIENT_ID=$client_id --dart-define=API_BASE_URL=http://10.0.2.2:$api_port"
 fi

@@ -42,7 +42,7 @@ triages them uniformly, and is self-hostable.
 - Full-page archival / offline reading of saved links.
 - AI tagging/summarization (a possible later phase, not v1).
 - Video capture (large files are out of scope until size limits are decided).
-- Native desktop app (macOS/Windows/Linux) — desktop triage is the Flutter web app, and
+- Native desktop app (macOS/Windows/Linux) — desktop triage is the web app, and
   desktop capture is the browser extension (D12).
 
 ## 4. Core workflow
@@ -99,7 +99,7 @@ The backend is scaffolded from the `go-event-sourcing-service` template (with th
 (triage and search), a Flutter app for Android (native share-target + drift-backed offline
 queue), and a browser extension (capture). Each has its own codebase and deployment.
 
-**Auth** — token middleware (from the template) for the Flutter app and the extension;
+**Auth** — token middleware (from the template) for the web app, the Flutter app, and the extension;
 sign-in and sign-out are recorded as `SignedIn` / `SignedOut` events.
 
 ## 7. Data model
