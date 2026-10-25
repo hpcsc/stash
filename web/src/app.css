@@ -1,0 +1,26 @@
+:root {
+  --bg: #fff;
+  --text: #08060d;
+  --accent: #7a4fa3;
+
+  color-scheme: light dark;
+  color: var(--text);
+  background: var(--bg);
+
+  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.5;
+}
+
+body {
+  margin: 0;
+}
+
+main {
+  max-width: 40rem;
+  margin: 4rem auto;
+  padding: 0 1.5rem;
+}
+
+h1 {
+  color: var(--accent);
+}

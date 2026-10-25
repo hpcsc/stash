@@ -1,0 +1,49 @@
+import { apiBaseUrl } from '../config'
+
+interface Envelope {
+  successful: boolean
+  messages: string[]
+  data?: unknown
+}
+
+export class ApiError extends Error {
+  readonly status: number | undefined
+
+  constructor(message: string, status?: number) {
+    super(message)
+    this.name = 'ApiError'
+    this.status = status
+  }
+}
+
+let token: string | null = null
+
+export function setToken(value: string | null): void {
+  token = value
+}
+
+async function request(method: string, path: string, body?: object): Promise<Envelope> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (token) headers.Authorization = `Bearer ${token}`
+
+  const response = await fetch(`${apiBaseUrl}${path}`, {
+    method,
+    headers,
+    body: body === undefined ? undefined : JSON.stringify(body),
+  })
+
+  const envelope = (await response.json()) as Envelope
+  if (envelope.successful !== true) {
+    throw new ApiError(envelope.messages.join('\n') || 'request failed', response.status)
+  }
+  return envelope
+}
+
+export async function signIn(idToken: string): Promise<string> {
+  const envelope = await request('POST', '/auth/signin', { provider: 'google', idToken })
+  return (envelope.data as { token: string }).token
+}
+
+export async function signOut(): Promise<void> {
+  await request('POST', '/auth/signout')
+}
