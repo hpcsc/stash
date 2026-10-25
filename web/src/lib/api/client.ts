@@ -66,3 +66,11 @@ export async function captureText(body: string): Promise<string> {
   const envelope = await request('POST', '/items', { body })
   return (envelope.data as { id: string }).id
 }
+
+export async function keepItem(id: string, tags?: string[]): Promise<void> {
+  await request('POST', `/items/${id}/keep`, { tags })
+}
+
+export async function dropItem(id: string): Promise<void> {
+  await request('POST', `/items/${id}/drop`)
+}

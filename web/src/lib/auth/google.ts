@@ -33,8 +33,9 @@ export function init(onCredential: CredentialCallback): void {
 export async function start(): Promise<boolean> {
   await loadScript()
   if (!callback) return false
+  if (!window.google?.accounts) return false
 
-  window.google!.accounts.id.initialize({
+  window.google.accounts.id.initialize({
     client_id: googleClientId,
     callback: (response) => {
       callback?.(response.credential)
@@ -45,7 +46,8 @@ export async function start(): Promise<boolean> {
 }
 
 export function renderButton(parent: HTMLElement): void {
-  window.google!.accounts.id.renderButton(parent, {
+  if (!window.google?.accounts) return
+  window.google.accounts.id.renderButton(parent, {
     theme: 'outline',
     size: 'large',
     type: 'standard',
