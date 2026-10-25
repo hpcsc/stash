@@ -3,9 +3,11 @@ import { googleClientId } from '../config'
 type CredentialCallback = (idToken: string) => void
 
 let callback: CredentialCallback | null = null
+let loading: Promise<void> | null = null
 
 function loadScript(): Promise<void> {
-  return new Promise((resolve, reject) => {
+  if (loading) return loading
+  loading = new Promise((resolve, reject) => {
     if (window.google?.accounts) {
       resolve()
       return
@@ -18,21 +20,31 @@ function loadScript(): Promise<void> {
     script.onerror = () => reject(new Error('failed to load the Google sign-in script'))
     document.head.appendChild(script)
   })
+  return loading
 }
 
-export async function initGoogleSignIn(onCredential: CredentialCallback): Promise<void> {
+export function init(onCredential: CredentialCallback): void {
   if (!googleClientId) {
     throw new Error('Google sign-in is not configured (set VITE_GOOGLE_CLIENT_ID)')
   }
   callback = onCredential
-  await loadScript()
-  window.google!.accounts.id.initialize({
-    client_id: googleClientId,
-    callback: (response) => callback?.(response.credential),
-  })
 }
 
-export function renderGoogleButton(parent: HTMLElement): void {
+export async function start(): Promise<boolean> {
+  await loadScript()
+  if (!callback) return false
+
+  window.google!.accounts.id.initialize({
+    client_id: googleClientId,
+    callback: (response) => {
+      callback?.(response.credential)
+    },
+  })
+
+  return true
+}
+
+export function renderButton(parent: HTMLElement): void {
   window.google!.accounts.id.renderButton(parent, {
     theme: 'outline',
     size: 'large',
