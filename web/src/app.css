@@ -24,3 +24,12 @@ main {
 h1 {
   color: var(--accent);
 }
+
+.error {
+  color: #b00020;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+}
