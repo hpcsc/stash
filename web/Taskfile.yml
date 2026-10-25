@@ -1,0 +1,22 @@
+version: '3'
+
+tasks:
+  run:
+    desc: run the web app on port 8080
+    cmds:
+      - npm run dev -- --port 8080
+
+  build:
+    desc: build the web app for production
+    cmds:
+      - npm run build
+
+  check:
+    desc: type-check the web app
+    cmds:
+      - npm run check
+
+  test:
+    desc: run the web app tests
+    cmds:
+      - npm test
