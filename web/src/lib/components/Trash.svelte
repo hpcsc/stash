@@ -5,26 +5,38 @@
   import ItemDetail from './ItemDetail.svelte'
   import EmptyState from './EmptyState.svelte'
   import SkeletonCard from './SkeletonCard.svelte'
+  import SearchBar from './SearchBar.svelte'
 
   let items = $state<Item[]>([])
   let loading = $state(true)
   let error = $state<string | null>(null)
   let selected = $state<Item | null>(null)
 
-  onMount(async () => {
+  onMount(() => {
+    load()
+  })
+
+  async function load(search = '') {
+    loading = true
+    error = null
     try {
-      items = await listItems(['dropped'])
+      items = await listItems(search, ['dropped'])
     } catch (e) {
       error = e instanceof Error ? e.message : 'Failed to load trash'
     } finally {
       loading = false
     }
-  })
+  }
+
+  function handleSearch(q: string) {
+    load(q)
+  }
 </script>
 
 {#if selected}
   <ItemDetail item={selected} onback={() => (selected = null)} />
 {:else}
+  <SearchBar placeholder="Search trash…" onsearch={handleSearch} />
   {#if error}
     <div class="error-banner">
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none">

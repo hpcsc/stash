@@ -6,22 +6,35 @@
   import ItemDetail from './ItemDetail.svelte'
   import EmptyState from './EmptyState.svelte'
   import SkeletonCard from './SkeletonCard.svelte'
+  import SearchBar from './SearchBar.svelte'
 
   let items = $state<Item[]>([])
   let loading = $state(true)
   let saving = $state(false)
   let error = $state<string | null>(null)
   let selected = $state<Item | null>(null)
+  let query = $state('')
 
-  onMount(async () => {
+  onMount(() => {
+    load()
+  })
+
+  async function load(search = '') {
+    loading = true
+    error = null
     try {
-      items = await listItems(['inbox'])
+      items = await listItems(search, ['inbox'])
     } catch (e) {
       error = e instanceof Error ? e.message : 'Failed to load the inbox'
     } finally {
       loading = false
     }
-  })
+  }
+
+  function handleSearch(q: string) {
+    query = q
+    load(q)
+  }
 
   async function save(body: string) {
     saving = true
@@ -64,6 +77,8 @@
   <ItemDetail item={selected} onback={() => (selected = null)} />
 {:else}
   <CaptureForm {saving} onsave={save} />
+
+  <SearchBar placeholder="Search inbox…" onsearch={handleSearch} />
 
   {#if error}
     <div class="error-banner">

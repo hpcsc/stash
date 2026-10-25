@@ -29,19 +29,33 @@ type Query struct {
 	pool *pgxpool.Pool
 }
 
-func (q *Query) List(ctx context.Context, states ...string) ([]Item, error) {
+func (q *Query) List(ctx context.Context, search string, states ...string) ([]Item, error) {
 	query := `
 		SELECT id::text, type, body, state, source_app, source_url, captured_at
 		FROM items
 	`
 	var args []any
+	var clauses []string
+	argIdx := 1
+
+	if search != "" {
+		clauses = append(clauses, fmt.Sprintf("body ILIKE '%%' || $%d || '%%'", argIdx))
+		args = append(args, search)
+		argIdx++
+	}
+
 	if len(states) > 0 {
 		placeholders := make([]string, len(states))
 		for i, s := range states {
-			placeholders[i] = fmt.Sprintf("$%d", i+1)
+			placeholders[i] = fmt.Sprintf("$%d", argIdx)
 			args = append(args, s)
+			argIdx++
 		}
-		query += fmt.Sprintf(" WHERE state IN (%s)", strings.Join(placeholders, ", "))
+		clauses = append(clauses, fmt.Sprintf("state IN (%s)", strings.Join(placeholders, ", ")))
+	}
+
+	if len(clauses) > 0 {
+		query += " WHERE " + strings.Join(clauses, " AND ")
 	}
 	query += " ORDER BY captured_at DESC"
 

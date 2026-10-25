@@ -58,9 +58,12 @@ export interface Item {
   capturedAt: string
 }
 
-export async function listItems(states?: string[]): Promise<Item[]> {
-  const qs = states?.length ? `?${states.map((s) => `state=${encodeURIComponent(s)}`).join('&')}` : ''
-  const envelope = await request('GET', `/items${qs}`)
+export async function listItems(search?: string, states?: string[]): Promise<Item[]> {
+  const params = new URLSearchParams()
+  if (search) params.set('q', search)
+  states?.forEach((s) => params.append('state', s))
+  const qs = params.toString()
+  const envelope = await request('GET', `/items${qs ? `?${qs}` : ''}`)
   return envelope.data as Item[]
 }
 

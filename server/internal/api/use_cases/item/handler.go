@@ -22,7 +22,7 @@ import (
 )
 
 type ItemReader interface {
-	List(ctx context.Context, states ...string) ([]items.Item, error)
+	List(ctx context.Context, search string, states ...string) ([]items.Item, error)
 	ByID(ctx context.Context, id string) (*items.Item, error)
 }
 
@@ -73,8 +73,9 @@ func (h *handler) capture(w http.ResponseWriter, req *http.Request) {
 }
 
 func (h *handler) list(w http.ResponseWriter, req *http.Request) {
+	search := req.URL.Query().Get("q")
 	states := req.URL.Query()["state"]
-	all, err := h.items.List(req.Context(), states...)
+	all, err := h.items.List(req.Context(), search, states...)
 	if err != nil {
 		_ = h.renderer.JSON(w, http.StatusInternalServerError, response.Fail(err.Error()))
 		return

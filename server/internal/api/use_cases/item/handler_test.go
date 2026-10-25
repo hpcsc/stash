@@ -136,7 +136,7 @@ type fakeReader struct {
 	item  *items.Item
 }
 
-func (f fakeReader) List(_ context.Context, _ ...string) ([]items.Item, error) {
+func (f fakeReader) List(_ context.Context, _ string, _ ...string) ([]items.Item, error) {
 	return f.items, nil
 }
 

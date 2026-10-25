@@ -53,7 +53,7 @@ func TestProjection(t *testing.T) {
 		err := projection.NewProjector(items.NewProjection(), pool, checkpointStore, sub, test.DiscardLogger()).Start(context.Background())
 		require.ErrorIs(t, err, event.ErrSubscriptionEnded)
 
-		all, err := items.NewQuery(pool).List(context.Background())
+		all, err := items.NewQuery(pool).List(context.Background(), "")
 		require.NoError(t, err)
 		require.Len(t, all, 2)
 		require.Equal(t, "newer", all[0].Body)

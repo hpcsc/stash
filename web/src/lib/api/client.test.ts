@@ -47,21 +47,32 @@ describe('client', () => {
   })
 
   it('listItems returns the items', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue(
-        jsonResponse({
-          successful: true,
-          messages: [],
-          data: [{ id: '1', type: 'text', body: 'hello', state: 'inbox', capturedAt: '2026-01-01T00:00:00Z' }],
-        }),
-      ),
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({
+        successful: true,
+        messages: [],
+        data: [{ id: '1', type: 'text', body: 'hello', state: 'inbox', capturedAt: '2026-01-01T00:00:00Z' }],
+      }),
     )
+    vi.stubGlobal('fetch', fetchMock)
 
     const items = await listItems()
 
     expect(items).toHaveLength(1)
     expect(items[0].body).toBe('hello')
+  })
+
+  it('listItems passes search and state query params', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({ successful: true, messages: [], data: [] }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    await listItems('hello', ['inbox'])
+
+    const [url] = fetchMock.mock.calls[0]
+    expect(url).toContain('q=hello')
+    expect(url).toContain('state=inbox')
   })
 
   it('captureText posts the body and returns the id', async () => {
