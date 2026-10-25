@@ -26,6 +26,7 @@ type Item struct {
 
 	id    uuid.UUID
 	state string
+	tags  []uuid.UUID
 }
 
 func (i *Item) ID() uuid.UUID {
@@ -64,6 +65,12 @@ func (i *Item) Keep(cmd command.Keep) error {
 	i.record(domain.NewEvent(&event.ItemKept{
 		ItemID: cmd.ItemID,
 	}))
+	if len(cmd.TagIDs) > 0 {
+		i.record(domain.NewEvent(&event.ItemTagged{
+			ItemID: cmd.ItemID,
+			TagIDs: cmd.TagIDs,
+		}))
+	}
 	return nil
 }
 
@@ -93,6 +100,8 @@ func (i *Item) Apply(e domain.Event) {
 		i.state = "kept"
 	case *event.ItemDropped:
 		i.state = "dropped"
+	case *event.ItemTagged:
+		i.tags = p.TagIDs
 	}
 }
 

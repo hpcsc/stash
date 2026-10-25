@@ -52,6 +52,19 @@ func TestItem(t *testing.T) {
 			require.Equal(t, &event.ItemKept{ItemID: itemID}, onlyRecorded(t, i).Payload)
 		})
 
+		t.Run("keeps an inbox item with tags", func(t *testing.T) {
+			i := given(captured())
+			cmd := keepCmd()
+			cmd.TagIDs = []uuid.UUID{uuid.New(), uuid.New()}
+
+			require.NoError(t, i.Keep(cmd))
+
+			recorded := i.Recorded()
+			require.Len(t, recorded, 2)
+			require.Equal(t, &event.ItemKept{ItemID: itemID}, recorded[0].Payload)
+			require.Equal(t, cmd.TagIDs, recorded[1].Payload.(*event.ItemTagged).TagIDs)
+		})
+
 		t.Run("rejects keeping an item that is not captured", func(t *testing.T) {
 			var i item.Item
 

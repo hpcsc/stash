@@ -76,3 +76,18 @@ export async function keepItem(id: string, tags?: string[]): Promise<void> {
 export async function dropItem(id: string): Promise<void> {
   await request('POST', `/items/${id}/drop`)
 }
+
+export interface Tag {
+  id: string
+  name: string
+}
+
+export async function listTags(): Promise<Tag[]> {
+  const envelope = await request('GET', '/tags')
+  return envelope.data as Tag[]
+}
+
+export async function createTag(name: string): Promise<string> {
+  const envelope = await request('POST', '/tags', { name })
+  return (envelope.data as { id: string }).id
+}

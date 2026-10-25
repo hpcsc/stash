@@ -11,16 +11,21 @@ import (
 	"github.com/hpcsc/stash/internal/use_cases/item/capturetext"
 	"github.com/hpcsc/stash/internal/use_cases/item/drop"
 	"github.com/hpcsc/stash/internal/use_cases/item/keep"
+	"github.com/hpcsc/stash/internal/use_cases/tag"
+	"github.com/hpcsc/stash/internal/use_cases/tag/createtag"
+	"github.com/hpcsc/stash/internal/use_cases/tag/renametag"
 )
 
 func RegisterEvents(reg *registry.OfEvents) {
 	identity.RegisterEvents(reg)
 	item.RegisterEvents(reg)
+	tag.RegisterEvents(reg)
 }
 
 func RegisterHandlers(bus *command.Bus, stream event.Stream) {
 	identities := identity.NewRepository(stream)
 	items := item.NewRepository(stream)
+	tags := tag.NewRepository(stream)
 
 	signin.Register(bus, identities)
 	signout.Register(bus, identities)
@@ -28,4 +33,7 @@ func RegisterHandlers(bus *command.Bus, stream event.Stream) {
 	capturetext.Register(bus, items)
 	keep.Register(bus, items)
 	drop.Register(bus, items)
+
+	createtag.Register(bus, tags)
+	renametag.Register(bus, tags)
 }

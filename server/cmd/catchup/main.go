@@ -18,6 +18,8 @@ import (
 	"github.com/hpcsc/stash/internal/domain/projection"
 	"github.com/hpcsc/stash/internal/use_cases"
 	"github.com/hpcsc/stash/internal/use_cases/item/items"
+	"github.com/hpcsc/stash/internal/use_cases/item/itemtags"
+	"github.com/hpcsc/stash/internal/use_cases/tag/tags"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -58,6 +60,8 @@ func consumers(pool *pgxpool.Pool, logger *slog.Logger) []*consumer.Consumer {
 
 	return []*consumer.Consumer{
 		projection.NewProjector(items.NewProjection(), pool, checkpointStore, eventSubscription, logger),
+		projection.NewProjector(tags.NewProjection(), pool, checkpointStore, eventSubscription, logger),
+		projection.NewProjector(itemtags.NewProjection(), pool, checkpointStore, eventSubscription, logger),
 	}
 }
 

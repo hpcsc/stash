@@ -107,7 +107,10 @@ func (h *handler) keep(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if !h.dispatch(w, req, itemCommand.Keep{ItemID: id}) {
+	var body KeepRequest
+	_ = json.NewDecoder(req.Body).Decode(&body)
+
+	if !h.dispatch(w, req, itemCommand.Keep{ItemID: id, TagIDs: parseTagIDs(body.Tags)}) {
 		return
 	}
 
