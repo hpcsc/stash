@@ -47,3 +47,22 @@ export async function signIn(idToken: string): Promise<string> {
 export async function signOut(): Promise<void> {
   await request('POST', '/auth/signout')
 }
+
+export interface Item {
+  id: string
+  type: string
+  body: string
+  sourceApp?: string
+  sourceUrl?: string
+  capturedAt: string
+}
+
+export async function listItems(): Promise<Item[]> {
+  const envelope = await request('GET', '/items')
+  return envelope.data as Item[]
+}
+
+export async function captureText(body: string): Promise<string> {
+  const envelope = await request('POST', '/items', { body })
+  return (envelope.data as { id: string }).id
+}
