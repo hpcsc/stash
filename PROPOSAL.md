@@ -77,17 +77,11 @@ current page (`link`), and a right-clicked image (`image`) — posting to the sa
 ## 6. Architecture
 
 ```
-┌─────────────────────────────┐        ┌───────────────────────────────────────────┐
-│  Flutter app (Android+Web)  │  JSON  │  Go service (event-sourced, Postgres)      │
-│  - share target (Android)   │ ─────► │  cmd/api      HTTP API (chi, token auth)   │
-│  - Inbox/Library/Trash UI   │ HTTPS  │  cmd/catchup  projections + reactions       │
-│  - offline queue (drift)    │        │  use_cases/account, item, trash, tag       │
-└─────────────────────────────┘        │  events table (append-only) + read models  │
-┌─────────────────────────────┐        │  storage: Disk / S3 (file bytes)          │
-│  Browser extension          │  JSON  └───────────────────────────────────────────┘
-│  (Chrome, then Firefox)     │ ─────►
-│  text / link / image        │ HTTPS
-└─────────────────────────────┘
+                            ┌────────────────────────────────────┐
+Web app (Svelte + TS)  ───► │ Go service (event-sourced, Postgres) │
+Flutter app (Android)  ───► │ cmd/api, cmd/catchup, use_cases      │
+Browser extension (JS) ───► │ storage: Disk / S3 (file bytes)      │
+                            └────────────────────────────────────┘
 ```
 
 The backend is scaffolded from the `go-event-sourcing-service` template (with the
@@ -101,10 +95,9 @@ The backend is scaffolded from the `go-event-sourcing-service` template (with th
 - **Files** — a `storage` behaviour (Disk for self-hosted, S3 for cloud) holds the bytes;
   the event stores only the `file_path` reference. This is new to the template.
 
-**Client** — one Flutter codebase targeting Android and Web. Android registers a native
-share-target (`receive_sharing_intent`) so Stash appears in the system share sheet; a
-drift-backed offline queue posts to the API when connectivity returns. Web runs the same
-triage/search UI.
+**Client** — three separate clients over the same JSON API: a Svelte + TypeScript web app
+(triage and search), a Flutter app for Android (native share-target + drift-backed offline
+queue), and a browser extension (capture). Each has its own codebase and deployment.
 
 **Auth** — token middleware (from the template) for the Flutter app and the extension;
 sign-in and sign-out are recorded as `SignedIn` / `SignedOut` events.
@@ -186,8 +179,7 @@ Auth is the token middleware from the template; sign-in and sign-out are recorde
 
 ## 9. Triage UX
 
-Both surfaces — the Flutter web app and the Flutter Android app — are one codebase and
-offer the same three views and the same keep/drop actions.
+The web app and the Android app offer the same three views and the same keep/drop actions.
 
 - **Inbox** — list of unsorted items. Swipe right = **Keep**, swipe left = **Drop**;
   tap opens detail with the same two actions plus tag assignment.
@@ -217,10 +209,11 @@ offer the same three views and the same keep/drop actions.
 | D9 | Categories = tags (many-to-many) | Flatter and more flexible than folders |
 | D10 | Drop = soft-delete to Trash | Recoverable, then emptyable |
 | D11 | Event sourcing: store + projections both in Postgres, async catchup consumer | No second event store; template's `LISTEN/NOTIFY` loop; read models eventually consistent |
-| D12 | Desktop triage = Flutter web; desktop capture = browser extension (text + link + image); no native desktop app | Web triage is already the Flutter app; the extension is the desktop analogue of the share sheet |
+| D12 | Desktop triage = the web app; desktop capture = browser extension (text + link + image); no native desktop app | Web triage is the same web app; the extension is the desktop analogue of the share sheet |
 | D13 | File size cap = 25 MB; video excluded | Keeps storage bounded; over-cap files are rejected with a clear message |
 | D14 | Adopt `go-event-sourcing-service` template; module `github.com/hpcsc/stash`; event namespace `stash` | Reuse the proven event store, subscription, and consumer loop |
 | D15 | Package naming `use_cases` (not `usecase`) | User's convention; template renamed to match |
+| D16 | Web client = Svelte + TypeScript (Vite); Flutter = Android only | Flutter web added a whole toolchain for a simple triage UI. The web app and the browser extension stay separate (different deployment). Supersedes D5's web target |
 
 ## 12. Milestones
 
@@ -228,7 +221,7 @@ offer the same three views and the same keep/drop actions.
 |---|---|---|
 | **M0** | This proposal | Decisions D1–D15 confirmed |
 | **M1** | Scaffold from template + implement `item` and `tag` domains | Aggregates, events, commands, use cases, projections (items, tags, item_tags), migrations, API handlers; tests green |
-| **M2** | Flutter app (Android + Web) | auth, Inbox/Library/Trash screens working against the API, running in a browser and on a device/emulator |
+| **M2** | Web app (Svelte) + Flutter app (Android) | auth, Inbox/Library/Trash screens working against the API, running in a browser and on a device/emulator |
 | **M3** | Android share target + offline queue | share text/image/link/file from any app → appears in Inbox; offline queue syncs |
 | **M4** | Browser extension (Chrome, then Firefox) | save selection (text), save page (link), save image (right-click) → all appear in Inbox |
 | **M5** | Polish | image thumbnails, tag management, search UX, error/retry states |
@@ -257,4 +250,4 @@ offer the same three views and the same keep/drop actions.
 
 ---
 
-*All decisions D1–D15 confirmed — ready for M1.*
+*All decisions D1–D16 confirmed.*
