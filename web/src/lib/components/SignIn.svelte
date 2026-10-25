@@ -10,9 +10,13 @@
 <div class="signin">
   <div class="hero">
     <div class="logo">
-      <svg width="56" height="56" viewBox="0 0 28 28" fill="none">
-        <rect width="28" height="28" rx="6" fill="var(--color-accent)" />
-        <path d="M7 10h14M7 14h14M7 18h10" stroke="var(--color-surface)" stroke-width="2" stroke-linecap="round" />
+      <svg width="56" height="56" viewBox="0 0 32 32" fill="none">
+        <rect width="32" height="32" rx="8" fill="var(--color-accent)" />
+        <circle cx="20" cy="9" r="2.5" fill="var(--color-surface)" />
+        <circle cx="13" cy="14" r="2.5" fill="var(--color-surface)" />
+        <circle cx="19" cy="18" r="2.5" fill="var(--color-surface)" />
+        <circle cx="13" cy="23" r="2.5" fill="var(--color-surface)" />
+        <path d="M19 11l-4 2M14 16l4 1M18 20l-4 2" stroke="var(--color-surface)" stroke-width="1.5" stroke-linecap="round" opacity="0.5" />
       </svg>
     </div>
     <h1 class="title">Stash</h1>
