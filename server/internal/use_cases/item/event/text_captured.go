@@ -18,19 +18,3 @@ type TextCaptured struct {
 func (TextCaptured) EventType() string {
 	return domainEvent.Namespace + ".text-captured"
 }
-
-type ItemKept struct {
-	ItemID uuid.UUID `json:"itemId"`
-}
-
-func (ItemKept) EventType() string {
-	return domainEvent.Namespace + ".item-kept"
-}
-
-type ItemDropped struct {
-	ItemID uuid.UUID `json:"itemId"`
-}
-
-func (ItemDropped) EventType() string {
-	return domainEvent.Namespace + ".item-dropped"
-}
