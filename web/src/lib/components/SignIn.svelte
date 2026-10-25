@@ -3,9 +3,9 @@
   import { initGoogleSignIn, renderGoogleButton } from '../auth/google'
   import { signIn } from '../auth/session'
 
-  let button: HTMLDivElement
   let error = $state<string | null>(null)
   let signingIn = $state(false)
+  let ready = $state(false)
 
   onMount(async () => {
     try {
@@ -16,15 +16,18 @@
           await signIn(idToken)
         } catch (e) {
           error = e instanceof Error ? e.message : 'sign-in failed'
-        } finally {
           signingIn = false
         }
       })
-      renderGoogleButton(button)
+      ready = true
     } catch (e) {
       error = e instanceof Error ? e.message : 'sign-in failed'
     }
   })
+
+  function renderButton(node: HTMLDivElement) {
+    renderGoogleButton(node)
+  }
 </script>
 
 <main>
@@ -37,7 +40,9 @@
 
   {#if signingIn}
     <p>Signing in…</p>
+  {:else if ready}
+    <div use:renderButton></div>
+  {:else}
+    <p>Loading…</p>
   {/if}
-
-  <div bind:this={button}></div>
 </main>
