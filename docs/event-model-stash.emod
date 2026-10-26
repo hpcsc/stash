@@ -675,7 +675,6 @@ context "Item" {
 
       automation "EmptyTrashReactor" {
         on      = TrashEmptied
-        reads   = TrashToPurgeView
         command = DeleteItem
       }
 
@@ -753,23 +752,6 @@ context "Item" {
       }
     }
 
-    slice "View Trash To Purge" {
-      description = "The items an empty-trash still needs to delete"
-
-      view "TrashToPurgeView" {
-        description = "Items named in an empty-trash that are not yet deleted"
-        subscribes  = [TrashEmptied, ItemDeleted]
-
-        fields {
-          itemId = required(uuid)
-        }
-      }
-
-      spec "lists an item still to purge" {
-        given = [ItemDeleted]
-        then  = view(TrashToPurgeView)
-      }
-    }
   }
 
   aggregate "Trash" {

@@ -127,8 +127,11 @@ Timeline: `ItemDropped` → (`ItemRestored` / `ItemDeleted`) → `TrashEmptied` 
 `TrashEmptied` is the single user-facing fact on the `Trash` aggregate; it carries the
 explicit `itemIds` resolved at command time. A reactor fans it out to one `DeleteItem` per
 item, so each item's own stream ends in `ItemDeleted` and the `Item` aggregate stays
-self-contained. The fan-out is safe to run twice: a repeated `DeleteItem` is refused by
-`DeleteFromTrash`.
+self-contained. The fan-out is safe to run twice: the reactor derives each command ID from
+the `TrashEmptied` event and the item ID, so a replay re-issues the same command, and
+`DeleteFromTrash` refuses the second delete for that item. A delete that already happened
+is skipped; any other failure is logged and the remaining items are still processed, so a
+bad item cannot stall the trash stream.
 
 | Trigger | Reactor | Command | Result |
 |---|---|---|---|
@@ -172,7 +175,6 @@ empty state.
 | `TagsView` | `TagCreated`, `TagRenamed` | Tag names | Tags screen |
 | `LinksToEnrichView` | `LinkCaptured`, `LinkMetadataFetched` | Links still needing metadata | LinkMetadataReactor |
 | `ImagesToThumbnailView` | `ImageCaptured`, `ThumbnailGenerated`, `NoteCaptured`, `ImageThumbnailGenerated` | Images still needing thumbnails | ThumbnailReactor |
-| `TrashToPurgeView` | `TrashEmptied`, `ItemDeleted` | Items an empty-trash still owes a delete | EmptyTrashReactor |
 
 The items read model is split into content (`ItemsView`) and state (`ItemStateView`) —
 the same content-vs-location boundary as the events. At implementation these two join into
@@ -219,7 +221,7 @@ fetch). No saga, process manager, policy, or scheduler.
 | 5 | Capture file | Item | `FileCaptured` | `CaptureFile` | `ItemsView` |
 | 6 | Keep + tag | Item | `ItemKept`, `ItemTagged` | `KeepItem`, `TagItem` | `ItemsView`, `ItemTagsView`, `ItemStateView` |
 | 7 | Drop / restore / delete | Item | `ItemDropped`, `ItemRestored`, `ItemDeleted` | `DropItem`, `RestoreItem`, `DeleteItem` | `ItemStateView` |
-| 8 | Empty trash | Trash | `TrashEmptied`, `ItemDeleted` | `EmptyTrash`, `DeleteItem` | `TrashToPurgeView` |
+| 8 | Empty trash | Trash | `TrashEmptied`, `ItemDeleted` | `EmptyTrash`, `DeleteItem` | `ItemStateView` |
 | 9 | Tags | Tag | `TagCreated`, `TagRenamed` | `CreateTag`, `RenameTag` | `TagsView` |
 | 10 | Capture note with inline images | Item | `NoteCaptured`, `ImageThumbnailGenerated` | `CaptureNote`, `RecordImageThumbnail` | `ItemsView`, `ImagesToThumbnailView` |
 

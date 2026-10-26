@@ -284,11 +284,6 @@
             <mxGeometry x="5520" y="374" width="240" height="55" as="geometry" />
           </mxCell>
         </object>
-        <object label="TrashToPurgeView" tooltip="Items named in an empty-trash that are not yet deleted" id="65">
-          <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontFamily=Helvetica;" vertex="1" parent="1">
-            <mxGeometry x="5840" y="374" width="240" height="55" as="geometry" />
-          </mxCell>
-        </object>
         <object label="Empty Trash (User)" tooltip="The trash&apos;s empty action" id="66">
           <mxCell style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#333333;fontFamily=Helvetica;" vertex="1" parent="1">
             <mxGeometry x="6170" y="142" width="240" height="55" as="geometry" />
@@ -657,9 +652,6 @@
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="156" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;fontFamily=Helvetica;strokeColor=#333333;endArrow=classic;" edge="1" parent="1" source="65" target="61">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
         <mxCell id="157" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;fontFamily=Helvetica;strokeColor=#333333;endArrow=classic;" edge="1" parent="1" source="61" target="59">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
@@ -724,22 +716,6 @@
             <Array as="points">
               <mxPoint x="2806" y="633" />
               <mxPoint x="5520" y="633" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="166" style="edgeStyle=orthogonalEdgeStyle;html=1;fontFamily=Helvetica;strokeColor=#82b366;fontSize=10;endArrow=classic;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=1;entryDx=0;entryDy=0;curved=1;" edge="1" parent="1" source="69" target="65">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="6326" y="633" />
-              <mxPoint x="5840" y="633" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="167" style="edgeStyle=orthogonalEdgeStyle;html=1;fontFamily=Helvetica;strokeColor=#82b366;fontSize=10;endArrow=classic;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=1;entryDx=0;entryDy=0;curved=1;" edge="1" parent="1" source="60" target="65">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="4726" y="633" />
-              <mxPoint x="5840" y="633" />
             </Array>
           </mxGeometry>
         </mxCell>
