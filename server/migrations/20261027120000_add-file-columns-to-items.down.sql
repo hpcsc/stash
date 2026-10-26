@@ -1,0 +1,2 @@
+ALTER TABLE items DROP COLUMN IF EXISTS file_path;
+ALTER TABLE items DROP COLUMN IF EXISTS thumbnail_path;

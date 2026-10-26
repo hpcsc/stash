@@ -107,6 +107,58 @@ func TestItem(t *testing.T) {
 		})
 	})
 
+	t.Run("capture image", func(t *testing.T) {
+		t.Run("captures an image into the inbox", func(t *testing.T) {
+			var i item.Item
+			cmd := captureImage()
+
+			require.NoError(t, i.CaptureImage(cmd))
+
+			require.Equal(t, &event.ImageCaptured{
+				ItemID:     cmd.ItemID,
+				FileRef:    "images/photo.jpg",
+				CapturedAt: capturedAt,
+			}, onlyRecorded(t, &i).Payload)
+			require.Equal(t, cmd.ItemID, i.ID())
+		})
+
+		t.Run("rejects a second capture", func(t *testing.T) {
+			i := given(imageCaptured())
+
+			require.ErrorIs(t, i.CaptureImage(captureImage()), item.ErrAlreadyCaptured)
+			require.Empty(t, i.Recorded())
+		})
+
+		t.Run("rejects an empty file ref", func(t *testing.T) {
+			var i item.Item
+			cmd := captureImage()
+			cmd.FileRef = ""
+
+			require.Error(t, i.CaptureImage(cmd))
+			require.Empty(t, i.Recorded())
+		})
+	})
+
+	t.Run("record thumbnail", func(t *testing.T) {
+		t.Run("records a thumbnail for an image item", func(t *testing.T) {
+			i := given(imageCaptured())
+
+			require.NoError(t, i.RecordThumbnail("thumbnails/photo.jpg"))
+
+			require.Equal(t, &event.ThumbnailGenerated{
+				ItemID:       itemID,
+				ThumbnailRef: "thumbnails/photo.jpg",
+			}, onlyRecorded(t, i).Payload)
+		})
+
+		t.Run("rejects thumbnail for an image that already has one", func(t *testing.T) {
+			i := given(imageCaptured(), thumbnailGenerated())
+
+			require.ErrorIs(t, i.RecordThumbnail("new-thumb.jpg"), item.ErrThumbnailAlreadyRecorded)
+			require.Empty(t, i.Recorded())
+		})
+	})
+
 	t.Run("keep", func(t *testing.T) {
 		t.Run("keeps an inbox item", func(t *testing.T) {
 			i := given(captured())
@@ -200,6 +252,14 @@ func captureLink() command.CaptureLink {
 	}
 }
 
+func captureImage() command.CaptureImage {
+	return command.CaptureImage{
+		ItemID:     itemID,
+		FileRef:    "images/photo.jpg",
+		CapturedAt: capturedAt,
+	}
+}
+
 func keepCmd() command.Keep {
 	return command.Keep{ItemID: itemID}
 }
@@ -227,6 +287,14 @@ func linkCaptured() domain.Event {
 
 func linkMetadataFetched() domain.Event {
 	return domain.NewEvent(&event.LinkMetadataFetched{ItemID: itemID, Title: "Example Page", Description: "A page for examples"})
+}
+
+func imageCaptured() domain.Event {
+	return domain.NewEvent(&event.ImageCaptured{ItemID: itemID, FileRef: "images/photo.jpg", CapturedAt: capturedAt})
+}
+
+func thumbnailGenerated() domain.Event {
+	return domain.NewEvent(&event.ThumbnailGenerated{ItemID: itemID, ThumbnailRef: "thumbnails/photo.jpg"})
 }
 
 func kept() domain.Event {

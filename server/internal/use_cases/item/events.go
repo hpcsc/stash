@@ -8,7 +8,9 @@ import (
 func RegisterEvents(reg *registry.OfEvents) {
 	reg.Register[event.TextCaptured]()
 	reg.Register[event.LinkCaptured]()
+	reg.Register[event.ImageCaptured]()
 	reg.Register[event.LinkMetadataFetched]()
+	reg.Register[event.ThumbnailGenerated]()
 	reg.Register[event.ItemKept]()
 	reg.Register[event.ItemDropped]()
 	reg.Register[event.ItemTagged]()

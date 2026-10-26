@@ -7,5 +7,6 @@ type Config struct {
 	SessionSecret  string   `env:"SESSION_SECRET"`
 	GoogleClientID string   `env:"GOOGLE_CLIENT_ID"`
 	AllowedOrigins []string `env:"ALLOWED_ORIGINS" envSeparator:","`
+	StorageDir     string   `env:"STORAGE_DIR" envDefault:"./data"`
 	DB             config.DB
 }
