@@ -1,6 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import { listItems, captureText, captureLink, keepItem, dropItem, type Item } from '../api/client'
+  import { connect, onMessage } from '../api/ws'
+  import { token } from '../auth/session'
   import CaptureForm from './CaptureForm.svelte'
   import ItemCard from './ItemCard.svelte'
   import ItemDetail from './ItemDetail.svelte'
@@ -19,6 +21,24 @@
 
   onMount(() => {
     load()
+
+    const unsubToken = token.subscribe((t) => {
+      if (t) connect(t)
+    })
+
+    const unsubMessages = onMessage((msg) => {
+      if (msg.type === 'link-metadata-fetched') {
+        const data = msg.data as { id: string; title: string; description: string }
+        items = items.map((i) =>
+          i.id === data.id ? { ...i, title: data.title, description: data.description } : i,
+        )
+      }
+    })
+
+    return () => {
+      unsubToken()
+      unsubMessages()
+    }
   })
 
   async function load(search = '') {
