@@ -2,6 +2,7 @@
   import type { Item } from '../api/client'
   import { fileUrl } from '../api/client'
   import { formatDate } from '../time'
+  import { formatFileSize } from '../format'
 
   interface Props {
     item: Item
@@ -33,6 +34,19 @@
 
   {#if item.type === 'image' && fullImage}
     <img class="full-image" src={fullImage} alt="" />
+  {:else if item.type === 'file'}
+    <div class="file-detail">
+      <span class="file-icon">📎</span>
+      <div class="file-info">
+        <p class="file-name">{item.fileName || 'File'}</p>
+        {#if item.fileSize}
+          <p class="file-size">{formatFileSize(item.fileSize)}</p>
+        {/if}
+      </div>
+      {#if item.filePath}
+        <a class="download-btn" href={fileUrl(item.filePath)} download={item.fileName}>Download</a>
+      {/if}
+    </div>
   {:else}
     <p class="body">{item.title || item.body}</p>
   {/if}
@@ -146,6 +160,55 @@
     object-fit: contain;
     border-radius: var(--radius-md);
     margin-bottom: var(--space-6);
+  }
+
+  .file-detail {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    margin-bottom: var(--space-6);
+    padding: var(--space-4);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+  }
+
+  .file-icon {
+    font-size: var(--text-2xl);
+  }
+
+  .file-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .file-name {
+    margin: 0;
+    font-size: var(--text-base);
+    font-weight: var(--weight-medium);
+    color: var(--color-text);
+    word-break: break-all;
+  }
+
+  .file-size {
+    margin: var(--space-1) 0 0;
+    font-size: var(--text-sm);
+    color: var(--color-text-tertiary);
+  }
+
+  .download-btn {
+    padding: var(--space-2) var(--space-4);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: white;
+    background: var(--color-accent);
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .download-btn:hover {
+    background: var(--color-accent-hover);
   }
 
   .link-url {

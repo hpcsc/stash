@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { listItems, captureText, captureLink, captureImage, keepItem, dropItem, type Item } from '../api/client'
+  import { listItems, captureText, captureLink, captureAttachment, keepItem, dropItem, type Item } from '../api/client'
   import { connect, onMessage } from '../api/ws'
   import { token } from '../auth/session'
   import CaptureForm from './CaptureForm.svelte'
@@ -88,17 +88,26 @@
     }
   }
 
-  async function saveImage(file: File) {
+  async function saveAttachment(file: File) {
     saving = true
     error = null
     try {
-      const { id, filePath } = await captureImage(file)
-      items = [
-        { id, type: 'image', body: '', filePath, state: 'inbox', capturedAt: new Date().toISOString() },
-        ...items,
-      ]
+      const { id, type, filePath, fileName } = await captureAttachment(file)
+      const item: Item = {
+        id,
+        type,
+        body: '',
+        filePath,
+        state: 'inbox',
+        capturedAt: new Date().toISOString(),
+      }
+      if (type === 'file') {
+        if (fileName) item.fileName = fileName
+        item.fileSize = file.size
+      }
+      items = [item, ...items]
     } catch (e) {
-      error = e instanceof Error ? e.message : 'Failed to save image'
+      error = e instanceof Error ? e.message : 'Failed to save attachment'
     } finally {
       saving = false
     }
@@ -128,7 +137,7 @@
 {#if selected}
   <ItemDetail item={selected} onback={() => (selected = null)} />
 {:else}
-  <CaptureForm {saving} onsave={save} onimage={saveImage} />
+  <CaptureForm {saving} onsave={save} onattach={saveAttachment} />
 
   <SearchBar placeholder="Search inbox…" onsearch={handleSearch} />
 

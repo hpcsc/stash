@@ -2,13 +2,14 @@
   interface Props {
     saving: boolean
     onsave: (body: string) => void
-    onimage: (file: File) => void
+    onattach: (file: File) => void
   }
 
-  let { saving, onsave, onimage }: Props = $props()
+  let { saving, onsave, onattach }: Props = $props()
 
   let body = $state('')
   let textareaEl: HTMLTextAreaElement | undefined = $state()
+  let imageEl: HTMLInputElement | undefined = $state()
   let fileEl: HTMLInputElement | undefined = $state()
 
   function handleInput() {
@@ -35,14 +36,18 @@
   }
 
   function pickImage() {
+    imageEl?.click()
+  }
+
+  function pickFile() {
     fileEl?.click()
   }
 
-  function handleFile(e: Event) {
+  function handlePicked(e: Event) {
     const input = e.target as HTMLInputElement
     const file = input.files?.[0]
     if (!file) return
-    onimage(file)
+    onattach(file)
     input.value = ''
   }
 </script>
@@ -65,7 +70,13 @@
           <path d="M5 6a1 1 0 1 0 0-2 1 1 0 0 0 0 2zM14.5 11l-4-4L3 14.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" />
         </svg>
       </button>
-      <input bind:this={fileEl} type="file" accept="image/*" onchange={handleFile} hidden />
+      <input bind:this={imageEl} type="file" accept="image/*" onchange={handlePicked} hidden />
+      <button type="button" class="attach-btn" onclick={pickFile} disabled={saving} title="Attach a file">
+        <svg width="18" height="18" viewBox="0 0 16 16" fill="none">
+          <path d="M13.5 7.5l-5.6 5.6a3.5 3.5 0 0 1-5-5l6-6a2.3 2.3 0 0 1 3.3 3.3l-6 6a1.2 1.2 0 0 1-1.7-1.7l5.3-5.3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </button>
+      <input bind:this={fileEl} type="file" onchange={handlePicked} hidden />
       <span class="hint">{body.length} character{body.length !== 1 ? 's' : ''}</span>
     </div>
     <button type="submit" class="save-btn" disabled={saving || !body.trim()}>

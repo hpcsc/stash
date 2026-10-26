@@ -59,6 +59,9 @@ export interface Item {
   description?: string
   filePath?: string
   thumbnailPath?: string
+  fileName?: string
+  fileSize?: number
+  mimeType?: string
   capturedAt: string
 }
 
@@ -81,12 +84,14 @@ export async function captureLink(url: string): Promise<string> {
   return (envelope.data as { id: string }).id
 }
 
-export interface CapturedImage {
+export interface CapturedAttachment {
   id: string
+  type: string
   filePath: string
+  fileName?: string
 }
 
-export async function captureImage(file: File): Promise<CapturedImage> {
+export async function captureAttachment(file: File): Promise<CapturedAttachment> {
   const form = new FormData()
   form.append('file', file)
 
@@ -103,7 +108,7 @@ export async function captureImage(file: File): Promise<CapturedImage> {
   if (envelope.successful !== true) {
     throw new ApiError(envelope.messages.join('\n') || 'request failed', response.status)
   }
-  return envelope.data as CapturedImage
+  return envelope.data as CapturedAttachment
 }
 
 export function fileUrl(path: string): string {

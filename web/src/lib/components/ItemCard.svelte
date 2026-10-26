@@ -2,6 +2,7 @@
   import type { Item } from '../api/client'
   import { fileUrl } from '../api/client'
   import { relativeTime } from '../time'
+  import { formatFileSize } from '../format'
 
   interface Props {
     item: Item
@@ -47,6 +48,15 @@
     {:else}
       <div class="image-placeholder">🖼</div>
     {/if}
+  {:else if item.type === 'file'}
+    <div class="file">
+      <div class="file-info">
+        <span class="file-name">{item.fileName || 'File'}</span>
+        {#if item.fileSize}
+          <span class="file-size">{formatFileSize(item.fileSize)}</span>
+        {/if}
+      </div>
+    </div>
   {:else}
     <p class="body">{preview}{hasMore ? '…' : ''}</p>
   {/if}
@@ -119,6 +129,36 @@
     background: var(--color-bg);
     border-radius: var(--radius-md);
     margin-bottom: var(--space-2);
+  }
+
+  .file {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3);
+    background: var(--color-bg);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-2);
+  }
+
+  .file-info {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .file-name {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--color-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .file-size {
+    font-size: var(--text-xs);
+    color: var(--color-text-tertiary);
   }
 
   .card-header {
