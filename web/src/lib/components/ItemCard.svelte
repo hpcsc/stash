@@ -20,8 +20,8 @@
 
   const meta = $derived(typeMeta[item.type] ?? typeMeta.text)
   const timeAgo = $derived(relativeTime(item.capturedAt))
-  const preview = $derived(item.body.slice(0, 160))
-  const hasMore = $derived(item.body.length > 160)
+  const preview = $derived(item.title || item.body.slice(0, 160))
+  const hasMore = $derived(!item.title && item.body.length > 160)
 
   function handleKeep(e: MouseEvent) {
     e.stopPropagation()

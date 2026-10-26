@@ -59,17 +59,30 @@ func (h *handler) capture(w http.ResponseWriter, req *http.Request) {
 	}
 
 	itemID := uuid.New()
-	if !h.dispatch(w, req, itemCommand.CaptureText{
-		ItemID:     itemID,
-		Body:       body.Body,
-		SourceApp:  body.SourceApp,
-		SourceURL:  body.SourceURL,
-		CapturedAt: time.Now(),
-	}) {
-		return
-	}
+	now := time.Now()
 
-	_ = h.renderer.JSON(w, http.StatusOK, response.SucceedWithData(map[string]string{"id": itemID.String()}))
+	switch body.Type {
+	case "link":
+		if !h.dispatch(w, req, itemCommand.CaptureLink{
+			ItemID:     itemID,
+			URL:        body.Body,
+			CapturedAt: now,
+		}) {
+			return
+		}
+		_ = h.renderer.JSON(w, http.StatusOK, response.SucceedWithData(map[string]string{"id": itemID.String()}))
+	default:
+		if !h.dispatch(w, req, itemCommand.CaptureText{
+			ItemID:     itemID,
+			Body:       body.Body,
+			SourceApp:  body.SourceApp,
+			SourceURL:  body.SourceURL,
+			CapturedAt: now,
+		}) {
+			return
+		}
+		_ = h.renderer.JSON(w, http.StatusOK, response.SucceedWithData(map[string]string{"id": itemID.String()}))
+	}
 }
 
 func (h *handler) list(w http.ResponseWriter, req *http.Request) {

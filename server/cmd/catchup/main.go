@@ -14,11 +14,15 @@ import (
 	"github.com/hpcsc/stash/internal/domain/checkpoint/store"
 	"github.com/hpcsc/stash/internal/domain/consumer"
 	"github.com/hpcsc/stash/internal/domain/event/registry"
+	"github.com/hpcsc/stash/internal/domain/event/stream"
 	"github.com/hpcsc/stash/internal/domain/event/subscription"
 	"github.com/hpcsc/stash/internal/domain/projection"
+	"github.com/hpcsc/stash/internal/domain/reaction"
 	"github.com/hpcsc/stash/internal/use_cases"
+	"github.com/hpcsc/stash/internal/use_cases/item"
 	"github.com/hpcsc/stash/internal/use_cases/item/items"
 	"github.com/hpcsc/stash/internal/use_cases/item/itemtags"
+	"github.com/hpcsc/stash/internal/use_cases/item/linkmetadata"
 	"github.com/hpcsc/stash/internal/use_cases/tag/tags"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -57,11 +61,15 @@ func consumers(pool *pgxpool.Pool, logger *slog.Logger) []*consumer.Consumer {
 
 	checkpointStore := store.NewPostgres(pool)
 	eventSubscription := subscription.NewPostgres(pool, reg, logger)
+	eventStream := stream.NewPostgres(pool, reg)
+
+	itemRepo := item.NewRepository(eventStream)
 
 	return []*consumer.Consumer{
 		projection.NewProjector(items.NewProjection(), pool, checkpointStore, eventSubscription, logger),
 		projection.NewProjector(tags.NewProjection(), pool, checkpointStore, eventSubscription, logger),
 		projection.NewProjector(itemtags.NewProjection(), pool, checkpointStore, eventSubscription, logger),
+		reaction.NewReactor(linkmetadata.New(itemRepo, logger), checkpointStore, eventSubscription, logger),
 	}
 }
 

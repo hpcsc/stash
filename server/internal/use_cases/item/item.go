@@ -14,6 +14,7 @@ var ErrAlreadyCaptured = errors.New("item is already captured")
 var ErrAlreadyKept = errors.New("item is already kept")
 var ErrAlreadyDropped = errors.New("item is already dropped")
 var ErrNotCaptured = errors.New("item has not been captured")
+var ErrMetadataAlreadyRecorded = errors.New("link metadata is already recorded")
 
 var _ domain.Aggregate = (*Item)(nil)
 
@@ -24,9 +25,11 @@ func StreamID(id uuid.UUID) string {
 type Item struct {
 	domain.AggregateBase
 
-	id    uuid.UUID
-	state string
-	tags  []uuid.UUID
+	id          uuid.UUID
+	state       string
+	kind        string
+	hasMetadata bool
+	tags        []uuid.UUID
 }
 
 func (i *Item) ID() uuid.UUID {
@@ -47,6 +50,35 @@ func (i *Item) CaptureText(cmd command.CaptureText) error {
 		SourceApp:  cmd.SourceApp,
 		SourceURL:  cmd.SourceURL,
 		CapturedAt: cmd.CapturedAt,
+	}))
+	return nil
+}
+
+func (i *Item) CaptureLink(cmd command.CaptureLink) error {
+	if i.id != uuid.Nil {
+		return ErrAlreadyCaptured
+	}
+	if cmd.URL == "" {
+		return errors.New("url must not be empty")
+	}
+
+	i.record(domain.NewEvent(&event.LinkCaptured{
+		ItemID:     cmd.ItemID,
+		URL:        cmd.URL,
+		CapturedAt: cmd.CapturedAt,
+	}))
+	return nil
+}
+
+func (i *Item) RecordLinkMetadata(title, description string) error {
+	if i.hasMetadata {
+		return ErrMetadataAlreadyRecorded
+	}
+
+	i.record(domain.NewEvent(&event.LinkMetadataFetched{
+		ItemID:      i.id,
+		Title:       title,
+		Description: description,
 	}))
 	return nil
 }
@@ -96,6 +128,13 @@ func (i *Item) Apply(e domain.Event) {
 	case *event.TextCaptured:
 		i.id = p.ItemID
 		i.state = "inbox"
+		i.kind = "text"
+	case *event.LinkCaptured:
+		i.id = p.ItemID
+		i.state = "inbox"
+		i.kind = "link"
+	case *event.LinkMetadataFetched:
+		i.hasMetadata = true
 	case *event.ItemKept:
 		i.state = "kept"
 	case *event.ItemDropped:

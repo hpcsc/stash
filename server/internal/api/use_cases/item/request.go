@@ -4,6 +4,7 @@ import "github.com/google/uuid"
 
 type CaptureRequest struct {
 	Body      string `json:"body" validate:"required"`
+	Type      string `json:"type"`
 	SourceApp string `json:"sourceApp"`
 	SourceURL string `json:"sourceUrl"`
 }

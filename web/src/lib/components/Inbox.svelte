@@ -1,12 +1,14 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { listItems, captureText, keepItem, dropItem, type Item } from '../api/client'
+  import { listItems, captureText, captureLink, keepItem, dropItem, type Item } from '../api/client'
   import CaptureForm from './CaptureForm.svelte'
   import ItemCard from './ItemCard.svelte'
   import ItemDetail from './ItemDetail.svelte'
   import EmptyState from './EmptyState.svelte'
   import SkeletonCard from './SkeletonCard.svelte'
   import SearchBar from './SearchBar.svelte'
+
+  const urlRe = /^https?:\/\/\S+$/i
 
   let items = $state<Item[]>([])
   let loading = $state(true)
@@ -40,11 +42,19 @@
     saving = true
     error = null
     try {
-      const id = await captureText(body)
-      items = [
-        { id, type: 'text', body, state: 'inbox', capturedAt: new Date().toISOString() },
-        ...items,
-      ]
+      if (urlRe.test(body.trim())) {
+        const id = await captureLink(body.trim())
+        items = [
+          { id, type: 'link', body: body.trim(), state: 'inbox', capturedAt: new Date().toISOString() },
+          ...items,
+        ]
+      } else {
+        const id = await captureText(body)
+        items = [
+          { id, type: 'text', body, state: 'inbox', capturedAt: new Date().toISOString() },
+          ...items,
+        ]
+      }
     } catch (e) {
       error = e instanceof Error ? e.message : 'Failed to save'
     } finally {

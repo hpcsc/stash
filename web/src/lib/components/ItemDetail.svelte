@@ -28,7 +28,20 @@
     <span class="type-label">{typeMeta[item.type] ?? 'Text'}</span>
   </div>
 
-  <p class="body">{item.body}</p>
+  <p class="body">{item.title || item.body}</p>
+
+  {#if item.type === 'link'}
+    <a class="link-url" href={item.body} target="_blank" rel="noopener noreferrer">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M12 8.5V13a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h4.5M10 2h4v4M7 9l7-7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+      {item.body}
+    </a>
+  {/if}
+
+  {#if item.description}
+    <p class="description">{item.description}</p>
+  {/if}
 
   <div class="meta">
     <span class="meta-item">{formatDate(item.capturedAt)}</span>
@@ -118,6 +131,28 @@
     color: var(--color-text);
     white-space: pre-wrap;
     word-break: break-word;
+  }
+
+  .link-url {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-bottom: var(--space-6);
+    font-size: var(--text-sm);
+    color: var(--color-accent);
+    text-decoration: none;
+    word-break: break-all;
+  }
+
+  .link-url:hover {
+    text-decoration: underline;
+  }
+
+  .description {
+    margin: 0 0 var(--space-6);
+    font-size: var(--text-base);
+    line-height: 1.7;
+    color: var(--color-text-secondary);
   }
 
   .meta {

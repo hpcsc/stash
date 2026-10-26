@@ -24,7 +24,7 @@ import (
 
 func TestHandler(t *testing.T) {
 	t.Run("capture", func(t *testing.T) {
-		t.Run("dispatches a capture command and returns the item ID", func(t *testing.T) {
+		t.Run("dispatches a capture text command and returns the item ID", func(t *testing.T) {
 			handler := fake.NewHandler[itemCommand.CaptureText]()
 			bus := command.NewBus()
 			bus.Register[itemCommand.CaptureText](handler)
@@ -36,6 +36,22 @@ func TestHandler(t *testing.T) {
 			payload := handler.TriggeredWithCommand().Payload
 			require.Equal(t, "hello", payload.Body)
 			require.Equal(t, "chrome", payload.SourceApp)
+			require.False(t, payload.CapturedAt.IsZero())
+			body := commonTest.UnmarshalJson[response.Response](t, w.Body.Bytes())
+			require.Equal(t, payload.ItemID.String(), body.Data.(map[string]any)["id"])
+		})
+
+		t.Run("dispatches a capture link command and returns the item ID", func(t *testing.T) {
+			handler := fake.NewHandler[itemCommand.CaptureLink]()
+			bus := command.NewBus()
+			bus.Register[itemCommand.CaptureLink](handler)
+			router := newRouter(bus, fakeReader{})
+
+			w := send(router, "POST", "/items", `{"body": "https://example.com", "type": "link"}`)
+
+			require.Equal(t, http.StatusOK, w.Code)
+			payload := handler.TriggeredWithCommand().Payload
+			require.Equal(t, "https://example.com", payload.URL)
 			require.False(t, payload.CapturedAt.IsZero())
 			body := commonTest.UnmarshalJson[response.Response](t, w.Body.Bytes())
 			require.Equal(t, payload.ItemID.String(), body.Data.(map[string]any)["id"])

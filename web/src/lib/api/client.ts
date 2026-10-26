@@ -55,6 +55,8 @@ export interface Item {
   state?: string
   sourceApp?: string
   sourceUrl?: string
+  title?: string
+  description?: string
   capturedAt: string
 }
 
@@ -69,6 +71,11 @@ export async function listItems(search?: string, states?: string[]): Promise<Ite
 
 export async function captureText(body: string): Promise<string> {
   const envelope = await request('POST', '/items', { body })
+  return (envelope.data as { id: string }).id
+}
+
+export async function captureLink(url: string): Promise<string> {
+  const envelope = await request('POST', '/items', { body: url, type: 'link' })
   return (envelope.data as { id: string }).id
 }
 

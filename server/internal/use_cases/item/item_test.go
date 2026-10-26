@@ -43,6 +43,70 @@ func TestItem(t *testing.T) {
 		})
 	})
 
+	t.Run("capture link", func(t *testing.T) {
+		t.Run("captures a link into the inbox", func(t *testing.T) {
+			var i item.Item
+			cmd := captureLink()
+
+			require.NoError(t, i.CaptureLink(cmd))
+
+			require.Equal(t, &event.LinkCaptured{
+				ItemID:     cmd.ItemID,
+				URL:        "https://example.com",
+				CapturedAt: capturedAt,
+			}, onlyRecorded(t, &i).Payload)
+			require.Equal(t, cmd.ItemID, i.ID())
+		})
+
+		t.Run("rejects a second capture", func(t *testing.T) {
+			i := given(linkCaptured())
+
+			require.ErrorIs(t, i.CaptureLink(captureLink()), item.ErrAlreadyCaptured)
+			require.Empty(t, i.Recorded())
+		})
+
+		t.Run("rejects an empty URL", func(t *testing.T) {
+			var i item.Item
+			cmd := captureLink()
+			cmd.URL = ""
+
+			require.Error(t, i.CaptureLink(cmd))
+			require.Empty(t, i.Recorded())
+		})
+	})
+
+	t.Run("record link metadata", func(t *testing.T) {
+		t.Run("records title and description for a link item", func(t *testing.T) {
+			i := given(linkCaptured())
+
+			require.NoError(t, i.RecordLinkMetadata("Example Page", "A page for examples"))
+
+			require.Equal(t, &event.LinkMetadataFetched{
+				ItemID:      itemID,
+				Title:       "Example Page",
+				Description: "A page for examples",
+			}, onlyRecorded(t, i).Payload)
+		})
+
+		t.Run("records metadata with only title", func(t *testing.T) {
+			i := given(linkCaptured())
+
+			require.NoError(t, i.RecordLinkMetadata("Example Page", ""))
+
+			require.Equal(t, &event.LinkMetadataFetched{
+				ItemID: itemID,
+				Title:  "Example Page",
+			}, onlyRecorded(t, i).Payload)
+		})
+
+		t.Run("rejects metadata for an already-enriched link", func(t *testing.T) {
+			i := given(linkCaptured(), linkMetadataFetched())
+
+			require.ErrorIs(t, i.RecordLinkMetadata("New Title", ""), item.ErrMetadataAlreadyRecorded)
+			require.Empty(t, i.Recorded())
+		})
+	})
+
 	t.Run("keep", func(t *testing.T) {
 		t.Run("keeps an inbox item", func(t *testing.T) {
 			i := given(captured())
@@ -128,6 +192,14 @@ func captureText() command.CaptureText {
 	return command.CaptureText{ItemID: itemID, Body: "hello", SourceApp: "chrome", SourceURL: "https://example.com", CapturedAt: capturedAt}
 }
 
+func captureLink() command.CaptureLink {
+	return command.CaptureLink{
+		ItemID:     itemID,
+		URL:        "https://example.com",
+		CapturedAt: capturedAt,
+	}
+}
+
 func keepCmd() command.Keep {
 	return command.Keep{ItemID: itemID}
 }
@@ -147,6 +219,14 @@ func given(history ...domain.Event) *item.Item {
 
 func captured() domain.Event {
 	return domain.NewEvent(&event.TextCaptured{ItemID: itemID, Body: "hello", CapturedAt: capturedAt})
+}
+
+func linkCaptured() domain.Event {
+	return domain.NewEvent(&event.LinkCaptured{ItemID: itemID, URL: "https://example.com", CapturedAt: capturedAt})
+}
+
+func linkMetadataFetched() domain.Event {
+	return domain.NewEvent(&event.LinkMetadataFetched{ItemID: itemID, Title: "Example Page", Description: "A page for examples"})
 }
 
 func kept() domain.Event {
