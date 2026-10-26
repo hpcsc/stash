@@ -63,7 +63,7 @@ func (h *handler) capture(w http.ResponseWriter, req *http.Request) {
 	contentType := req.Header.Get("Content-Type")
 
 	if strings.HasPrefix(contentType, "multipart/form-data") {
-		h.captureImage(w, req)
+		h.captureUpload(w, req)
 		return
 	}
 
@@ -186,9 +186,9 @@ func (h *handler) dispatch[P any](w http.ResponseWriter, req *http.Request, payl
 	return true
 }
 
-const maxUploadSize = 25 << 20 // 25 MB
+const maxUploadSize = itemCommand.MaxFileSize + (1 << 20) // file plus multipart overhead
 
-func (h *handler) captureImage(w http.ResponseWriter, req *http.Request) {
+func (h *handler) captureUpload(w http.ResponseWriter, req *http.Request) {
 	req.Body = http.MaxBytesReader(w, req.Body, maxUploadSize)
 
 	if err := req.ParseMultipartForm(maxUploadSize); err != nil {
@@ -204,32 +204,69 @@ func (h *handler) captureImage(w http.ResponseWriter, req *http.Request) {
 	defer file.Close()
 
 	mimeType := header.Header.Get("Content-Type")
-	if !isImage(mimeType) {
-		_ = h.renderer.JSON(w, http.StatusBadRequest, response.Fail("only image files are accepted"))
+	if strings.HasPrefix(mimeType, "video/") {
+		_ = h.renderer.JSON(w, http.StatusBadRequest, response.Fail("videos are not accepted"))
 		return
 	}
 
 	itemID := uuid.New()
-	ext := filepath.Ext(header.Filename)
-	key := fmt.Sprintf("images/%s%s", itemID, ext)
+	fileName := filepath.Base(header.Filename)
+	ext := filepath.Ext(fileName)
+	now := time.Now()
 
-	if _, err := h.storage.Save(req.Context(), key, file); err != nil {
-		_ = h.renderer.JSON(w, http.StatusInternalServerError, response.Fail("failed to save file"))
+	if isImage(mimeType) {
+		key := fmt.Sprintf("images/%s%s", itemID, ext)
+		if !h.saveUpload(w, req, key, file) {
+			return
+		}
+		if !h.dispatch(w, req, itemCommand.CaptureImage{
+			ItemID:     itemID,
+			FileRef:    key,
+			CapturedAt: now,
+		}) {
+			return
+		}
+		_ = h.renderer.JSON(w, http.StatusOK, response.SucceedWithData(map[string]string{
+			"id":       itemID.String(),
+			"type":     "image",
+			"filePath": key,
+		}))
 		return
 	}
 
-	if !h.dispatch(w, req, itemCommand.CaptureImage{
+	if header.Size > itemCommand.MaxFileSize {
+		_ = h.renderer.JSON(w, http.StatusBadRequest, response.Fail("file too large, max 25 MB"))
+		return
+	}
+
+	key := fmt.Sprintf("files/%s%s", itemID, ext)
+	if !h.saveUpload(w, req, key, file) {
+		return
+	}
+	if !h.dispatch(w, req, itemCommand.CaptureFile{
 		ItemID:     itemID,
 		FileRef:    key,
-		CapturedAt: time.Now(),
+		FileName:   fileName,
+		FileSize:   header.Size,
+		MimeType:   mimeType,
+		CapturedAt: now,
 	}) {
 		return
 	}
-
 	_ = h.renderer.JSON(w, http.StatusOK, response.SucceedWithData(map[string]string{
 		"id":       itemID.String(),
+		"type":     "file",
 		"filePath": key,
+		"fileName": fileName,
 	}))
+}
+
+func (h *handler) saveUpload(w http.ResponseWriter, req *http.Request, key string, file io.Reader) bool {
+	if _, err := h.storage.Save(req.Context(), key, file); err != nil {
+		_ = h.renderer.JSON(w, http.StatusInternalServerError, response.Fail("failed to save file"))
+		return false
+	}
+	return true
 }
 
 func isImage(mime string) bool {

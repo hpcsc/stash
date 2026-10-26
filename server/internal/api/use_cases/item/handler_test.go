@@ -3,10 +3,14 @@
 package item_test
 
 import (
+	"bytes"
 	"context"
+	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"net/textproto"
 	"strings"
 	"testing"
 	"time"
@@ -66,6 +70,56 @@ func TestHandler(t *testing.T) {
 			w := send(router, "POST", "/items", `{}`)
 
 			require.Equal(t, http.StatusBadRequest, w.Code)
+		})
+
+		t.Run("dispatches a capture image command for an image upload", func(t *testing.T) {
+			handler := fake.NewHandler[itemCommand.CaptureImage]()
+			bus := command.NewBus()
+			bus.Register[itemCommand.CaptureImage](handler)
+			router := newRouter(bus, fakeReader{})
+
+			body, contentType := multipartBody(t, "photo.png", "image/png", []byte("png-bytes"))
+			w := sendMultipart(router, body, contentType)
+
+			require.Equal(t, http.StatusOK, w.Code)
+			payload := handler.TriggeredWithCommand().Payload
+			require.True(t, strings.HasPrefix(payload.FileRef, "images/"))
+			require.True(t, strings.HasSuffix(payload.FileRef, ".png"))
+		})
+
+		t.Run("dispatches a capture file command for a non-image upload", func(t *testing.T) {
+			handler := fake.NewHandler[itemCommand.CaptureFile]()
+			bus := command.NewBus()
+			bus.Register[itemCommand.CaptureFile](handler)
+			router := newRouter(bus, fakeReader{})
+
+			body, contentType := multipartBody(t, "report.pdf", "application/pdf", []byte("pdf-bytes"))
+			w := sendMultipart(router, body, contentType)
+
+			require.Equal(t, http.StatusOK, w.Code)
+			payload := handler.TriggeredWithCommand().Payload
+			require.Equal(t, "report.pdf", payload.FileName)
+			require.Equal(t, int64(len("pdf-bytes")), payload.FileSize)
+			require.Equal(t, "application/pdf", payload.MimeType)
+			require.True(t, strings.HasPrefix(payload.FileRef, "files/"))
+			require.True(t, strings.HasSuffix(payload.FileRef, ".pdf"))
+
+			responseBody := commonTest.UnmarshalJson[response.Response](t, w.Body.Bytes())
+			data := responseBody.Data.(map[string]any)
+			require.Equal(t, payload.ItemID.String(), data["id"])
+			require.Equal(t, "file", data["type"])
+			require.Equal(t, payload.FileRef, data["filePath"])
+			require.Equal(t, "report.pdf", data["fileName"])
+		})
+
+		t.Run("rejects a video upload", func(t *testing.T) {
+			router := newRouter(command.NewBus(), fakeReader{})
+
+			body, contentType := multipartBody(t, "clip.mp4", "video/mp4", []byte("video-bytes"))
+			w := sendMultipart(router, body, contentType)
+
+			require.Equal(t, http.StatusBadRequest, w.Code)
+			require.Contains(t, w.Body.String(), "videos are not accepted")
 		})
 	})
 
@@ -168,6 +222,31 @@ func newRouter(bus *command.Bus, reader item.ItemReader) http.Handler {
 func send(router http.Handler, method, path, body string) *httptest.ResponseRecorder {
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, httptest.NewRequest(method, path, strings.NewReader(body)))
+	return w
+}
+
+func multipartBody(t *testing.T, filename, contentType string, data []byte) (*bytes.Buffer, string) {
+	t.Helper()
+
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	part, err := writer.CreatePart(textproto.MIMEHeader{
+		"Content-Disposition": []string{fmt.Sprintf(`form-data; name="file"; filename=%q`, filename)},
+		"Content-Type":        []string{contentType},
+	})
+	require.NoError(t, err)
+	_, err = part.Write(data)
+	require.NoError(t, err)
+	require.NoError(t, writer.Close())
+
+	return &body, writer.FormDataContentType()
+}
+
+func sendMultipart(router http.Handler, body *bytes.Buffer, contentType string) *httptest.ResponseRecorder {
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("POST", "/items", body)
+	req.Header.Set("Content-Type", contentType)
+	router.ServeHTTP(w, req)
 	return w
 }
 
