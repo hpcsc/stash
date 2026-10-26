@@ -13,11 +13,11 @@ import (
 	"github.com/hpcsc/stash/internal/api/middleware"
 	"github.com/hpcsc/stash/internal/api/route"
 	"github.com/hpcsc/stash/internal/api/session"
-	"github.com/hpcsc/stash/internal/api/websocket"
 	apiIdentity "github.com/hpcsc/stash/internal/api/use_cases/identity"
 	apiItem "github.com/hpcsc/stash/internal/api/use_cases/item"
-	apiTag "github.com/hpcsc/stash/internal/api/use_cases/tag"
 	"github.com/hpcsc/stash/internal/api/use_cases/root"
+	apiTag "github.com/hpcsc/stash/internal/api/use_cases/tag"
+	"github.com/hpcsc/stash/internal/api/websocket"
 	"github.com/hpcsc/stash/internal/domain/command"
 	"github.com/hpcsc/stash/internal/domain/event/registry"
 	"github.com/hpcsc/stash/internal/domain/event/stream"
@@ -126,6 +126,7 @@ func subscribeToPushEvents(ctx context.Context, pool *pgxpool.Pool, reg *registr
 	eventTypes := []string{
 		event.LinkMetadataFetched{}.EventType(),
 		event.ThumbnailGenerated{}.EventType(),
+		event.ImageThumbnailGenerated{}.EventType(),
 	}
 	events, err := sub.SubscribeToAll(ctx, after, eventTypes)
 	if err != nil {
@@ -149,6 +150,15 @@ func subscribeToPushEvents(ctx context.Context, pool *pgxpool.Pool, reg *registr
 				Type: "thumbnail-generated",
 				Data: map[string]string{
 					"id":            payload.ItemID.String(),
+					"thumbnailPath": payload.ThumbnailRef,
+				},
+			})
+		case *event.ImageThumbnailGenerated:
+			hub.Broadcast(context.Background(), websocket.Message{
+				Type: "image-thumbnail-generated",
+				Data: map[string]string{
+					"id":            payload.ItemID.String(),
+					"imageId":       payload.ImageID.String(),
 					"thumbnailPath": payload.ThumbnailRef,
 				},
 			})

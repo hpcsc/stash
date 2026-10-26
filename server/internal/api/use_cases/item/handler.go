@@ -22,6 +22,7 @@ import (
 	"github.com/hpcsc/stash/internal/storage"
 	itemCommand "github.com/hpcsc/stash/internal/use_cases/item/command"
 	"github.com/hpcsc/stash/internal/use_cases/item/items"
+	"github.com/hpcsc/stash/internal/use_cases/item/note"
 	"github.com/unrolled/render"
 )
 
@@ -186,13 +187,23 @@ func (h *handler) dispatch[P any](w http.ResponseWriter, req *http.Request, payl
 	return true
 }
 
-const maxUploadSize = itemCommand.MaxFileSize + (1 << 20) // file plus multipart overhead
+const (
+	maxNoteUploadSize  = itemCommand.MaxNoteSize + (1 << 20) // note images plus multipart overhead
+	maxMultipartMemory = 32 << 20
+)
 
 func (h *handler) captureUpload(w http.ResponseWriter, req *http.Request) {
-	req.Body = http.MaxBytesReader(w, req.Body, maxUploadSize)
+	req.Body = http.MaxBytesReader(w, req.Body, maxNoteUploadSize)
 
-	if err := req.ParseMultipartForm(maxUploadSize); err != nil {
-		_ = h.renderer.JSON(w, http.StatusBadRequest, response.Fail("file too large, max 25 MB"))
+	if err := req.ParseMultipartForm(maxMultipartMemory); err != nil {
+		_ = h.renderer.JSON(w, http.StatusBadRequest, response.Fail("upload is too large, max 100 MB"))
+		return
+	}
+
+	_, hasDocument := req.MultipartForm.Value["document"]
+	_, hasImages := req.MultipartForm.File["images"]
+	if hasDocument || hasImages {
+		h.captureNote(w, req)
 		return
 	}
 
@@ -202,6 +213,11 @@ func (h *handler) captureUpload(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	defer file.Close()
+
+	if header.Size > itemCommand.MaxFileSize {
+		_ = h.renderer.JSON(w, http.StatusBadRequest, response.Fail("file too large, max 25 MB"))
+		return
+	}
 
 	mimeType := header.Header.Get("Content-Type")
 	if strings.HasPrefix(mimeType, "video/") {
@@ -234,11 +250,6 @@ func (h *handler) captureUpload(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if header.Size > itemCommand.MaxFileSize {
-		_ = h.renderer.JSON(w, http.StatusBadRequest, response.Fail("file too large, max 25 MB"))
-		return
-	}
-
 	key := fmt.Sprintf("files/%s%s", itemID, ext)
 	if !h.saveUpload(w, req, key, file) {
 		return
@@ -259,6 +270,179 @@ func (h *handler) captureUpload(w http.ResponseWriter, req *http.Request) {
 		"filePath": key,
 		"fileName": fileName,
 	}))
+}
+
+func (h *handler) captureNote(w http.ResponseWriter, req *http.Request) {
+	raw := req.FormValue("document")
+	if raw == "" {
+		_ = h.renderer.JSON(w, http.StatusBadRequest, response.Fail("missing note document"))
+		return
+	}
+
+	var doc NoteDocument
+	if err := json.Unmarshal([]byte(raw), &doc); err != nil {
+		_ = h.renderer.JSON(w, http.StatusBadRequest, response.Fail("invalid note document"))
+		return
+	}
+
+	headers := req.MultipartForm.File["images"]
+	if len(headers) > itemCommand.MaxNoteImages {
+		_ = h.renderer.JSON(w, http.StatusBadRequest, response.Fail(fmt.Sprintf("too many images, max %d", itemCommand.MaxNoteImages)))
+		return
+	}
+
+	referenced := make([]bool, len(headers))
+	hasText := false
+	for _, b := range doc.Blocks {
+		switch b.Type {
+		case note.TypeText:
+			if strings.TrimSpace(b.Text) != "" {
+				hasText = true
+			}
+		case note.TypeImage:
+			if b.Index == nil || *b.Index < 0 || *b.Index >= len(headers) {
+				_ = h.renderer.JSON(w, http.StatusBadRequest, response.Fail("invalid image reference in note"))
+				return
+			}
+			if referenced[*b.Index] {
+				_ = h.renderer.JSON(w, http.StatusBadRequest, response.Fail("image referenced more than once in note"))
+				return
+			}
+			referenced[*b.Index] = true
+		default:
+			_ = h.renderer.JSON(w, http.StatusBadRequest, response.Fail("invalid note block"))
+			return
+		}
+	}
+
+	referencedCount := 0
+	for _, ok := range referenced {
+		if ok {
+			referencedCount++
+		}
+	}
+	if referencedCount != len(headers) {
+		_ = h.renderer.JSON(w, http.StatusBadRequest, response.Fail("every note image must be referenced exactly once"))
+		return
+	}
+	if !hasText && len(headers) == 0 {
+		_ = h.renderer.JSON(w, http.StatusBadRequest, response.Fail("note must have text or an image"))
+		return
+	}
+
+	var totalSize int64
+	for _, header := range headers {
+		if header.Size > itemCommand.MaxFileSize {
+			_ = h.renderer.JSON(w, http.StatusBadRequest, response.Fail("image too large, max 25 MB"))
+			return
+		}
+		totalSize += header.Size
+		if totalSize > itemCommand.MaxNoteSize {
+			_ = h.renderer.JSON(w, http.StatusBadRequest, response.Fail("note is too large, max 100 MB"))
+			return
+		}
+
+		mimeType := header.Header.Get("Content-Type")
+		if strings.HasPrefix(mimeType, "video/") {
+			_ = h.renderer.JSON(w, http.StatusBadRequest, response.Fail("videos are not accepted"))
+			return
+		}
+		if !isImage(mimeType) {
+			_ = h.renderer.JSON(w, http.StatusBadRequest, response.Fail("only images can be added to a note"))
+			return
+		}
+	}
+
+	itemID := uuid.New()
+	now := time.Now()
+	images := make([]note.Image, len(headers))
+	for idx, header := range headers {
+		file, err := header.Open()
+		if err != nil {
+			_ = h.renderer.JSON(w, http.StatusBadRequest, response.Fail("failed to read image"))
+			return
+		}
+
+		imageID := uuid.New()
+		fileName := filepath.Base(header.Filename)
+		key := fmt.Sprintf("images/%s%s", imageID, filepath.Ext(fileName))
+		if !h.saveUpload(w, req, key, file) {
+			file.Close()
+			return
+		}
+		file.Close()
+
+		images[idx] = note.Image{
+			ID:       imageID,
+			FileRef:  key,
+			FileName: fileName,
+			FileSize: header.Size,
+			MimeType: header.Header.Get("Content-Type"),
+		}
+	}
+
+	blocks := make([]note.Block, 0, len(doc.Blocks))
+	for _, b := range doc.Blocks {
+		if b.Type == note.TypeText {
+			if b.Text == "" {
+				continue
+			}
+			blocks = append(blocks, note.Block{Type: note.TypeText, Text: b.Text})
+			continue
+		}
+		image := images[*b.Index]
+		blocks = append(blocks, note.Block{Type: note.TypeImage, Image: &image})
+	}
+
+	if !h.dispatch(w, req, itemCommand.CaptureNote{
+		ItemID:     itemID,
+		Blocks:     blocks,
+		CapturedAt: now,
+	}) {
+		return
+	}
+
+	_ = h.renderer.JSON(w, http.StatusOK, response.SucceedWithData(noteResponse(itemID, now, blocks)))
+}
+
+func noteResponse(id uuid.UUID, capturedAt time.Time, blocks []note.Block) NoteResponse {
+	images := make([]items.Image, 0)
+	for _, b := range blocks {
+		if b.Image == nil {
+			continue
+		}
+		images = append(images, items.Image{
+			ID:       b.Image.ID.String(),
+			FilePath: b.Image.FileRef,
+			FileName: b.Image.FileName,
+			FileSize: b.Image.FileSize,
+			MimeType: b.Image.MimeType,
+		})
+	}
+
+	byID := make(map[string]*items.Image, len(images))
+	for idx := range images {
+		byID[images[idx].ID] = &images[idx]
+	}
+
+	responseBlocks := make([]items.Block, 0, len(blocks))
+	for _, b := range blocks {
+		if b.Image != nil {
+			responseBlocks = append(responseBlocks, items.Block{Type: note.TypeImage, Image: byID[b.Image.ID.String()]})
+			continue
+		}
+		responseBlocks = append(responseBlocks, items.Block{Type: note.TypeText, Text: b.Text})
+	}
+
+	return NoteResponse{
+		ID:         id.String(),
+		Type:       "note",
+		Body:       note.PlainText(blocks),
+		State:      "inbox",
+		CapturedAt: capturedAt,
+		Images:     images,
+		Blocks:     responseBlocks,
+	}
 }
 
 func (h *handler) saveUpload(w http.ResponseWriter, req *http.Request, key string, file io.Reader) bool {

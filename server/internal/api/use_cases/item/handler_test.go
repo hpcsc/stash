@@ -121,6 +121,105 @@ func TestHandler(t *testing.T) {
 			require.Equal(t, http.StatusBadRequest, w.Code)
 			require.Contains(t, w.Body.String(), "videos are not accepted")
 		})
+
+		t.Run("dispatches a capture note command with text and images in order", func(t *testing.T) {
+			handler := fake.NewHandler[itemCommand.CaptureNote]()
+			bus := command.NewBus()
+			bus.Register[itemCommand.CaptureNote](handler)
+			router := newRouter(bus, fakeReader{})
+
+			body, contentType := noteMultipartBody(t,
+				`{"blocks":[{"type":"text","text":"before"},{"type":"image","index":0},{"type":"text","text":"after"}]}`,
+				imagePart{filename: "photo.png", contentType: "image/png", data: []byte("png-bytes")},
+			)
+			w := sendMultipart(router, body, contentType)
+
+			require.Equal(t, http.StatusOK, w.Code)
+			payload := handler.TriggeredWithCommand().Payload
+			require.Len(t, payload.Blocks, 3)
+			require.Equal(t, "before", payload.Blocks[0].Text)
+			require.True(t, strings.HasPrefix(payload.Blocks[1].Image.FileRef, "images/"))
+			require.True(t, strings.HasSuffix(payload.Blocks[1].Image.FileRef, ".png"))
+			require.Equal(t, "photo.png", payload.Blocks[1].Image.FileName)
+			require.Equal(t, "image/png", payload.Blocks[1].Image.MimeType)
+			require.Equal(t, int64(len("png-bytes")), payload.Blocks[1].Image.FileSize)
+			require.Equal(t, "after", payload.Blocks[2].Text)
+
+			responseBody := commonTest.UnmarshalJson[response.Response](t, w.Body.Bytes())
+			data := responseBody.Data.(map[string]any)
+			require.Equal(t, payload.ItemID.String(), data["id"])
+			require.Equal(t, "note", data["type"])
+			require.Equal(t, "before\nafter", data["body"])
+			require.Len(t, data["images"], 1)
+			require.Len(t, data["blocks"], 3)
+		})
+
+		t.Run("captures a note with images only", func(t *testing.T) {
+			handler := fake.NewHandler[itemCommand.CaptureNote]()
+			bus := command.NewBus()
+			bus.Register[itemCommand.CaptureNote](handler)
+			router := newRouter(bus, fakeReader{})
+
+			body, contentType := noteMultipartBody(t,
+				`{"blocks":[{"type":"image","index":0}]}`,
+				imagePart{filename: "photo.png", contentType: "image/png", data: []byte("png-bytes")},
+			)
+			w := sendMultipart(router, body, contentType)
+
+			require.Equal(t, http.StatusOK, w.Code)
+			require.Len(t, handler.TriggeredWithCommand().Payload.Blocks, 1)
+		})
+
+		t.Run("rejects a note without a document", func(t *testing.T) {
+			router := newRouter(command.NewBus(), fakeReader{})
+
+			body, contentType := noteMultipartBody(t, "",
+				imagePart{filename: "photo.png", contentType: "image/png", data: []byte("png-bytes")},
+			)
+			w := sendMultipart(router, body, contentType)
+
+			require.Equal(t, http.StatusBadRequest, w.Code)
+			require.Contains(t, w.Body.String(), "missing note document")
+		})
+
+		t.Run("rejects an image that the note does not reference", func(t *testing.T) {
+			router := newRouter(command.NewBus(), fakeReader{})
+
+			body, contentType := noteMultipartBody(t,
+				`{"blocks":[{"type":"text","text":"hello"}]}`,
+				imagePart{filename: "photo.png", contentType: "image/png", data: []byte("png-bytes")},
+			)
+			w := sendMultipart(router, body, contentType)
+
+			require.Equal(t, http.StatusBadRequest, w.Code)
+			require.Contains(t, w.Body.String(), "referenced exactly once")
+		})
+
+		t.Run("rejects an image referenced twice", func(t *testing.T) {
+			router := newRouter(command.NewBus(), fakeReader{})
+
+			body, contentType := noteMultipartBody(t,
+				`{"blocks":[{"type":"image","index":0},{"type":"image","index":0}]}`,
+				imagePart{filename: "photo.png", contentType: "image/png", data: []byte("png-bytes")},
+			)
+			w := sendMultipart(router, body, contentType)
+
+			require.Equal(t, http.StatusBadRequest, w.Code)
+			require.Contains(t, w.Body.String(), "referenced more than once")
+		})
+
+		t.Run("rejects a non-image note upload", func(t *testing.T) {
+			router := newRouter(command.NewBus(), fakeReader{})
+
+			body, contentType := noteMultipartBody(t,
+				`{"blocks":[{"type":"image","index":0}]}`,
+				imagePart{filename: "report.pdf", contentType: "application/pdf", data: []byte("pdf-bytes")},
+			)
+			w := sendMultipart(router, body, contentType)
+
+			require.Equal(t, http.StatusBadRequest, w.Code)
+			require.Contains(t, w.Body.String(), "only images can be added to a note")
+		})
 	})
 
 	t.Run("list", func(t *testing.T) {
@@ -237,6 +336,34 @@ func multipartBody(t *testing.T, filename, contentType string, data []byte) (*by
 	require.NoError(t, err)
 	_, err = part.Write(data)
 	require.NoError(t, err)
+	require.NoError(t, writer.Close())
+
+	return &body, writer.FormDataContentType()
+}
+
+type imagePart struct {
+	filename    string
+	contentType string
+	data        []byte
+}
+
+func noteMultipartBody(t *testing.T, document string, images ...imagePart) (*bytes.Buffer, string) {
+	t.Helper()
+
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	if document != "" {
+		require.NoError(t, writer.WriteField("document", document))
+	}
+	for _, image := range images {
+		part, err := writer.CreatePart(textproto.MIMEHeader{
+			"Content-Disposition": []string{fmt.Sprintf(`form-data; name="images"; filename=%q`, image.filename)},
+			"Content-Type":        []string{image.contentType},
+		})
+		require.NoError(t, err)
+		_, err = part.Write(image.data)
+		require.NoError(t, err)
+	}
 	require.NoError(t, writer.Close())
 
 	return &body, writer.FormDataContentType()

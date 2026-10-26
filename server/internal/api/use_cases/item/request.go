@@ -13,6 +13,16 @@ type KeepRequest struct {
 	Tags []string `json:"tags"`
 }
 
+type NoteDocument struct {
+	Blocks []NoteDocumentBlock `json:"blocks"`
+}
+
+type NoteDocumentBlock struct {
+	Type  string `json:"type"`
+	Text  string `json:"text,omitempty"`
+	Index *int   `json:"index,omitempty"`
+}
+
 func parseTagIDs(raw []string) []uuid.UUID {
 	if len(raw) == 0 {
 		return nil
