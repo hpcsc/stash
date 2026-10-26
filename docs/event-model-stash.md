@@ -4,7 +4,7 @@ A self-hostable capture inbox: save text, links, images, and files from any app,
 them into tagged libraries or drop them into a recoverable trash. Event-sourced, with the
 event store and projections both in PostgreSQL.
 
-Model: `event-model-stash.emod` · Diagram: `event-model-stash.drawio`
+Model: `event-model-stash.emod`
 
 ## Actors
 

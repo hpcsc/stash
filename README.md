@@ -16,8 +16,7 @@ its projections both in PostgreSQL.
 
 Google sign-in and text capture are implemented end to end. The event model for the whole
 feature lives in [docs/event-model-stash.md](docs/event-model-stash.md), with the source in
-`event-model-stash.emod` and the diagram in `event-model-stash.drawio`. The user stories are
-in `user-stories/stash.md`.
+`event-model-stash.emod`. The user stories are in `user-stories/stash.md`.
 
 ## Architecture
 
