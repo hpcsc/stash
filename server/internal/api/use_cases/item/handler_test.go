@@ -4,6 +4,7 @@ package item_test
 
 import (
 	"context"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -161,7 +162,7 @@ func (f fakeReader) ByID(context.Context, string) (*items.Item, error) {
 }
 
 func newRouter(bus *command.Bus, reader item.ItemReader) http.Handler {
-	return apiTest.NewRouterWithRoutable(item.NewHandler(bus, reader))
+	return apiTest.NewRouterWithRoutable(item.NewHandler(bus, reader, fakeStore{}))
 }
 
 func send(router http.Handler, method, path, body string) *httptest.ResponseRecorder {
@@ -169,3 +170,8 @@ func send(router http.Handler, method, path, body string) *httptest.ResponseReco
 	router.ServeHTTP(w, httptest.NewRequest(method, path, strings.NewReader(body)))
 	return w
 }
+
+type fakeStore struct{}
+
+func (fakeStore) Save(_ context.Context, _ string, _ io.Reader) (string, error) { return "key", nil }
+func (fakeStore) Open(_ context.Context, _ string) (io.ReadCloser, error)       { return nil, nil }

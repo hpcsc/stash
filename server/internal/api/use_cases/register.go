@@ -22,6 +22,7 @@ import (
 	"github.com/hpcsc/stash/internal/domain/event/registry"
 	"github.com/hpcsc/stash/internal/domain/event/stream"
 	"github.com/hpcsc/stash/internal/domain/event/subscription"
+	"github.com/hpcsc/stash/internal/storage"
 	coreUseCases "github.com/hpcsc/stash/internal/use_cases"
 	"github.com/hpcsc/stash/internal/use_cases/item/event"
 	"github.com/hpcsc/stash/internal/use_cases/item/items"
@@ -53,10 +54,15 @@ func Register(router chi.Router, cfg *api.Config, pool *pgxpool.Pool, logger *sl
 	reg := registry.New()
 	coreUseCases.RegisterEvents(reg)
 
+	store, err := storage.NewDisk(cfg.StorageDir)
+	if err != nil {
+		return nil, fmt.Errorf("storage: %w", err)
+	}
+
 	wsHub := websocket.NewHub(logger)
 
 	subCtx, cancelSub := context.WithCancel(context.Background())
-	go subscribeToMetadataEvents(subCtx, pool, reg, wsHub, logger)
+	go subscribeToPushEvents(subCtx, pool, reg, wsHub, logger)
 
 	cleanup := func() {
 		cancelSub()
@@ -64,7 +70,7 @@ func Register(router chi.Router, cfg *api.Config, pool *pgxpool.Pool, logger *sl
 	}
 
 	var publicRoutes, protectedRoutes []*route.Route
-	for _, r := range allRoutes(pool, issuer, verifiers, reg, wsHub) {
+	for _, r := range allRoutes(pool, issuer, verifiers, reg, wsHub, store) {
 		if r.IsPublic() {
 			publicRoutes = append(publicRoutes, r)
 		} else if r.IsProtected() {
@@ -89,14 +95,14 @@ func Register(router chi.Router, cfg *api.Config, pool *pgxpool.Pool, logger *sl
 	return cleanup, nil
 }
 
-func allRoutes(pool *pgxpool.Pool, issuer *session.Issuer, verifiers map[string]apiIdentity.IDTokenVerifier, reg *registry.OfEvents, wsHub *websocket.Hub) []*route.Route {
+func allRoutes(pool *pgxpool.Pool, issuer *session.Issuer, verifiers map[string]apiIdentity.IDTokenVerifier, reg *registry.OfEvents, wsHub *websocket.Hub, store storage.Storage) []*route.Route {
 	bus := command.NewBus()
 	coreUseCases.RegisterHandlers(bus, stream.NewPostgres(pool, reg))
 
 	routables := []route.Routable{
 		root.NewHandler(),
 		apiIdentity.NewHandler(bus, verifiers, issuer),
-		apiItem.NewHandler(bus, items.NewQuery(pool)),
+		apiItem.NewHandler(bus, items.NewQuery(pool), store),
 		apiTag.NewHandler(bus, tags.NewQuery(pool)),
 		websocket.NewHandler(wsHub, issuer, slog.Default()),
 	}
@@ -108,36 +114,46 @@ func allRoutes(pool *pgxpool.Pool, issuer *session.Issuer, verifiers map[string]
 	return routes
 }
 
-func subscribeToMetadataEvents(ctx context.Context, pool *pgxpool.Pool, reg *registry.OfEvents, hub *websocket.Hub, logger *slog.Logger) {
+func subscribeToPushEvents(ctx context.Context, pool *pgxpool.Pool, reg *registry.OfEvents, hub *websocket.Hub, logger *slog.Logger) {
 	sub := subscription.NewPostgres(pool, reg, logger)
 
 	after, err := sub.LastPosition(ctx)
 	if err != nil {
-		logger.Error("failed to get last position for metadata subscription", "error", err)
+		logger.Error("failed to get last position for push subscription", "error", err)
 		return
 	}
 
-	eventTypes := []string{event.LinkMetadataFetched{}.EventType()}
+	eventTypes := []string{
+		event.LinkMetadataFetched{}.EventType(),
+		event.ThumbnailGenerated{}.EventType(),
+	}
 	events, err := sub.SubscribeToAll(ctx, after, eventTypes)
 	if err != nil {
-		logger.Error("failed to subscribe to metadata events", "error", err)
+		logger.Error("failed to subscribe to push events", "error", err)
 		return
 	}
 
 	for evt := range events {
-		payload, ok := evt.Payload.(*event.LinkMetadataFetched)
-		if !ok {
-			continue
+		switch payload := evt.Payload.(type) {
+		case *event.LinkMetadataFetched:
+			hub.Broadcast(context.Background(), websocket.Message{
+				Type: "link-metadata-fetched",
+				Data: map[string]string{
+					"id":          payload.ItemID.String(),
+					"title":       payload.Title,
+					"description": payload.Description,
+				},
+			})
+		case *event.ThumbnailGenerated:
+			hub.Broadcast(context.Background(), websocket.Message{
+				Type: "thumbnail-generated",
+				Data: map[string]string{
+					"id":            payload.ItemID.String(),
+					"thumbnailPath": payload.ThumbnailRef,
+				},
+			})
 		}
-		hub.Broadcast(context.Background(), websocket.Message{
-			Type: "link-metadata-fetched",
-			Data: map[string]string{
-				"id":          payload.ItemID.String(),
-				"title":       payload.Title,
-				"description": payload.Description,
-			},
-		})
 	}
 
-	logger.Info("metadata event subscription stopped")
+	logger.Info("push event subscription stopped")
 }

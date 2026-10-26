@@ -18,17 +18,20 @@ import (
 	"github.com/hpcsc/stash/internal/domain/event/subscription"
 	"github.com/hpcsc/stash/internal/domain/projection"
 	"github.com/hpcsc/stash/internal/domain/reaction"
+	"github.com/hpcsc/stash/internal/storage"
 	"github.com/hpcsc/stash/internal/use_cases"
 	"github.com/hpcsc/stash/internal/use_cases/item"
 	"github.com/hpcsc/stash/internal/use_cases/item/items"
 	"github.com/hpcsc/stash/internal/use_cases/item/itemtags"
 	"github.com/hpcsc/stash/internal/use_cases/item/linkmetadata"
+	"github.com/hpcsc/stash/internal/use_cases/item/thumbnail"
 	"github.com/hpcsc/stash/internal/use_cases/tag/tags"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Config struct {
-	DB config.DB
+	DB         config.DB
+	StorageDir string `env:"STORAGE_DIR" envDefault:"./data"`
 }
 
 func main() {
@@ -46,8 +49,14 @@ func main() {
 		os.Exit(1)
 	}
 
+	fileStore, err := storage.NewDisk(cfg.StorageDir)
+	if err != nil {
+		logger.Error(err.Error())
+		os.Exit(1)
+	}
+
 	ctx := runShutdownSignalHandler(context.Background(), logger)
-	failed := run(ctx, consumers(pool, logger), logger)
+	failed := run(ctx, consumers(pool, fileStore, logger), logger)
 
 	pool.Close()
 	if failed {
@@ -55,7 +64,7 @@ func main() {
 	}
 }
 
-func consumers(pool *pgxpool.Pool, logger *slog.Logger) []*consumer.Consumer {
+func consumers(pool *pgxpool.Pool, fileStore storage.Storage, logger *slog.Logger) []*consumer.Consumer {
 	reg := registry.New()
 	use_cases.RegisterEvents(reg)
 
@@ -70,6 +79,7 @@ func consumers(pool *pgxpool.Pool, logger *slog.Logger) []*consumer.Consumer {
 		projection.NewProjector(tags.NewProjection(), pool, checkpointStore, eventSubscription, logger),
 		projection.NewProjector(itemtags.NewProjection(), pool, checkpointStore, eventSubscription, logger),
 		reaction.NewReactor(linkmetadata.New(itemRepo, logger), checkpointStore, eventSubscription, logger),
+		reaction.NewReactor(thumbnail.New(itemRepo, fileStore, logger), checkpointStore, eventSubscription, logger),
 	}
 }
 

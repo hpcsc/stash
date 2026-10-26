@@ -5,7 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -16,6 +19,7 @@ import (
 	"github.com/hpcsc/stash/internal/domain"
 	"github.com/hpcsc/stash/internal/domain/command"
 	"github.com/hpcsc/stash/internal/domain/event"
+	"github.com/hpcsc/stash/internal/storage"
 	itemCommand "github.com/hpcsc/stash/internal/use_cases/item/command"
 	"github.com/hpcsc/stash/internal/use_cases/item/items"
 	"github.com/unrolled/render"
@@ -28,11 +32,12 @@ type ItemReader interface {
 
 var _ route.Routable = (*handler)(nil)
 
-func NewHandler(bus *command.Bus, items ItemReader) route.Routable {
+func NewHandler(bus *command.Bus, items ItemReader, store storage.Storage) route.Routable {
 	return &handler{
 		renderer: render.New(),
 		bus:      bus,
 		items:    items,
+		storage:  store,
 	}
 }
 
@@ -40,6 +45,7 @@ type handler struct {
 	renderer *render.Render
 	bus      *command.Bus
 	items    ItemReader
+	storage  storage.Storage
 }
 
 func (h *handler) Routes() []*route.Route {
@@ -49,10 +55,18 @@ func (h *handler) Routes() []*route.Route {
 		route.Protected("GET", "/items/{id}", h.get),
 		route.Protected("POST", "/items/{id}/keep", h.keep),
 		route.Protected("POST", "/items/{id}/drop", h.dropItem),
+		route.Protected("GET", "/files/*", h.serveFile),
 	}
 }
 
 func (h *handler) capture(w http.ResponseWriter, req *http.Request) {
+	contentType := req.Header.Get("Content-Type")
+
+	if strings.HasPrefix(contentType, "multipart/form-data") {
+		h.captureImage(w, req)
+		return
+	}
+
 	var body CaptureRequest
 	if !h.decode(w, req, &body) {
 		return
@@ -170,4 +184,76 @@ func (h *handler) dispatch[P any](w http.ResponseWriter, req *http.Request, payl
 		return false
 	}
 	return true
+}
+
+const maxUploadSize = 25 << 20 // 25 MB
+
+func (h *handler) captureImage(w http.ResponseWriter, req *http.Request) {
+	req.Body = http.MaxBytesReader(w, req.Body, maxUploadSize)
+
+	if err := req.ParseMultipartForm(maxUploadSize); err != nil {
+		_ = h.renderer.JSON(w, http.StatusBadRequest, response.Fail("file too large, max 25 MB"))
+		return
+	}
+
+	file, header, err := req.FormFile("file")
+	if err != nil {
+		_ = h.renderer.JSON(w, http.StatusBadRequest, response.Fail("missing file field"))
+		return
+	}
+	defer file.Close()
+
+	mimeType := header.Header.Get("Content-Type")
+	if !isImage(mimeType) {
+		_ = h.renderer.JSON(w, http.StatusBadRequest, response.Fail("only image files are accepted"))
+		return
+	}
+
+	itemID := uuid.New()
+	ext := filepath.Ext(header.Filename)
+	key := fmt.Sprintf("images/%s%s", itemID, ext)
+
+	if _, err := h.storage.Save(req.Context(), key, file); err != nil {
+		_ = h.renderer.JSON(w, http.StatusInternalServerError, response.Fail("failed to save file"))
+		return
+	}
+
+	if !h.dispatch(w, req, itemCommand.CaptureImage{
+		ItemID:     itemID,
+		FileRef:    key,
+		CapturedAt: time.Now(),
+	}) {
+		return
+	}
+
+	_ = h.renderer.JSON(w, http.StatusOK, response.SucceedWithData(map[string]string{
+		"id":       itemID.String(),
+		"filePath": key,
+	}))
+}
+
+func isImage(mime string) bool {
+	switch mime {
+	case "image/jpeg", "image/png", "image/gif", "image/webp", "image/bmp":
+		return true
+	}
+	return false
+}
+
+func (h *handler) serveFile(w http.ResponseWriter, req *http.Request) {
+	key := chi.URLParam(req, "*")
+	reader, err := h.storage.Open(req.Context(), key)
+	if err != nil {
+		_ = h.renderer.JSON(w, http.StatusNotFound, response.Fail("file not found"))
+		return
+	}
+	defer reader.Close()
+
+	if seeker, ok := reader.(io.ReadSeeker); ok {
+		http.ServeContent(w, req, key, time.Now(), seeker)
+		return
+	}
+
+	w.Header().Set("Cache-Control", "public, max-age=86400")
+	io.Copy(w, reader)
 }
