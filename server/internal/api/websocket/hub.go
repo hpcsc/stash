@@ -54,6 +54,17 @@ func (h *Hub) Broadcast(ctx context.Context, msg Message) {
 	}
 }
 
+func (h *Hub) Shutdown(ctx context.Context) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	for conn := range h.clients {
+		conn.Close(websocket.StatusGoingAway, "server shutting down")
+	}
+	h.clients = make(map[*websocket.Conn]struct{})
+	h.logger.Info("websocket hub shut down")
+}
+
 type Message struct {
 	Type string `json:"type"`
 	Data any    `json:"data"`
