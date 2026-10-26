@@ -1,4 +1,4 @@
-package linkmetadata
+package link_metadata
 
 import (
 	"context"

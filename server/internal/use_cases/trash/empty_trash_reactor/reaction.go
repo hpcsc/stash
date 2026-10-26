@@ -1,4 +1,4 @@
-package emptytrashreactor
+package empty_trash_reactor
 
 import (
 	"context"

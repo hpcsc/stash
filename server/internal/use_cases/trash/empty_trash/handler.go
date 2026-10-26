@@ -1,4 +1,4 @@
-package emptytrash
+package empty_trash
 
 import (
 	"context"

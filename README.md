@@ -161,7 +161,7 @@ reads the event.
    `domain.NewEvent(&event.SignedIn{...})`. `Apply` changes the state from that event.
 2. Add a payload type for the command, for example `SignIn` in
    `server/internal/use_cases/identity/command`.
-3. Add a package for the use case, for example `server/internal/use_cases/identity/signin`. Give it a
+3. Add a package for the use case, for example `server/internal/use_cases/identity/sign_in`. Give it a
    handler type with a `Handle(ctx, domain.Command[SignIn]) error` method. The handler loads
    the aggregate from its repository, calls the method, and saves.
 4. Give the package a `Register` function that calls `bus.Register[SignIn](handler{...})`, and

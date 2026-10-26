@@ -1,4 +1,4 @@
-package itemtags
+package item_tags
 
 import (
 	"context"

@@ -1,4 +1,4 @@
-package capturefile
+package capture_text
 
 import (
 	"context"
@@ -10,19 +10,19 @@ import (
 )
 
 func Register(bus *command.Bus, items *item.Repository) {
-	bus.Register[itemCommand.CaptureFile](handler{items: items})
+	bus.Register[itemCommand.CaptureText](handler{items: items})
 }
 
 type handler struct {
 	items *item.Repository
 }
 
-func (h handler) Handle(ctx context.Context, cmd domain.Command[itemCommand.CaptureFile]) error {
+func (h handler) Handle(ctx context.Context, cmd domain.Command[itemCommand.CaptureText]) error {
 	i, err := h.items.Load(ctx, cmd.Payload.ItemID)
 	if err != nil {
 		return err
 	}
-	if err := i.CaptureFile(cmd.Payload); err != nil {
+	if err := i.CaptureText(cmd.Payload); err != nil {
 		return err
 	}
 	return h.items.Save(ctx, i, cmd.ID)

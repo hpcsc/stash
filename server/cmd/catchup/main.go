@@ -22,12 +22,12 @@ import (
 	"github.com/hpcsc/stash/internal/storage"
 	"github.com/hpcsc/stash/internal/use_cases"
 	"github.com/hpcsc/stash/internal/use_cases/item"
+	"github.com/hpcsc/stash/internal/use_cases/item/item_tags"
 	"github.com/hpcsc/stash/internal/use_cases/item/items"
-	"github.com/hpcsc/stash/internal/use_cases/item/itemtags"
-	"github.com/hpcsc/stash/internal/use_cases/item/linkmetadata"
+	"github.com/hpcsc/stash/internal/use_cases/item/link_metadata"
 	"github.com/hpcsc/stash/internal/use_cases/item/thumbnail"
 	"github.com/hpcsc/stash/internal/use_cases/tag/tags"
-	"github.com/hpcsc/stash/internal/use_cases/trash/emptytrashreactor"
+	"github.com/hpcsc/stash/internal/use_cases/trash/empty_trash_reactor"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -81,10 +81,10 @@ func consumers(pool *pgxpool.Pool, fileStore storage.Storage, logger *slog.Logge
 	return []*consumer.Consumer{
 		projection.NewProjector(items.NewProjection(), pool, checkpointStore, eventSubscription, logger),
 		projection.NewProjector(tags.NewProjection(), pool, checkpointStore, eventSubscription, logger),
-		projection.NewProjector(itemtags.NewProjection(), pool, checkpointStore, eventSubscription, logger),
-		reaction.NewReactor(linkmetadata.New(itemRepo, logger), checkpointStore, eventSubscription, logger),
+		projection.NewProjector(item_tags.NewProjection(), pool, checkpointStore, eventSubscription, logger),
+		reaction.NewReactor(link_metadata.New(itemRepo, logger), checkpointStore, eventSubscription, logger),
 		reaction.NewReactor(thumbnail.New(itemRepo, fileStore, logger), checkpointStore, eventSubscription, logger),
-		reaction.NewReactor(emptytrashreactor.New(bus, logger), checkpointStore, eventSubscription, logger),
+		reaction.NewReactor(empty_trash_reactor.New(bus, logger), checkpointStore, eventSubscription, logger),
 	}
 }
 

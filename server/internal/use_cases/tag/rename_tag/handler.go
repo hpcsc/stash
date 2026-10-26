@@ -1,4 +1,4 @@
-package renametag
+package rename_tag
 
 import (
 	"context"

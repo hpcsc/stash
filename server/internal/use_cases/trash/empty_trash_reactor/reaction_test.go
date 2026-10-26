@@ -1,6 +1,6 @@
 //go:build unit
 
-package emptytrashreactor_test
+package empty_trash_reactor_test
 
 import (
 	"context"
@@ -15,7 +15,7 @@ import (
 	"github.com/hpcsc/stash/internal/use_cases/item"
 	itemCommand "github.com/hpcsc/stash/internal/use_cases/item/command"
 	itemEvent "github.com/hpcsc/stash/internal/use_cases/item/event"
-	"github.com/hpcsc/stash/internal/use_cases/trash/emptytrashreactor"
+	"github.com/hpcsc/stash/internal/use_cases/trash/empty_trash_reactor"
 	"github.com/hpcsc/stash/internal/use_cases/trash/event"
 	"github.com/stretchr/testify/require"
 )
@@ -102,12 +102,12 @@ func (h *recordingDeletes) Handle(_ context.Context, cmd domain.Command[itemComm
 	return h.errByItem[cmd.Payload.ItemID]
 }
 
-func given(t *testing.T, handler *recordingDeletes) *emptytrashreactor.Reaction {
+func given(t *testing.T, handler *recordingDeletes) *empty_trash_reactor.Reaction {
 	t.Helper()
 
 	bus := command.NewBus()
 	bus.Register[itemCommand.Delete](handler)
-	return emptytrashreactor.New(bus, test.DiscardLogger())
+	return empty_trash_reactor.New(bus, test.DiscardLogger())
 }
 
 func trashEmptiedEvent(id string, itemIDs ...uuid.UUID) *domain.Event {

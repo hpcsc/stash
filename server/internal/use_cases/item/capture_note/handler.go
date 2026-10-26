@@ -1,4 +1,4 @@
-package capturenote
+package capture_note
 
 import (
 	"context"

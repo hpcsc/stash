@@ -1,4 +1,4 @@
-package createtag
+package create_tag
 
 import (
 	"context"

@@ -1,4 +1,4 @@
-package deleteitem
+package capture_link
 
 import (
 	"context"
@@ -10,19 +10,19 @@ import (
 )
 
 func Register(bus *command.Bus, items *item.Repository) {
-	bus.Register[itemCommand.Delete](handler{items: items})
+	bus.Register[itemCommand.CaptureLink](handler{items: items})
 }
 
 type handler struct {
 	items *item.Repository
 }
 
-func (h handler) Handle(ctx context.Context, cmd domain.Command[itemCommand.Delete]) error {
+func (h handler) Handle(ctx context.Context, cmd domain.Command[itemCommand.CaptureLink]) error {
 	i, err := h.items.Load(ctx, cmd.Payload.ItemID)
 	if err != nil {
 		return err
 	}
-	if err := i.Delete(cmd.Payload); err != nil {
+	if err := i.CaptureLink(cmd.Payload); err != nil {
 		return err
 	}
 	return h.items.Save(ctx, i, cmd.ID)

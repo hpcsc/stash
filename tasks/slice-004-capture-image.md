@@ -67,8 +67,8 @@ No tests yet — the interface itself is trivial; disk implementation gets teste
 ## 6. Use case handler
 
 **Files:**
-- `use_cases/item/captureimage/handler.go` — `Register(bus, items)` + handler that loads aggregate, calls `CaptureImage()`, saves. Same pattern as `capturelink/handler.go`.
-- `use_cases/register.go` — call `captureimage.Register(bus, items)` in `RegisterHandlers`
+- `use_cases/item/capture_image/handler.go` — `Register(bus, items)` + handler that loads aggregate, calls `CaptureImage()`, saves. Same pattern as `capture_link/handler.go`.
+- `use_cases/register.go` — call `capture_image.Register(bus, items)` in `RegisterHandlers`
 
 ---
 
@@ -136,7 +136,7 @@ Reacts to `ImageCaptured`, generates a thumbnail, dispatches `RecordThumbnail` o
   - Loads item aggregate, calls `RecordThumbnail(thumbnailPath)`, saves
   - On error: logs warning, returns nil (same as link metadata reactor — don't block the stream)
 
-No tests — same as linkmetadata, the reaction logic is tested via integration.
+No tests — same as link_metadata, the reaction logic is tested via integration.
 
 **Files:**
 - `cmd/catchup/main.go` — register the thumbnail reactor consumer

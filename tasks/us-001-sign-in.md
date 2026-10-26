@@ -63,7 +63,7 @@
    - `internal/use_cases/identity/repository.go`.
 
 5. **Add the sign-in and sign-out command handlers** and register them.
-   - `internal/use_cases/identity/signin/handler.go`, `signout/handler.go`.
+   - `internal/use_cases/identity/sign_in/handler.go`, `sign_out/handler.go`.
 
 6. **Wire events + handlers** into `internal/use_cases/register.go`.
 
