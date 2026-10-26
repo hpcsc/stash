@@ -24,6 +24,7 @@ import (
 	"github.com/hpcsc/stash/internal/domain/command/fake"
 	itemCommand "github.com/hpcsc/stash/internal/use_cases/item/command"
 	"github.com/hpcsc/stash/internal/use_cases/item/items"
+	trashCommand "github.com/hpcsc/stash/internal/use_cases/trash/command"
 	"github.com/stretchr/testify/require"
 )
 
@@ -297,6 +298,85 @@ func TestHandler(t *testing.T) {
 			w := send(router, "POST", "/items/not-a-uuid/drop", "")
 
 			require.Equal(t, http.StatusBadRequest, w.Code)
+		})
+	})
+
+	t.Run("restore", func(t *testing.T) {
+		t.Run("dispatches a restore command", func(t *testing.T) {
+			handler := fake.NewHandler[itemCommand.Restore]()
+			bus := command.NewBus()
+			bus.Register[itemCommand.Restore](handler)
+			router := newRouter(bus, fakeReader{})
+
+			w := send(router, "POST", "/items/6f1c2a54-7b0e-4f6a-9a51-2d8f0c3e9b71/restore", "")
+
+			require.Equal(t, http.StatusOK, w.Code)
+			require.Equal(t, uuid.MustParse("6f1c2a54-7b0e-4f6a-9a51-2d8f0c3e9b71"), handler.TriggeredWithCommand().Payload.ItemID)
+		})
+
+		t.Run("rejects an invalid item id", func(t *testing.T) {
+			bus := command.NewBus()
+			bus.Register[itemCommand.Restore](fake.NewHandler[itemCommand.Restore]())
+			router := newRouter(bus, fakeReader{})
+
+			w := send(router, "POST", "/items/not-a-uuid/restore", "")
+
+			require.Equal(t, http.StatusBadRequest, w.Code)
+		})
+	})
+
+	t.Run("delete", func(t *testing.T) {
+		t.Run("dispatches a delete command", func(t *testing.T) {
+			handler := fake.NewHandler[itemCommand.Delete]()
+			bus := command.NewBus()
+			bus.Register[itemCommand.Delete](handler)
+			router := newRouter(bus, fakeReader{})
+
+			w := send(router, "POST", "/items/6f1c2a54-7b0e-4f6a-9a51-2d8f0c3e9b71/delete", "")
+
+			require.Equal(t, http.StatusOK, w.Code)
+			require.Equal(t, uuid.MustParse("6f1c2a54-7b0e-4f6a-9a51-2d8f0c3e9b71"), handler.TriggeredWithCommand().Payload.ItemID)
+		})
+
+		t.Run("rejects an invalid item id", func(t *testing.T) {
+			bus := command.NewBus()
+			bus.Register[itemCommand.Delete](fake.NewHandler[itemCommand.Delete]())
+			router := newRouter(bus, fakeReader{})
+
+			w := send(router, "POST", "/items/not-a-uuid/delete", "")
+
+			require.Equal(t, http.StatusBadRequest, w.Code)
+		})
+	})
+
+	t.Run("empty trash", func(t *testing.T) {
+		t.Run("dispatches an empty trash command with the dropped items", func(t *testing.T) {
+			handler := fake.NewHandler[trashCommand.EmptyTrash]()
+			bus := command.NewBus()
+			bus.Register[trashCommand.EmptyTrash](handler)
+			router := newRouter(bus, fakeReader{items: []items.Item{
+				{ID: "6f1c2a54-7b0e-4f6a-9a51-2d8f0c3e9b71"},
+				{ID: "c2d5a1e8-3f47-4b90-8e61-7a4c9d2b5f03"},
+			}})
+
+			w := send(router, "POST", "/trash/empty", "")
+
+			require.Equal(t, http.StatusOK, w.Code)
+			require.Equal(t, []uuid.UUID{
+				uuid.MustParse("6f1c2a54-7b0e-4f6a-9a51-2d8f0c3e9b71"),
+				uuid.MustParse("c2d5a1e8-3f47-4b90-8e61-7a4c9d2b5f03"),
+			}, handler.TriggeredWithCommand().Payload.ItemIDs)
+		})
+
+		t.Run("rejects an empty trash", func(t *testing.T) {
+			bus := command.NewBus()
+			bus.Register[trashCommand.EmptyTrash](fake.NewHandler[trashCommand.EmptyTrash]())
+			router := newRouter(bus, fakeReader{})
+
+			w := send(router, "POST", "/trash/empty", "")
+
+			require.Equal(t, http.StatusBadRequest, w.Code)
+			require.Contains(t, w.Body.String(), "trash is empty")
 		})
 	})
 }

@@ -23,6 +23,7 @@ import (
 	itemCommand "github.com/hpcsc/stash/internal/use_cases/item/command"
 	"github.com/hpcsc/stash/internal/use_cases/item/items"
 	"github.com/hpcsc/stash/internal/use_cases/item/note"
+	trashCommand "github.com/hpcsc/stash/internal/use_cases/trash/command"
 	"github.com/unrolled/render"
 )
 
@@ -56,6 +57,9 @@ func (h *handler) Routes() []*route.Route {
 		route.Protected("GET", "/items/{id}", h.get),
 		route.Protected("POST", "/items/{id}/keep", h.keep),
 		route.Protected("POST", "/items/{id}/drop", h.dropItem),
+		route.Protected("POST", "/items/{id}/restore", h.restoreItem),
+		route.Protected("POST", "/items/{id}/delete", h.deleteItem),
+		route.Protected("POST", "/trash/empty", h.emptyTrash),
 		route.Public("GET", "/files/*", h.serveFile),
 	}
 }
@@ -154,6 +158,61 @@ func (h *handler) dropItem(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if !h.dispatch(w, req, itemCommand.Drop{ItemID: id}) {
+		return
+	}
+
+	_ = h.renderer.JSON(w, http.StatusOK, response.Succeed())
+}
+
+func (h *handler) restoreItem(w http.ResponseWriter, req *http.Request) {
+	id, err := uuid.Parse(chi.URLParam(req, "id"))
+	if err != nil {
+		_ = h.renderer.JSON(w, http.StatusBadRequest, response.Fail("invalid item id"))
+		return
+	}
+
+	if !h.dispatch(w, req, itemCommand.Restore{ItemID: id}) {
+		return
+	}
+
+	_ = h.renderer.JSON(w, http.StatusOK, response.Succeed())
+}
+
+func (h *handler) deleteItem(w http.ResponseWriter, req *http.Request) {
+	id, err := uuid.Parse(chi.URLParam(req, "id"))
+	if err != nil {
+		_ = h.renderer.JSON(w, http.StatusBadRequest, response.Fail("invalid item id"))
+		return
+	}
+
+	if !h.dispatch(w, req, itemCommand.Delete{ItemID: id}) {
+		return
+	}
+
+	_ = h.renderer.JSON(w, http.StatusOK, response.Succeed())
+}
+
+func (h *handler) emptyTrash(w http.ResponseWriter, req *http.Request) {
+	dropped, err := h.items.List(req.Context(), "", "dropped")
+	if err != nil {
+		_ = h.renderer.JSON(w, http.StatusInternalServerError, response.Fail(err.Error()))
+		return
+	}
+
+	ids := make([]uuid.UUID, 0, len(dropped))
+	for _, i := range dropped {
+		id, err := uuid.Parse(i.ID)
+		if err != nil {
+			continue
+		}
+		ids = append(ids, id)
+	}
+	if len(ids) == 0 {
+		_ = h.renderer.JSON(w, http.StatusBadRequest, response.Fail("trash is empty"))
+		return
+	}
+
+	if !h.dispatch(w, req, trashCommand.EmptyTrash{ItemIDs: ids}) {
 		return
 	}
 
