@@ -139,6 +139,59 @@ func TestItem(t *testing.T) {
 		})
 	})
 
+	t.Run("capture file", func(t *testing.T) {
+		t.Run("captures a file into the inbox", func(t *testing.T) {
+			var i item.Item
+			cmd := captureFile()
+
+			require.NoError(t, i.CaptureFile(cmd))
+
+			require.Equal(t, &event.FileCaptured{
+				ItemID:     cmd.ItemID,
+				FileRef:    "files/report.pdf",
+				FileName:   "report.pdf",
+				FileSize:   1024,
+				MimeType:   "application/pdf",
+				CapturedAt: capturedAt,
+			}, onlyRecorded(t, &i).Payload)
+			require.Equal(t, cmd.ItemID, i.ID())
+		})
+
+		t.Run("rejects a second capture", func(t *testing.T) {
+			i := given(fileCaptured())
+
+			require.ErrorIs(t, i.CaptureFile(captureFile()), item.ErrAlreadyCaptured)
+			require.Empty(t, i.Recorded())
+		})
+
+		t.Run("rejects an empty file ref", func(t *testing.T) {
+			var i item.Item
+			cmd := captureFile()
+			cmd.FileRef = ""
+
+			require.Error(t, i.CaptureFile(cmd))
+			require.Empty(t, i.Recorded())
+		})
+
+		t.Run("rejects a file larger than the limit", func(t *testing.T) {
+			var i item.Item
+			cmd := captureFile()
+			cmd.FileSize = command.MaxFileSize + 1
+
+			require.ErrorIs(t, i.CaptureFile(cmd), item.ErrFileTooLarge)
+			require.Empty(t, i.Recorded())
+		})
+
+		t.Run("rejects a video", func(t *testing.T) {
+			var i item.Item
+			cmd := captureFile()
+			cmd.MimeType = "video/mp4"
+
+			require.ErrorIs(t, i.CaptureFile(cmd), item.ErrVideoRejected)
+			require.Empty(t, i.Recorded())
+		})
+	})
+
 	t.Run("record thumbnail", func(t *testing.T) {
 		t.Run("records a thumbnail for an image item", func(t *testing.T) {
 			i := given(imageCaptured())
@@ -260,6 +313,17 @@ func captureImage() command.CaptureImage {
 	}
 }
 
+func captureFile() command.CaptureFile {
+	return command.CaptureFile{
+		ItemID:     itemID,
+		FileRef:    "files/report.pdf",
+		FileName:   "report.pdf",
+		FileSize:   1024,
+		MimeType:   "application/pdf",
+		CapturedAt: capturedAt,
+	}
+}
+
 func keepCmd() command.Keep {
 	return command.Keep{ItemID: itemID}
 }
@@ -291,6 +355,17 @@ func linkMetadataFetched() domain.Event {
 
 func imageCaptured() domain.Event {
 	return domain.NewEvent(&event.ImageCaptured{ItemID: itemID, FileRef: "images/photo.jpg", CapturedAt: capturedAt})
+}
+
+func fileCaptured() domain.Event {
+	return domain.NewEvent(&event.FileCaptured{
+		ItemID:     itemID,
+		FileRef:    "files/report.pdf",
+		FileName:   "report.pdf",
+		FileSize:   1024,
+		MimeType:   "application/pdf",
+		CapturedAt: capturedAt,
+	})
 }
 
 func thumbnailGenerated() domain.Event {

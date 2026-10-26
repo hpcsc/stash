@@ -22,6 +22,9 @@ type Item struct {
 	Description   string    `json:"description,omitempty"`
 	FilePath      string    `json:"filePath,omitempty"`
 	ThumbnailPath string    `json:"thumbnailPath,omitempty"`
+	FileName      string    `json:"fileName,omitempty"`
+	FileSize      int64     `json:"fileSize,omitempty"`
+	MimeType      string    `json:"mimeType,omitempty"`
 	CapturedAt    time.Time `json:"capturedAt"`
 }
 
@@ -35,7 +38,7 @@ type Query struct {
 
 func (q *Query) List(ctx context.Context, search string, states ...string) ([]Item, error) {
 	query := `
-		SELECT id::text, type, body, state, source_app, source_url, title, description, file_path, thumbnail_path, captured_at
+		SELECT id::text, type, body, state, source_app, source_url, title, description, file_path, thumbnail_path, file_name, file_size, mime_type, captured_at
 		FROM items
 	`
 	var args []any
@@ -71,7 +74,7 @@ func (q *Query) List(ctx context.Context, search string, states ...string) ([]It
 
 	return pgx.CollectRows(rows, func(r pgx.CollectableRow) (Item, error) {
 		var i Item
-		err := r.Scan(&i.ID, &i.Type, &i.Body, &i.State, &i.SourceApp, &i.SourceURL, &i.Title, &i.Description, &i.FilePath, &i.ThumbnailPath, &i.CapturedAt)
+		err := r.Scan(&i.ID, &i.Type, &i.Body, &i.State, &i.SourceApp, &i.SourceURL, &i.Title, &i.Description, &i.FilePath, &i.ThumbnailPath, &i.FileName, &i.FileSize, &i.MimeType, &i.CapturedAt)
 		return i, err
 	})
 }
@@ -79,10 +82,10 @@ func (q *Query) List(ctx context.Context, search string, states ...string) ([]It
 func (q *Query) ByID(ctx context.Context, id string) (*Item, error) {
 	var i Item
 	err := q.pool.QueryRow(ctx, `
-		SELECT id::text, type, body, state, source_app, source_url, title, description, file_path, thumbnail_path, captured_at
+		SELECT id::text, type, body, state, source_app, source_url, title, description, file_path, thumbnail_path, file_name, file_size, mime_type, captured_at
 		FROM items
 		WHERE id = $1
-	`, id).Scan(&i.ID, &i.Type, &i.Body, &i.State, &i.SourceApp, &i.SourceURL, &i.Title, &i.Description, &i.FilePath, &i.ThumbnailPath, &i.CapturedAt)
+	`, id).Scan(&i.ID, &i.Type, &i.Body, &i.State, &i.SourceApp, &i.SourceURL, &i.Title, &i.Description, &i.FilePath, &i.ThumbnailPath, &i.FileName, &i.FileSize, &i.MimeType, &i.CapturedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}

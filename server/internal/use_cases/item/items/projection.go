@@ -23,6 +23,7 @@ func (p *Projection) EventTypes() []string {
 		event.TextCaptured{}.EventType(),
 		event.LinkCaptured{}.EventType(),
 		event.ImageCaptured{}.EventType(),
+		event.FileCaptured{}.EventType(),
 		event.LinkMetadataFetched{}.EventType(),
 		event.ThumbnailGenerated{}.EventType(),
 		event.ItemKept{}.EventType(),
@@ -64,6 +65,13 @@ func (p *Projection) Handle(ctx context.Context, tx pgx.Tx, evt *domain.Event) e
 			UPDATE items SET thumbnail_path = $2, version = $3, updated_at = NOW()
 			WHERE id = $1
 		`, payload.ItemID, payload.ThumbnailRef, evt.Version)
+		return err
+	case *event.FileCaptured:
+		_, err := tx.Exec(ctx, `
+			INSERT INTO items (id, type, body, file_path, file_name, file_size, mime_type, captured_at, state, version)
+			VALUES ($1, 'file', '', $2, $3, $4, $5, $6, 'inbox', $7)
+			ON CONFLICT (id) DO NOTHING
+		`, payload.ItemID, payload.FileRef, payload.FileName, payload.FileSize, payload.MimeType, payload.CapturedAt, evt.Version)
 		return err
 	case *event.ItemKept:
 		_, err := tx.Exec(ctx, `

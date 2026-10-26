@@ -41,6 +41,28 @@ func TestProjection(t *testing.T) {
 		require.Equal(t, "chrome", item.SourceApp)
 	})
 
+	t.Run("projects a captured file with its metadata", func(t *testing.T) {
+		pool := test.NewDBPool(t)
+		clearState(t, pool)
+		checkpointStore := store.NewPostgres(pool)
+		id := uuid.New()
+		sub := subscription.NewFake().WithEventChannel(closedChannel(
+			fileCapturedEvent(1, 1, id, time.Date(2026, 10, 24, 12, 0, 0, 0, time.UTC)),
+		))
+
+		err := projection.NewProjector(items.NewProjection(), pool, checkpointStore, sub, test.DiscardLogger()).Start(context.Background())
+		require.ErrorIs(t, err, event.ErrSubscriptionEnded)
+
+		item, err := items.NewQuery(pool).ByID(context.Background(), id.String())
+		require.NoError(t, err)
+		require.NotNil(t, item)
+		require.Equal(t, "file", item.Type)
+		require.Equal(t, "files/report.pdf", item.FilePath)
+		require.Equal(t, "report.pdf", item.FileName)
+		require.Equal(t, int64(1024), item.FileSize)
+		require.Equal(t, "application/pdf", item.MimeType)
+	})
+
 	t.Run("lists items newest first", func(t *testing.T) {
 		pool := test.NewDBPool(t)
 		clearState(t, pool)
@@ -70,6 +92,22 @@ func textCapturedEvent(txID, sequence uint64, id uuid.UUID, body, sourceApp stri
 			ItemID:     id,
 			Body:       body,
 			SourceApp:  sourceApp,
+			CapturedAt: capturedAt,
+		},
+	}
+}
+
+func fileCapturedEvent(txID, sequence uint64, id uuid.UUID, capturedAt time.Time) domain.Event {
+	return domain.Event{
+		StreamID: "item-" + id.String(),
+		Version:  1,
+		Position: domain.Position{TransactionID: txID, Sequence: sequence},
+		Payload: &itemEvent.FileCaptured{
+			ItemID:     id,
+			FileRef:    "files/report.pdf",
+			FileName:   "report.pdf",
+			FileSize:   1024,
+			MimeType:   "application/pdf",
 			CapturedAt: capturedAt,
 		},
 	}

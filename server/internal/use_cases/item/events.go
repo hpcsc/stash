@@ -9,6 +9,7 @@ func RegisterEvents(reg *registry.OfEvents) {
 	reg.Register[event.TextCaptured]()
 	reg.Register[event.LinkCaptured]()
 	reg.Register[event.ImageCaptured]()
+	reg.Register[event.FileCaptured]()
 	reg.Register[event.LinkMetadataFetched]()
 	reg.Register[event.ThumbnailGenerated]()
 	reg.Register[event.ItemKept]()

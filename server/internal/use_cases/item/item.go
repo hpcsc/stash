@@ -3,6 +3,7 @@ package item
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/hpcsc/stash/internal/domain"
@@ -16,6 +17,8 @@ var ErrAlreadyDropped = errors.New("item is already dropped")
 var ErrNotCaptured = errors.New("item has not been captured")
 var ErrMetadataAlreadyRecorded = errors.New("link metadata is already recorded")
 var ErrThumbnailAlreadyRecorded = errors.New("thumbnail is already recorded")
+var ErrFileTooLarge = errors.New("file is too large")
+var ErrVideoRejected = errors.New("videos are not accepted")
 
 var _ domain.Aggregate = (*Item)(nil)
 
@@ -83,6 +86,31 @@ func (i *Item) CaptureImage(cmd command.CaptureImage) error {
 	i.record(domain.NewEvent(&event.ImageCaptured{
 		ItemID:     cmd.ItemID,
 		FileRef:    cmd.FileRef,
+		CapturedAt: cmd.CapturedAt,
+	}))
+	return nil
+}
+
+func (i *Item) CaptureFile(cmd command.CaptureFile) error {
+	if i.id != uuid.Nil {
+		return ErrAlreadyCaptured
+	}
+	if cmd.FileRef == "" {
+		return errors.New("file ref must not be empty")
+	}
+	if cmd.FileSize > command.MaxFileSize {
+		return ErrFileTooLarge
+	}
+	if strings.HasPrefix(cmd.MimeType, "video/") {
+		return ErrVideoRejected
+	}
+
+	i.record(domain.NewEvent(&event.FileCaptured{
+		ItemID:     cmd.ItemID,
+		FileRef:    cmd.FileRef,
+		FileName:   cmd.FileName,
+		FileSize:   cmd.FileSize,
+		MimeType:   cmd.MimeType,
 		CapturedAt: cmd.CapturedAt,
 	}))
 	return nil
@@ -167,6 +195,10 @@ func (i *Item) Apply(e domain.Event) {
 		i.id = p.ItemID
 		i.state = "inbox"
 		i.kind = "image"
+	case *event.FileCaptured:
+		i.id = p.ItemID
+		i.state = "inbox"
+		i.kind = "file"
 	case *event.LinkMetadataFetched:
 		i.hasMetadata = true
 	case *event.ThumbnailGenerated:
