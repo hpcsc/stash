@@ -16,7 +16,7 @@
   const typeMeta: Record<string, { icon: string; label: string }> = {
     text: { icon: 'T', label: 'Text' },
     link: { icon: '🔗', label: 'Link' },
-    image: { icon: '🖼', label: 'Image' },
+    image: { icon: '📷', label: 'Image' },
     file: { icon: '📎', label: 'File' },
   }
 
@@ -46,7 +46,7 @@
     {#if thumbnail}
       <img class="thumb" src={thumbnail} alt="" />
     {:else}
-      <div class="image-placeholder">🖼</div>
+      <div class="image-placeholder">📷</div>
     {/if}
   {:else if item.type === 'file'}
     <div class="file">
