@@ -48,6 +48,21 @@ export async function signOut(): Promise<void> {
   await request('POST', '/auth/signout')
 }
 
+export interface ItemImage {
+  id: string
+  filePath: string
+  thumbnailPath?: string
+  fileName?: string
+  fileSize?: number
+  mimeType?: string
+}
+
+export interface ItemBlock {
+  type: string
+  text?: string
+  image?: ItemImage
+}
+
 export interface Item {
   id: string
   type: string
@@ -63,6 +78,18 @@ export interface Item {
   fileSize?: number
   mimeType?: string
   capturedAt: string
+  images?: ItemImage[]
+  blocks?: ItemBlock[]
+}
+
+export interface NoteDocumentBlock {
+  type: 'text' | 'image'
+  text?: string
+  index?: number
+}
+
+export interface NoteDocument {
+  blocks: NoteDocumentBlock[]
 }
 
 export async function listItems(search?: string, states?: string[]): Promise<Item[]> {
@@ -91,14 +118,11 @@ export interface CapturedAttachment {
   fileName?: string
 }
 
-export async function captureAttachment(file: File): Promise<CapturedAttachment> {
-  const form = new FormData()
-  form.append('file', file)
-
+async function postForm(path: string, form: FormData): Promise<Envelope> {
   const headers: Record<string, string> = {}
   if (token) headers.Authorization = `Bearer ${token}`
 
-  const response = await fetch(`${apiBaseUrl}/items`, {
+  const response = await fetch(`${apiBaseUrl}${path}`, {
     method: 'POST',
     headers,
     body: form,
@@ -108,7 +132,22 @@ export async function captureAttachment(file: File): Promise<CapturedAttachment>
   if (envelope.successful !== true) {
     throw new ApiError(envelope.messages.join('\n') || 'request failed', response.status)
   }
+  return envelope
+}
+
+export async function captureAttachment(file: File): Promise<CapturedAttachment> {
+  const form = new FormData()
+  form.append('file', file)
+  const envelope = await postForm('/items', form)
   return envelope.data as CapturedAttachment
+}
+
+export async function captureNote(document: NoteDocument, images: File[]): Promise<Item> {
+  const form = new FormData()
+  form.append('document', JSON.stringify(document))
+  for (const image of images) form.append('images', image, image.name)
+  const envelope = await postForm('/items', form)
+  return envelope.data as Item
 }
 
 export function fileUrl(path: string): string {

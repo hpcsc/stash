@@ -1,8 +1,9 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { listItems, captureText, captureLink, captureAttachment, keepItem, dropItem, type Item } from '../api/client'
+  import { listItems, captureText, captureLink, captureAttachment, captureNote, keepItem, dropItem, type Item } from '../api/client'
   import { connect, onMessage } from '../api/ws'
   import { token } from '../auth/session'
+  import type { NoteUpload } from '../note'
   import CaptureForm from './CaptureForm.svelte'
   import ItemCard from './ItemCard.svelte'
   import ItemDetail from './ItemDetail.svelte'
@@ -39,6 +40,15 @@
           i.id === data.id ? { ...i, thumbnailPath: data.thumbnailPath } : i,
         )
       }
+      if (msg.type === 'image-thumbnail-generated') {
+        const data = msg.data as { id: string; imageId: string; thumbnailPath: string }
+        items = items.map((i) =>
+          i.id === data.id ? withImageThumbnail(i, data.imageId, data.thumbnailPath) : i,
+        )
+        if (selected?.id === data.id) {
+          selected = withImageThumbnail(selected, data.imageId, data.thumbnailPath)
+        }
+      }
     })
 
     return () => {
@@ -64,14 +74,23 @@
     load(q)
   }
 
-  async function save(body: string) {
+  async function save(upload: NoteUpload) {
     saving = true
     error = null
     try {
-      if (urlRe.test(body.trim())) {
-        const id = await captureLink(body.trim())
+      if (upload.images.length > 0) {
+        const item = await captureNote(upload.document, upload.images)
+        items = [item, ...items]
+        return
+      }
+
+      const body = upload.text.trim()
+      if (!body) return
+
+      if (urlRe.test(body)) {
+        const id = await captureLink(body)
         items = [
-          { id, type: 'link', body: body.trim(), state: 'inbox', capturedAt: new Date().toISOString() },
+          { id, type: 'link', body, state: 'inbox', capturedAt: new Date().toISOString() },
           ...items,
         ]
       } else {
@@ -86,6 +105,18 @@
     } finally {
       saving = false
     }
+  }
+
+  function withImageThumbnail(item: Item, imageId: string, thumbnailPath: string): Item {
+    const images = item.images?.map((image) =>
+      image.id === imageId ? { ...image, thumbnailPath } : image,
+    )
+    const blocks = item.blocks?.map((block) =>
+      block.image?.id === imageId
+        ? { ...block, image: { ...block.image, thumbnailPath } }
+        : block,
+    )
+    return { ...item, images, blocks }
   }
 
   async function saveAttachment(file: File) {

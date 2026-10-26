@@ -18,6 +18,7 @@
     link: { icon: '🔗', label: 'Link' },
     image: { icon: '📷', label: 'Image' },
     file: { icon: '📎', label: 'File' },
+    note: { icon: '📝', label: 'Note' },
   }
 
   const meta = $derived(typeMeta[item.type] ?? typeMeta.text)
@@ -25,6 +26,9 @@
   const preview = $derived(item.title || item.body.slice(0, 160))
   const hasMore = $derived(!item.title && item.body.length > 160)
   const thumbnail = $derived(item.thumbnailPath ? fileUrl(item.thumbnailPath) : null)
+  const noteImages = $derived(item.images ?? [])
+  const visibleNoteImages = $derived(noteImages.slice(0, 4))
+  const hiddenNoteImageCount = $derived(Math.max(0, noteImages.length - 4))
 
   function handleKeep(e: MouseEvent) {
     e.stopPropagation()
@@ -57,6 +61,24 @@
         {/if}
       </div>
     </div>
+  {:else if item.type === 'note'}
+    {#if item.body}
+      <p class="body">{preview}{hasMore ? '…' : ''}</p>
+    {/if}
+    {#if noteImages.length > 0}
+      <div class="note-images">
+        {#each visibleNoteImages as image (image.id)}
+          {#if image.thumbnailPath}
+            <img class="note-thumb" src={fileUrl(image.thumbnailPath)} alt={image.fileName || ''} />
+          {:else}
+            <div class="note-thumb image-placeholder">📷</div>
+          {/if}
+        {/each}
+        {#if hiddenNoteImageCount > 0}
+          <span class="note-more">+{hiddenNoteImageCount}</span>
+        {/if}
+      </div>
+    {/if}
   {:else}
     <p class="body">{preview}{hasMore ? '…' : ''}</p>
   {/if}
@@ -158,6 +180,32 @@
 
   .file-size {
     font-size: var(--text-xs);
+    color: var(--color-text-tertiary);
+  }
+
+  .note-images {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-top: var(--space-2);
+  }
+
+  .note-thumb {
+    width: 64px;
+    height: 64px;
+    object-fit: cover;
+    border-radius: var(--radius-sm);
+    background: var(--color-bg);
+  }
+
+  .note-thumb.image-placeholder {
+    height: 64px;
+    margin-bottom: 0;
+    font-size: var(--text-lg);
+  }
+
+  .note-more {
+    font-size: var(--text-sm);
     color: var(--color-text-tertiary);
   }
 

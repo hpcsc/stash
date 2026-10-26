@@ -16,6 +16,7 @@
     link: 'Link',
     image: 'Image',
     file: 'File',
+    note: 'Note',
   }
 
   const fullImage = $derived(item.filePath ? fileUrl(item.filePath) : null)
@@ -32,7 +33,20 @@
     <span class="type-label">{typeMeta[item.type] ?? 'Text'}</span>
   </div>
 
-  {#if item.type === 'image' && fullImage}
+  {#if item.type === 'note'}
+    <div class="note">
+      {#each item.blocks ?? [] as block}
+        {#if block.type === 'text'}
+          <p class="body">{block.text}</p>
+        {:else if block.image}
+          <img class="note-image" src={fileUrl(block.image.thumbnailPath || block.image.filePath)} alt={block.image.fileName || ''} />
+        {/if}
+      {/each}
+      {#if !item.blocks?.length}
+        <p class="body">{item.body}</p>
+      {/if}
+    </div>
+  {:else if item.type === 'image' && fullImage}
     <img class="full-image" src={fullImage} alt="" />
   {:else if item.type === 'file'}
     <div class="file-detail">
@@ -153,6 +167,24 @@
     color: var(--color-text);
     white-space: pre-wrap;
     word-break: break-word;
+  }
+
+  .note {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    margin-bottom: var(--space-6);
+  }
+
+  .note .body {
+    margin: 0;
+  }
+
+  .note-image {
+    width: 100%;
+    max-height: 60vh;
+    object-fit: contain;
+    border-radius: var(--radius-md);
   }
 
   .full-image {

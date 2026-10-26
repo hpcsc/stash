@@ -1,67 +1,240 @@
 <script lang="ts">
+  import { buildNoteUpload, readSegments, type NoteUpload } from '../note'
+
   interface Props {
     saving: boolean
-    onsave: (body: string) => void
+    onsave: (upload: NoteUpload) => void
     onattach: (file: File) => void
   }
 
   let { saving, onsave, onattach }: Props = $props()
 
-  let body = $state('')
-  let textareaEl: HTMLTextAreaElement | undefined = $state()
+  let editorEl: HTMLDivElement | undefined = $state()
   let imageEl: HTMLInputElement | undefined = $state()
   let fileEl: HTMLInputElement | undefined = $state()
+  let hasContent = $state(false)
+  let charCount = $state(0)
+  let imageCount = $state(0)
 
-  function handleInput() {
-    if (!textareaEl) return
-    textareaEl.style.height = 'auto'
-    textareaEl.style.height = `${textareaEl.scrollHeight}px`
+  let keySeed = 0
+  let lastRange: Range | null = null
+  const filesByKey = new Map<string, File>()
+  const objectUrls = new Map<string, string>()
+
+  function refreshState() {
+    if (!editorEl) return
+
+    const segments = readSegments(editorEl)
+    hasContent = segments.length > 0
+    imageCount = segments.reduce((count, segment) => count + (segment.type === 'image' ? 1 : 0), 0)
+    charCount = segments.reduce((count, segment) => count + (segment.type === 'text' ? segment.text.length : 0), 0)
   }
 
-  function handleKeydown(e: KeyboardEvent) {
-    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-      e.preventDefault()
-      submit()
+  function rememberCaret() {
+    if (!editorEl) return
+
+    const selection = window.getSelection()
+    if (!selection || selection.rangeCount === 0) return
+
+    const range = selection.getRangeAt(0)
+    if (editorEl.contains(range.commonAncestorContainer)) {
+      lastRange = range.cloneRange()
     }
+  }
+
+  function focusEnd() {
+    if (!editorEl) return
+
+    const range = document.createRange()
+    range.selectNodeContents(editorEl)
+    range.collapse(false)
+
+    const selection = window.getSelection()
+    selection?.removeAllRanges()
+    selection?.addRange(range)
+    editorEl.focus()
+  }
+
+  function insertAtCaret(node: Node) {
+    if (!editorEl) return
+
+    const selection = window.getSelection()
+    const current = selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null
+    const range = current && editorEl.contains(current.commonAncestorContainer) ? current : lastRange
+
+    if (!range || !editorEl.contains(range.commonAncestorContainer)) {
+      editorEl.appendChild(node)
+      lastRange = null
+      focusEnd()
+      return
+    }
+
+    range.deleteContents()
+    range.insertNode(node)
+    range.setStartAfter(node)
+    range.collapse(true)
+    lastRange = range.cloneRange()
+
+    selection?.removeAllRanges()
+    selection?.addRange(range)
+  }
+
+  function insertTextAtCaret(text: string) {
+    insertAtCaret(document.createTextNode(text))
+    refreshState()
+  }
+
+  function insertImage(file: File) {
+    const key = `image-${++keySeed}`
+    const url = URL.createObjectURL(file)
+    filesByKey.set(key, file)
+    objectUrls.set(key, url)
+
+    const image = document.createElement('img')
+    image.src = url
+    image.dataset.key = key
+    image.alt = file.name || 'Image'
+
+    insertAtCaret(image)
+    refreshState()
+  }
+
+  function clearEditor() {
+    editorEl?.replaceChildren()
+    for (const url of objectUrls.values()) URL.revokeObjectURL(url)
+    objectUrls.clear()
+    filesByKey.clear()
+    lastRange = null
+    refreshState()
   }
 
   function submit() {
-    const text = body.trim()
-    if (!text || saving) return
-    onsave(text)
-    body = ''
-    if (textareaEl) {
-      textareaEl.style.height = 'auto'
+    if (!editorEl || saving) return
+
+    const upload = buildNoteUpload(readSegments(editorEl), filesByKey)
+    if (upload.document.blocks.length === 0) return
+
+    onsave(upload)
+    clearEditor()
+  }
+
+  function handleKeydown(e: KeyboardEvent) {
+    if (e.isComposing) return
+
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+      e.preventDefault()
+      submit()
+      return
+    }
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      insertTextAtCaret('\n')
     }
   }
 
+  function handlePaste(e: ClipboardEvent) {
+    const clipboard = e.clipboardData
+    if (!clipboard) return
+
+    const files = Array.from(clipboard.files ?? [])
+    const images = files.filter((file) => file.type.startsWith('image/'))
+    if (images.length > 0) {
+      e.preventDefault()
+      for (const image of images) insertImage(image)
+      return
+    }
+    if (files.length > 0) {
+      e.preventDefault()
+      for (const file of files) onattach(file)
+      return
+    }
+
+    e.preventDefault()
+    const text = clipboard.getData('text/plain')
+    if (text) insertTextAtCaret(text)
+  }
+
+  function handleDragOver(e: DragEvent) {
+    if (e.dataTransfer?.types.includes('Files')) e.preventDefault()
+  }
+
+  function handleDrop(e: DragEvent) {
+    const transfer = e.dataTransfer
+    if (!transfer) return
+
+    const files = Array.from(transfer.files ?? [])
+    if (files.length === 0) return
+
+    e.preventDefault()
+    const dropped = rangeFromPoint(e.clientX, e.clientY)
+    if (dropped) selectRange(dropped)
+
+    for (const file of files) {
+      if (file.type.startsWith('image/')) insertImage(file)
+      else onattach(file)
+    }
+  }
+
+  function rangeFromPoint(x: number, y: number): Range | null {
+    const doc = document as Document & {
+      caretRangeFromPoint?: (x: number, y: number) => Range | null
+    }
+    const range = doc.caretRangeFromPoint?.(x, y) ?? null
+    if (!range || !editorEl) return null
+    return editorEl.contains(range.commonAncestorContainer) ? range : null
+  }
+
+  function selectRange(range: Range) {
+    const selection = window.getSelection()
+    selection?.removeAllRanges()
+    selection?.addRange(range)
+    editorEl?.focus()
+  }
+
   function pickImage() {
+    rememberCaret()
     imageEl?.click()
   }
 
   function pickFile() {
+    rememberCaret()
     fileEl?.click()
   }
 
   function handlePicked(e: Event) {
     const input = e.target as HTMLInputElement
     const file = input.files?.[0]
-    if (!file) return
-    onattach(file)
     input.value = ''
+    if (!file) return
+
+    if (file.type.startsWith('image/')) {
+      insertImage(file)
+      return
+    }
+    onattach(file)
   }
 </script>
 
 <form class="capture" onsubmit={(e) => { e.preventDefault(); submit() }}>
-  <textarea
-    bind:this={textareaEl}
-    bind:value={body}
-    oninput={handleInput}
+  <div
+    bind:this={editorEl}
+    class="editor"
+    contenteditable="true"
+    role="textbox"
+    aria-multiline="true"
+    aria-label="Capture"
+    tabindex="0"
+    data-placeholder="Paste or type anything to stash…"
+    data-empty={hasContent ? 'false' : 'true'}
+    oninput={refreshState}
     onkeydown={handleKeydown}
-    placeholder="Paste or type anything to stash…"
-    rows="2"
-    disabled={saving}
-  ></textarea>
+    onkeyup={rememberCaret}
+    onmouseup={rememberCaret}
+    onblur={rememberCaret}
+    onpaste={handlePaste}
+    ondragover={handleDragOver}
+    ondrop={handleDrop}
+  ></div>
   <div class="capture-footer">
     <div class="footer-left">
       <button type="button" class="attach-btn" onclick={pickImage} disabled={saving} title="Attach an image">
@@ -77,9 +250,11 @@
         </svg>
       </button>
       <input bind:this={fileEl} type="file" onchange={handlePicked} hidden />
-      <span class="hint">{body.length} character{body.length !== 1 ? 's' : ''}</span>
+      <span class="hint">
+        {charCount} character{charCount !== 1 ? 's' : ''}{imageCount > 0 ? ` · ${imageCount} image${imageCount !== 1 ? 's' : ''}` : ''}
+      </span>
     </div>
-    <button type="submit" class="save-btn" disabled={saving || !body.trim()}>
+    <button type="submit" class="save-btn" disabled={saving || !hasContent}>
       {#if saving}
         <span class="spinner"></span>
         Saving…
@@ -95,11 +270,52 @@
     margin-bottom: var(--space-8);
   }
 
-  .capture textarea {
+  .editor {
+    position: relative;
     width: 100%;
     min-height: 72px;
-    padding: var(--space-4);
+    max-height: 50vh;
+    padding: var(--space-3) var(--space-4);
     box-sizing: border-box;
+    overflow-y: auto;
+    font-family: inherit;
+    font-size: var(--text-base);
+    line-height: var(--leading);
+    color: var(--color-text);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-xs);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    cursor: text;
+    transition: border-color var(--duration-fast) var(--ease-out),
+                box-shadow var(--duration-fast) var(--ease-out);
+  }
+
+  .editor:focus {
+    outline: none;
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px var(--color-accent-subtle);
+  }
+
+  .editor[data-empty='true']::before {
+    content: attr(data-placeholder);
+    position: absolute;
+    top: var(--space-3);
+    left: var(--space-4);
+    color: var(--color-text-tertiary);
+    pointer-events: none;
+  }
+
+  .editor :global(img) {
+    display: inline-block;
+    max-width: 100%;
+    max-height: 200px;
+    margin: 2px 0;
+    border-radius: var(--radius-md);
+    object-fit: contain;
+    vertical-align: middle;
   }
 
   .capture-footer {
