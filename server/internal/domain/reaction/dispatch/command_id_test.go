@@ -32,3 +32,19 @@ func TestCommandIDFor(t *testing.T) {
 		require.NotEqual(t, first, other)
 	})
 }
+
+func TestCommandIDForTarget(t *testing.T) {
+	t.Run("gives the same ID to the same event and target", func(t *testing.T) {
+		first := dispatch.CommandIDForTarget("empty-trash", &domain.Event{ID: "event-1"}, "item-1")
+		again := dispatch.CommandIDForTarget("empty-trash", &domain.Event{ID: "event-1"}, "item-1")
+
+		require.Equal(t, first, again)
+	})
+
+	t.Run("gives another ID to another target", func(t *testing.T) {
+		first := dispatch.CommandIDForTarget("empty-trash", &domain.Event{ID: "event-1"}, "item-1")
+		other := dispatch.CommandIDForTarget("empty-trash", &domain.Event{ID: "event-1"}, "item-2")
+
+		require.NotEqual(t, first, other)
+	})
+}

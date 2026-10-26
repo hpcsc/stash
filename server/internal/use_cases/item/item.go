@@ -15,6 +15,7 @@ import (
 var ErrAlreadyCaptured = errors.New("item is already captured")
 var ErrAlreadyKept = errors.New("item is already kept")
 var ErrAlreadyDropped = errors.New("item is already dropped")
+var ErrNotDropped = errors.New("item is not in the trash")
 var ErrNotCaptured = errors.New("item has not been captured")
 var ErrMetadataAlreadyRecorded = errors.New("link metadata is already recorded")
 var ErrThumbnailAlreadyRecorded = errors.New("thumbnail is already recorded")
@@ -38,6 +39,7 @@ type Item struct {
 	id              uuid.UUID
 	state           string
 	kind            string
+	hadBeenKept     bool
 	hasMetadata     bool
 	hasThumbnail    bool
 	tags            []uuid.UUID
@@ -214,11 +216,42 @@ func (i *Item) Drop(cmd command.Drop) error {
 	if i.state == "dropped" {
 		return ErrAlreadyDropped
 	}
-	if i.state == "kept" {
-		return ErrAlreadyKept
-	}
 
 	i.record(domain.NewEvent(&event.ItemDropped{
+		ItemID: cmd.ItemID,
+	}))
+	return nil
+}
+
+func (i *Item) Restore(cmd command.Restore) error {
+	if i.id == uuid.Nil {
+		return ErrNotCaptured
+	}
+	if i.state != "dropped" {
+		return ErrNotDropped
+	}
+
+	restoredTo := "inbox"
+	if i.hadBeenKept {
+		restoredTo = "library"
+	}
+
+	i.record(domain.NewEvent(&event.ItemRestored{
+		ItemID:     cmd.ItemID,
+		RestoredTo: restoredTo,
+	}))
+	return nil
+}
+
+func (i *Item) Delete(cmd command.Delete) error {
+	if i.id == uuid.Nil {
+		return ErrNotCaptured
+	}
+	if i.state != "dropped" {
+		return ErrNotDropped
+	}
+
+	i.record(domain.NewEvent(&event.ItemDeleted{
 		ItemID: cmd.ItemID,
 	}))
 	return nil
@@ -264,8 +297,16 @@ func (i *Item) Apply(e domain.Event) {
 		i.imageThumbnails[p.ImageID] = true
 	case *event.ItemKept:
 		i.state = "kept"
+		i.hadBeenKept = true
 	case *event.ItemDropped:
 		i.state = "dropped"
+	case *event.ItemRestored:
+		i.state = "inbox"
+		if p.RestoredTo == "library" {
+			i.state = "kept"
+		}
+	case *event.ItemDeleted:
+		i.state = "deleted"
 	case *event.ItemTagged:
 		i.tags = p.TagIDs
 	}

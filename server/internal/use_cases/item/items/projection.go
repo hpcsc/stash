@@ -32,6 +32,8 @@ func (p *Projection) EventTypes() []string {
 		event.ImageThumbnailGenerated{}.EventType(),
 		event.ItemKept{}.EventType(),
 		event.ItemDropped{}.EventType(),
+		event.ItemRestored{}.EventType(),
+		event.ItemDeleted{}.EventType(),
 	}
 }
 
@@ -130,6 +132,19 @@ func (p *Projection) Handle(ctx context.Context, tx pgx.Tx, evt *domain.Event) e
 			UPDATE items SET state = 'dropped', version = $2, updated_at = NOW()
 			WHERE id = $1
 		`, payload.ItemID, evt.Version)
+		return err
+	case *event.ItemRestored:
+		state := "inbox"
+		if payload.RestoredTo == "library" {
+			state = "kept"
+		}
+		_, err := tx.Exec(ctx, `
+			UPDATE items SET state = $2, version = $3, updated_at = NOW()
+			WHERE id = $1
+		`, payload.ItemID, state, evt.Version)
+		return err
+	case *event.ItemDeleted:
+		_, err := tx.Exec(ctx, `DELETE FROM items WHERE id = $1`, payload.ItemID)
 		return err
 	}
 	return nil

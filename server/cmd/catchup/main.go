@@ -12,6 +12,7 @@ import (
 
 	"github.com/hpcsc/stash/internal/common/config"
 	"github.com/hpcsc/stash/internal/domain/checkpoint/store"
+	"github.com/hpcsc/stash/internal/domain/command"
 	"github.com/hpcsc/stash/internal/domain/consumer"
 	"github.com/hpcsc/stash/internal/domain/event/registry"
 	"github.com/hpcsc/stash/internal/domain/event/stream"
@@ -26,6 +27,7 @@ import (
 	"github.com/hpcsc/stash/internal/use_cases/item/linkmetadata"
 	"github.com/hpcsc/stash/internal/use_cases/item/thumbnail"
 	"github.com/hpcsc/stash/internal/use_cases/tag/tags"
+	"github.com/hpcsc/stash/internal/use_cases/trash/emptytrashreactor"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -73,6 +75,8 @@ func consumers(pool *pgxpool.Pool, fileStore storage.Storage, logger *slog.Logge
 	eventStream := stream.NewPostgres(pool, reg)
 
 	itemRepo := item.NewRepository(eventStream)
+	bus := command.NewBus()
+	use_cases.RegisterHandlers(bus, eventStream)
 
 	return []*consumer.Consumer{
 		projection.NewProjector(items.NewProjection(), pool, checkpointStore, eventSubscription, logger),
@@ -80,6 +84,7 @@ func consumers(pool *pgxpool.Pool, fileStore storage.Storage, logger *slog.Logge
 		projection.NewProjector(itemtags.NewProjection(), pool, checkpointStore, eventSubscription, logger),
 		reaction.NewReactor(linkmetadata.New(itemRepo, logger), checkpointStore, eventSubscription, logger),
 		reaction.NewReactor(thumbnail.New(itemRepo, fileStore, logger), checkpointStore, eventSubscription, logger),
+		reaction.NewReactor(emptytrashreactor.New(bus, logger), checkpointStore, eventSubscription, logger),
 	}
 }
 

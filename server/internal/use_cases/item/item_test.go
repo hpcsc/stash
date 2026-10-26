@@ -441,10 +441,67 @@ func TestItem(t *testing.T) {
 			require.Empty(t, i.Recorded())
 		})
 
-		t.Run("rejects dropping a kept item", func(t *testing.T) {
+		t.Run("drops a kept item", func(t *testing.T) {
 			i := given(captured(), kept())
 
-			require.ErrorIs(t, i.Drop(dropCmd()), item.ErrAlreadyKept)
+			require.NoError(t, i.Drop(dropCmd()))
+
+			require.Equal(t, &event.ItemDropped{ItemID: itemID}, onlyRecorded(t, i).Payload)
+		})
+	})
+
+	t.Run("restore", func(t *testing.T) {
+		t.Run("restores an item that was never kept to the inbox", func(t *testing.T) {
+			i := given(captured(), dropped())
+
+			require.NoError(t, i.Restore(restoreCmd()))
+
+			require.Equal(t, &event.ItemRestored{ItemID: itemID, RestoredTo: "inbox"}, onlyRecorded(t, i).Payload)
+		})
+
+		t.Run("restores an item that was kept to the library", func(t *testing.T) {
+			i := given(captured(), kept(), dropped())
+
+			require.NoError(t, i.Restore(restoreCmd()))
+
+			require.Equal(t, &event.ItemRestored{ItemID: itemID, RestoredTo: "library"}, onlyRecorded(t, i).Payload)
+		})
+
+		t.Run("rejects restoring an item that is not captured", func(t *testing.T) {
+			var i item.Item
+
+			require.ErrorIs(t, i.Restore(restoreCmd()), item.ErrNotCaptured)
+			require.Empty(t, i.Recorded())
+		})
+
+		t.Run("rejects restoring an item that is not in the trash", func(t *testing.T) {
+			i := given(captured())
+
+			require.ErrorIs(t, i.Restore(restoreCmd()), item.ErrNotDropped)
+			require.Empty(t, i.Recorded())
+		})
+	})
+
+	t.Run("delete", func(t *testing.T) {
+		t.Run("deletes a dropped item", func(t *testing.T) {
+			i := given(captured(), dropped())
+
+			require.NoError(t, i.Delete(deleteCmd()))
+
+			require.Equal(t, &event.ItemDeleted{ItemID: itemID}, onlyRecorded(t, i).Payload)
+		})
+
+		t.Run("rejects deleting an item that is not captured", func(t *testing.T) {
+			var i item.Item
+
+			require.ErrorIs(t, i.Delete(deleteCmd()), item.ErrNotCaptured)
+			require.Empty(t, i.Recorded())
+		})
+
+		t.Run("rejects deleting an item that is not in the trash", func(t *testing.T) {
+			i := given(captured())
+
+			require.ErrorIs(t, i.Delete(deleteCmd()), item.ErrNotDropped)
 			require.Empty(t, i.Recorded())
 		})
 	})
@@ -501,6 +558,14 @@ func captureNote() command.CaptureNote {
 
 func keepCmd() command.Keep {
 	return command.Keep{ItemID: itemID}
+}
+
+func restoreCmd() command.Restore {
+	return command.Restore{ItemID: itemID}
+}
+
+func deleteCmd() command.Delete {
+	return command.Delete{ItemID: itemID}
 }
 
 func dropCmd() command.Drop {

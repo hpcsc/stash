@@ -94,6 +94,69 @@ func TestProjection(t *testing.T) {
 		require.Equal(t, "after", item.Blocks[2].Text)
 	})
 
+	t.Run("restores a dropped item to the inbox", func(t *testing.T) {
+		pool := test.NewDBPool(t)
+		clearState(t, pool)
+		checkpointStore := store.NewPostgres(pool)
+		id := uuid.New()
+		capturedAt := time.Date(2026, 10, 24, 12, 0, 0, 0, time.UTC)
+		sub := subscription.NewFake().WithEventChannel(closedChannel(
+			textCapturedEvent(3, 1, id, "restore me", "", capturedAt),
+			itemDroppedEvent(3, 2, 2, id),
+			itemRestoredEvent(3, 3, 3, id, "inbox"),
+		))
+
+		err := projection.NewProjector(items.NewProjection(), pool, checkpointStore, sub, test.DiscardLogger()).Start(context.Background())
+		require.ErrorIs(t, err, event.ErrSubscriptionEnded)
+
+		item, err := items.NewQuery(pool).ByID(context.Background(), id.String())
+		require.NoError(t, err)
+		require.NotNil(t, item)
+		require.Equal(t, "inbox", item.State)
+	})
+
+	t.Run("restores a dropped item that was kept to the library", func(t *testing.T) {
+		pool := test.NewDBPool(t)
+		clearState(t, pool)
+		checkpointStore := store.NewPostgres(pool)
+		id := uuid.New()
+		capturedAt := time.Date(2026, 10, 24, 12, 0, 0, 0, time.UTC)
+		sub := subscription.NewFake().WithEventChannel(closedChannel(
+			textCapturedEvent(4, 1, id, "restore me", "", capturedAt),
+			itemKeptEvent(4, 2, 2, id),
+			itemDroppedEvent(4, 3, 3, id),
+			itemRestoredEvent(4, 4, 4, id, "library"),
+		))
+
+		err := projection.NewProjector(items.NewProjection(), pool, checkpointStore, sub, test.DiscardLogger()).Start(context.Background())
+		require.ErrorIs(t, err, event.ErrSubscriptionEnded)
+
+		item, err := items.NewQuery(pool).ByID(context.Background(), id.String())
+		require.NoError(t, err)
+		require.NotNil(t, item)
+		require.Equal(t, "kept", item.State)
+	})
+
+	t.Run("deletes a dropped item", func(t *testing.T) {
+		pool := test.NewDBPool(t)
+		clearState(t, pool)
+		checkpointStore := store.NewPostgres(pool)
+		id := uuid.New()
+		capturedAt := time.Date(2026, 10, 24, 12, 0, 0, 0, time.UTC)
+		sub := subscription.NewFake().WithEventChannel(closedChannel(
+			textCapturedEvent(5, 1, id, "delete me", "", capturedAt),
+			itemDroppedEvent(5, 2, 2, id),
+			itemDeletedEvent(5, 3, 3, id),
+		))
+
+		err := projection.NewProjector(items.NewProjection(), pool, checkpointStore, sub, test.DiscardLogger()).Start(context.Background())
+		require.ErrorIs(t, err, event.ErrSubscriptionEnded)
+
+		item, err := items.NewQuery(pool).ByID(context.Background(), id.String())
+		require.NoError(t, err)
+		require.Nil(t, item)
+	})
+
 	t.Run("lists items newest first", func(t *testing.T) {
 		pool := test.NewDBPool(t)
 		clearState(t, pool)
@@ -177,6 +240,42 @@ func imageThumbnailGeneratedEvent(txID, sequence uint64, id, imageID uuid.UUID) 
 			ImageID:      imageID,
 			ThumbnailRef: "thumbnails/photo.png",
 		},
+	}
+}
+
+func itemKeptEvent(txID, sequence, version uint64, id uuid.UUID) domain.Event {
+	return domain.Event{
+		StreamID: "item-" + id.String(),
+		Version:  version,
+		Position: domain.Position{TransactionID: txID, Sequence: sequence},
+		Payload:  &itemEvent.ItemKept{ItemID: id},
+	}
+}
+
+func itemDroppedEvent(txID, sequence, version uint64, id uuid.UUID) domain.Event {
+	return domain.Event{
+		StreamID: "item-" + id.String(),
+		Version:  version,
+		Position: domain.Position{TransactionID: txID, Sequence: sequence},
+		Payload:  &itemEvent.ItemDropped{ItemID: id},
+	}
+}
+
+func itemRestoredEvent(txID, sequence, version uint64, id uuid.UUID, restoredTo string) domain.Event {
+	return domain.Event{
+		StreamID: "item-" + id.String(),
+		Version:  version,
+		Position: domain.Position{TransactionID: txID, Sequence: sequence},
+		Payload:  &itemEvent.ItemRestored{ItemID: id, RestoredTo: restoredTo},
+	}
+}
+
+func itemDeletedEvent(txID, sequence, version uint64, id uuid.UUID) domain.Event {
+	return domain.Event{
+		StreamID: "item-" + id.String(),
+		Version:  version,
+		Position: domain.Position{TransactionID: txID, Sequence: sequence},
+		Payload:  &itemEvent.ItemDeleted{ItemID: id},
 	}
 }
 

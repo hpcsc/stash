@@ -16,5 +16,7 @@ func RegisterEvents(reg *registry.OfEvents) {
 	reg.Register[event.ImageThumbnailGenerated]()
 	reg.Register[event.ItemKept]()
 	reg.Register[event.ItemDropped]()
+	reg.Register[event.ItemRestored]()
+	reg.Register[event.ItemDeleted]()
 	reg.Register[event.ItemTagged]()
 }
