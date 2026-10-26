@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { listItems, type Item } from '../api/client'
+  import { listItems, dropItem, type Item } from '../api/client'
   import ItemCard from './ItemCard.svelte'
   import ItemDetail from './ItemDetail.svelte'
   import EmptyState from './EmptyState.svelte'
@@ -31,10 +31,26 @@
   function handleSearch(q: string) {
     load(q)
   }
+
+  async function handleDrop(id: string) {
+    error = null
+    try {
+      await dropItem(id)
+      items = items.filter((item) => item.id !== id)
+      if (selected?.id === id) selected = null
+    } catch (e) {
+      error = e instanceof Error ? e.message : 'Failed to drop item'
+    }
+  }
 </script>
 
 {#if selected}
-  <ItemDetail item={selected} onback={() => (selected = null)} />
+  {@const current = selected}
+  <ItemDetail
+    item={current}
+    onback={() => (selected = null)}
+    ondrop={() => handleDrop(current.id)}
+  />
 {:else}
   <SearchBar placeholder="Search library…" onsearch={handleSearch} />
   {#if error}
@@ -66,7 +82,7 @@
   {:else}
     <div class="list">
       {#each items as item (item.id)}
-        <ItemCard {item} onclick={() => (selected = item)} />
+        <ItemCard {item} onclick={() => (selected = item)} ondrop={handleDrop} />
       {/each}
     </div>
   {/if}

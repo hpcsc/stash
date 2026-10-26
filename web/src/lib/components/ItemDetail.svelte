@@ -7,9 +7,13 @@
   interface Props {
     item: Item
     onback: () => void
+    onkeep?: () => void
+    ondrop?: () => void
+    onrestore?: () => void
+    ondelete?: () => void
   }
 
-  let { item, onback }: Props = $props()
+  let { item, onback, onkeep, ondrop, onrestore, ondelete }: Props = $props()
 
   const typeMeta: Record<string, string> = {
     text: 'Text',
@@ -93,18 +97,35 @@
   </div>
 
   <div class="actions">
-    <button type="button" class="btn btn-keep">
-      <svg width="20" height="20" viewBox="0 0 16 16" fill="none">
-        <path d="M3 8.5l3 3 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-      </svg>
-      Keep
-    </button>
-    <button type="button" class="btn btn-drop">
-      <svg width="20" height="20" viewBox="0 0 16 16" fill="none">
-        <path d="M3 4h10M5.5 4v8a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1V4M6.5 4V3a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
-      </svg>
-      Drop
-    </button>
+    {#if item.state === 'dropped'}
+      <button type="button" class="btn btn-keep" onclick={onrestore}>
+        <svg width="20" height="20" viewBox="0 0 16 16" fill="none">
+          <path d="M3 8a5 5 0 1 0 1.5-3.5M3 3v3h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        Restore
+      </button>
+      <button type="button" class="btn btn-drop" onclick={ondelete}>
+        <svg width="20" height="20" viewBox="0 0 16 16" fill="none">
+          <path d="M3 4h10M5.5 4v8a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1V4M6.5 4V3a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        Delete forever
+      </button>
+    {:else}
+      {#if item.state !== 'kept'}
+        <button type="button" class="btn btn-keep" onclick={onkeep}>
+          <svg width="20" height="20" viewBox="0 0 16 16" fill="none">
+            <path d="M3 8.5l3 3 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+          Keep
+        </button>
+      {/if}
+      <button type="button" class="btn btn-drop" onclick={ondrop}>
+        <svg width="20" height="20" viewBox="0 0 16 16" fill="none">
+          <path d="M3 4h10M5.5 4v8a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1V4M6.5 4V3a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        Drop
+      </button>
+    {/if}
   </div>
 </div>
 

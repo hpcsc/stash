@@ -149,6 +149,7 @@
     try {
       await keepItem(id)
       items = items.filter((i) => i.id !== id)
+      if (selected?.id === id) selected = null
     } catch (e) {
       error = e instanceof Error ? e.message : 'Failed to keep item'
     }
@@ -159,6 +160,7 @@
     try {
       await dropItem(id)
       items = items.filter((i) => i.id !== id)
+      if (selected?.id === id) selected = null
     } catch (e) {
       error = e instanceof Error ? e.message : 'Failed to drop item'
     }
@@ -166,7 +168,13 @@
 </script>
 
 {#if selected}
-  <ItemDetail item={selected} onback={() => (selected = null)} />
+  {@const current = selected}
+  <ItemDetail
+    item={current}
+    onback={() => (selected = null)}
+    onkeep={() => handleKeep(current.id)}
+    ondrop={() => handleDrop(current.id)}
+  />
 {:else}
   <CaptureForm {saving} onsave={save} onattach={saveAttachment} />
 

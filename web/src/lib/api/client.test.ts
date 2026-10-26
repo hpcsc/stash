@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { setToken, signIn, signOut, listItems, captureText } from './client'
+import { setToken, signIn, signOut, listItems, captureText, captureNote, restoreItem, deleteItem, emptyTrash } from './client'
 
 function jsonResponse(body: object, status = 200): Response {
   return new Response(JSON.stringify(body), { status })
@@ -88,5 +88,66 @@ describe('client', () => {
     expect(url).toBe('http://127.0.0.1:3333/items')
     expect(init.method).toBe('POST')
     expect(JSON.parse(init.body)).toEqual({ body: 'remember this' })
+  })
+
+  it('captureNote posts the document and images as multipart', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({
+        successful: true,
+        messages: [],
+        data: { id: 'item-1', type: 'note', body: 'before', state: 'inbox', capturedAt: '2026-01-01T00:00:00Z' },
+      }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    const image = new File(['png'], 'photo.png', { type: 'image/png' })
+    const document = {
+      blocks: [
+        { type: 'text' as const, text: 'before' },
+        { type: 'image' as const, index: 0 },
+      ],
+    }
+
+    const item = await captureNote(document, [image])
+
+    expect(item.type).toBe('note')
+    const [url, init] = fetchMock.mock.calls[0]
+    expect(url).toBe('http://127.0.0.1:3333/items')
+    expect(init.body).toBeInstanceOf(FormData)
+    const form = init.body as FormData
+    expect(form.get('document')).toBe(JSON.stringify(document))
+    expect(form.get('images')).toBeInstanceOf(File)
+  })
+
+  it('restoreItem posts to the restore endpoint', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ successful: true, messages: [] }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await restoreItem('item-1')
+
+    const [url, init] = fetchMock.mock.calls[0]
+    expect(url).toBe('http://127.0.0.1:3333/items/item-1/restore')
+    expect(init.method).toBe('POST')
+  })
+
+  it('deleteItem posts to the delete endpoint', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ successful: true, messages: [] }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await deleteItem('item-1')
+
+    const [url, init] = fetchMock.mock.calls[0]
+    expect(url).toBe('http://127.0.0.1:3333/items/item-1/delete')
+    expect(init.method).toBe('POST')
+  })
+
+  it('emptyTrash posts to the trash endpoint', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ successful: true, messages: [] }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await emptyTrash()
+
+    const [url, init] = fetchMock.mock.calls[0]
+    expect(url).toBe('http://127.0.0.1:3333/trash/empty')
+    expect(init.method).toBe('POST')
   })
 })

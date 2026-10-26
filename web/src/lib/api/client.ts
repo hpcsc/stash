@@ -162,6 +162,18 @@ export async function dropItem(id: string): Promise<void> {
   await request('POST', `/items/${id}/drop`)
 }
 
+export async function restoreItem(id: string): Promise<void> {
+  await request('POST', `/items/${id}/restore`)
+}
+
+export async function deleteItem(id: string): Promise<void> {
+  await request('POST', `/items/${id}/delete`)
+}
+
+export async function emptyTrash(): Promise<void> {
+  await request('POST', '/trash/empty')
+}
+
 export interface Tag {
   id: string
   name: string
