@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Item } from '../api/client'
+  import { fileUrl } from '../api/client'
   import { relativeTime } from '../time'
 
   interface Props {
@@ -22,6 +23,7 @@
   const timeAgo = $derived(relativeTime(item.capturedAt))
   const preview = $derived(item.title || item.body.slice(0, 160))
   const hasMore = $derived(!item.title && item.body.length > 160)
+  const thumbnail = $derived(item.thumbnailPath ? fileUrl(item.thumbnailPath) : null)
 
   function handleKeep(e: MouseEvent) {
     e.stopPropagation()
@@ -39,7 +41,15 @@
     <span class="type-badge" title={meta.label}>{meta.icon}</span>
     <span class="time">{timeAgo}</span>
   </div>
-  <p class="body">{preview}{hasMore ? '…' : ''}</p>
+  {#if item.type === 'image'}
+    {#if thumbnail}
+      <img class="thumb" src={thumbnail} alt="" />
+    {:else}
+      <div class="image-placeholder">🖼</div>
+    {/if}
+  {:else}
+    <p class="body">{preview}{hasMore ? '…' : ''}</p>
+  {/if}
   <div class="card-footer">
     {#if item.sourceApp}
       <span class="source">{item.sourceApp}</span>
@@ -88,6 +98,27 @@
 
   .card:active {
     transform: translateY(0);
+  }
+
+  .thumb {
+    width: 100%;
+    max-height: 200px;
+    object-fit: cover;
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-2);
+  }
+
+  .image-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 120px;
+    font-size: var(--text-2xl);
+    color: var(--color-text-tertiary);
+    background: var(--color-bg);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-2);
   }
 
   .card-header {

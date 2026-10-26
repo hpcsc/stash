@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Item } from '../api/client'
+  import { fileUrl } from '../api/client'
   import { formatDate } from '../time'
 
   interface Props {
@@ -15,6 +16,8 @@
     image: 'Image',
     file: 'File',
   }
+
+  const fullImage = $derived(item.filePath ? fileUrl(item.filePath) : null)
 </script>
 
 <div class="detail">
@@ -28,7 +31,11 @@
     <span class="type-label">{typeMeta[item.type] ?? 'Text'}</span>
   </div>
 
-  <p class="body">{item.title || item.body}</p>
+  {#if item.type === 'image' && fullImage}
+    <img class="full-image" src={fullImage} alt="" />
+  {:else}
+    <p class="body">{item.title || item.body}</p>
+  {/if}
 
   {#if item.type === 'link'}
     <a class="link-url" href={item.body} target="_blank" rel="noopener noreferrer">
@@ -131,6 +138,14 @@
     color: var(--color-text);
     white-space: pre-wrap;
     word-break: break-word;
+  }
+
+  .full-image {
+    width: 100%;
+    max-height: 60vh;
+    object-fit: contain;
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-6);
   }
 
   .link-url {

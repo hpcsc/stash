@@ -2,12 +2,14 @@
   interface Props {
     saving: boolean
     onsave: (body: string) => void
+    onimage: (file: File) => void
   }
 
-  let { saving, onsave }: Props = $props()
+  let { saving, onsave, onimage }: Props = $props()
 
   let body = $state('')
   let textareaEl: HTMLTextAreaElement | undefined = $state()
+  let fileEl: HTMLInputElement | undefined = $state()
 
   function handleInput() {
     if (!textareaEl) return
@@ -31,6 +33,18 @@
       textareaEl.style.height = 'auto'
     }
   }
+
+  function pickImage() {
+    fileEl?.click()
+  }
+
+  function handleFile(e: Event) {
+    const input = e.target as HTMLInputElement
+    const file = input.files?.[0]
+    if (!file) return
+    onimage(file)
+    input.value = ''
+  }
 </script>
 
 <form class="capture" onsubmit={(e) => { e.preventDefault(); submit() }}>
@@ -44,7 +58,16 @@
     disabled={saving}
   ></textarea>
   <div class="capture-footer">
-    <span class="hint">{body.length} character{body.length !== 1 ? 's' : ''}</span>
+    <div class="footer-left">
+      <button type="button" class="attach-btn" onclick={pickImage} disabled={saving} title="Attach an image">
+        <svg width="18" height="18" viewBox="0 0 16 16" fill="none">
+          <path d="M1.5 3A1.5 1.5 0 0 1 3 1.5h10A1.5 1.5 0 0 1 14.5 3v10a1.5 1.5 0 0 1-1.5 1.5H3A1.5 1.5 0 0 1 1.5 13V3z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" />
+          <path d="M5 6a1 1 0 1 0 0-2 1 1 0 0 0 0 2zM14.5 11l-4-4L3 14.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </button>
+      <input bind:this={fileEl} type="file" accept="image/*" onchange={handleFile} hidden />
+      <span class="hint">{body.length} character{body.length !== 1 ? 's' : ''}</span>
+    </div>
     <button type="submit" class="save-btn" disabled={saving || !body.trim()}>
       {#if saving}
         <span class="spinner"></span>
@@ -73,6 +96,30 @@
     align-items: center;
     justify-content: space-between;
     margin-top: var(--space-3);
+  }
+
+  .footer-left {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .attach-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    color: var(--color-text-tertiary);
+    background: transparent;
+    border-radius: var(--radius-sm);
+    transition: color var(--duration-fast) var(--ease-out),
+                background var(--duration-fast) var(--ease-out);
+  }
+
+  .attach-btn:hover:not(:disabled) {
+    color: var(--color-accent);
+    background: var(--color-accent-subtle);
   }
 
   .hint {

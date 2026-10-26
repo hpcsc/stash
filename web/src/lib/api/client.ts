@@ -57,6 +57,8 @@ export interface Item {
   sourceUrl?: string
   title?: string
   description?: string
+  filePath?: string
+  thumbnailPath?: string
   capturedAt: string
 }
 
@@ -77,6 +79,35 @@ export async function captureText(body: string): Promise<string> {
 export async function captureLink(url: string): Promise<string> {
   const envelope = await request('POST', '/items', { body: url, type: 'link' })
   return (envelope.data as { id: string }).id
+}
+
+export interface CapturedImage {
+  id: string
+  filePath: string
+}
+
+export async function captureImage(file: File): Promise<CapturedImage> {
+  const form = new FormData()
+  form.append('file', file)
+
+  const headers: Record<string, string> = {}
+  if (token) headers.Authorization = `Bearer ${token}`
+
+  const response = await fetch(`${apiBaseUrl}/items`, {
+    method: 'POST',
+    headers,
+    body: form,
+  })
+
+  const envelope = (await response.json()) as Envelope
+  if (envelope.successful !== true) {
+    throw new ApiError(envelope.messages.join('\n') || 'request failed', response.status)
+  }
+  return envelope.data as CapturedImage
+}
+
+export function fileUrl(path: string): string {
+  return `${apiBaseUrl}/files/${path}`
 }
 
 export async function keepItem(id: string, tags?: string[]): Promise<void> {

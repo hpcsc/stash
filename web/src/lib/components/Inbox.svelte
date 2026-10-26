@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { listItems, captureText, captureLink, keepItem, dropItem, type Item } from '../api/client'
+  import { listItems, captureText, captureLink, captureImage, keepItem, dropItem, type Item } from '../api/client'
   import { connect, onMessage } from '../api/ws'
   import { token } from '../auth/session'
   import CaptureForm from './CaptureForm.svelte'
@@ -31,6 +31,12 @@
         const data = msg.data as { id: string; title: string; description: string }
         items = items.map((i) =>
           i.id === data.id ? { ...i, title: data.title, description: data.description } : i,
+        )
+      }
+      if (msg.type === 'thumbnail-generated') {
+        const data = msg.data as { id: string; thumbnailPath: string }
+        items = items.map((i) =>
+          i.id === data.id ? { ...i, thumbnailPath: data.thumbnailPath } : i,
         )
       }
     })
@@ -82,6 +88,22 @@
     }
   }
 
+  async function saveImage(file: File) {
+    saving = true
+    error = null
+    try {
+      const { id, filePath } = await captureImage(file)
+      items = [
+        { id, type: 'image', body: '', filePath, state: 'inbox', capturedAt: new Date().toISOString() },
+        ...items,
+      ]
+    } catch (e) {
+      error = e instanceof Error ? e.message : 'Failed to save image'
+    } finally {
+      saving = false
+    }
+  }
+
   async function handleKeep(id: string) {
     error = null
     try {
@@ -106,7 +128,7 @@
 {#if selected}
   <ItemDetail item={selected} onback={() => (selected = null)} />
 {:else}
-  <CaptureForm {saving} onsave={save} />
+  <CaptureForm {saving} onsave={save} onimage={saveImage} />
 
   <SearchBar placeholder="Search inbox…" onsearch={handleSearch} />
 

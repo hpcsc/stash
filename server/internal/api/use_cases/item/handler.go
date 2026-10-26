@@ -55,7 +55,7 @@ func (h *handler) Routes() []*route.Route {
 		route.Protected("GET", "/items/{id}", h.get),
 		route.Protected("POST", "/items/{id}/keep", h.keep),
 		route.Protected("POST", "/items/{id}/drop", h.dropItem),
-		route.Protected("GET", "/files/*", h.serveFile),
+		route.Public("GET", "/files/*", h.serveFile),
 	}
 }
 
