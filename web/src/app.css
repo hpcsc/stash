@@ -52,6 +52,9 @@
   --space-12: 3rem;
   --space-16: 4rem;
 
+  /* Layout */
+  --content-width: 64rem;
+
   /* Radii */
   --radius-sm: 6px;
   --radius-md: 8px;

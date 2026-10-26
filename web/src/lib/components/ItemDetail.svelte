@@ -147,6 +147,7 @@
 
   .body {
     margin: 0 0 var(--space-6);
+    max-width: 68ch;
     font-size: var(--text-lg);
     line-height: 1.7;
     color: var(--color-text);
@@ -228,6 +229,7 @@
 
   .description {
     margin: 0 0 var(--space-6);
+    max-width: 68ch;
     font-size: var(--text-base);
     line-height: 1.7;
     color: var(--color-text-secondary);

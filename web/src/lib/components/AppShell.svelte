@@ -142,7 +142,7 @@
 
   .main {
     flex: 1;
-    max-width: 44rem;
+    max-width: var(--content-width);
     width: 100%;
     margin: 0 auto;
     padding: var(--space-10) var(--space-6);
