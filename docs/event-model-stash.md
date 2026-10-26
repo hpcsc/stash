@@ -38,7 +38,7 @@ is middleware, not an event.
 
 ### Process 2 — Capture an item
 
-Timeline: `TextCaptured` / `LinkCaptured` / `ImageCaptured` / `FileCaptured` → (`LinkMetadataFetched`, `ThumbnailGenerated`)
+Timeline: `TextCaptured` / `LinkCaptured` / `ImageCaptured` / `FileCaptured` / `NoteCaptured` → (`LinkMetadataFetched`, `ThumbnailGenerated`, `ImageThumbnailGenerated`)
 
 | Event | Description | Key data |
 |---|---|---|
@@ -46,8 +46,10 @@ Timeline: `TextCaptured` / `LinkCaptured` / `ImageCaptured` / `FileCaptured` →
 | `LinkCaptured` | Link saved to the Inbox | itemId, url, sourceUrl? |
 | `ImageCaptured` | Image saved to the Inbox | itemId, fileRef |
 | `FileCaptured` | File saved to the Inbox | itemId, fileRef, fileName, fileSize, mimeType |
+| `NoteCaptured` | Note with ordered text and image blocks saved to the Inbox | itemId, blocks[] |
 | `LinkMetadataFetched` | Link title/description fetched | itemId, title?, description? |
 | `ThumbnailGenerated` | Image thumbnail generated | itemId, thumbnailRef |
+| `ImageThumbnailGenerated` | Thumbnail generated for one image in a note | itemId, imageId, thumbnailRef |
 
 | Command | Actor | Produces | Refused when |
 |---|---|---|---|
@@ -55,22 +57,32 @@ Timeline: `TextCaptured` / `LinkCaptured` / `ImageCaptured` / `FileCaptured` →
 | `CaptureLink` | User | `LinkCaptured` | `CapturedOnce` |
 | `CaptureImage` | User | `ImageCaptured` | `CapturedOnce` |
 | `CaptureFile` | User | `FileCaptured` | `CapturedOnce`, `FileTooLarge`, `VideoRejected` |
+| `CaptureNote` | User | `NoteCaptured` | `CapturedOnce`, `NoteEmpty`, `TooManyImages`, `NoteTooLarge`, `InvalidNoteBlock`, `FileTooLarge`, `VideoRejected` |
 | `RecordLinkMetadata` | reactor | `LinkMetadataFetched` | `MetadataRecordedOnce` |
 | `RecordThumbnail` | reactor | `ThumbnailGenerated` | `ThumbnailRecordedOnce` |
+| `RecordImageThumbnail` | reactor | `ImageThumbnailGenerated` | `ThumbnailRecordedOnce`, `ImageNotAttached` |
 
-The four capture types are separate events, not a `type` discriminator on one event — the
-payloads diverge (body vs url vs file), so a discriminator would be a bag of
+The capture types are separate events, not a `type` discriminator on one event — the
+payloads diverge (body vs url vs file vs blocks), so a discriminator would be a bag of
 mutually-exclusive nullable fields. The `Item` aggregate is one: the only uniform thing
 across types is the location state machine, which is the aggregate's invariant. The type
 lives in the event type, not a field.
 
-`FileTooLarge` (25 MB) and `VideoRejected` are command-input validation, decided from the
-command payload rather than the item's history.
+A note carries its whole document in one event: ordered `text` and `image` blocks. The
+text is the note body; images keep their position in the block list. One note is one
+triage unit, so keep, drop and tag act on the note as a whole. Images are captured as part
+of the note rather than as separate items, which is why the composer holds them until the
+user saves.
+
+`FileTooLarge` (25 MB), `VideoRejected` and `NoteTooLarge` (100 MB total) are
+command-input validation, decided from the command payload rather than the item's history.
+A note has at most 10 images and must contain text or an image.
 
 | Trigger | Reactor | Command | Result |
 |---|---|---|---|
 | `LinkCaptured` | `LinkMetadataReactor` | `RecordLinkMetadata` | `LinkMetadataFetched` |
 | `ImageCaptured` | `ThumbnailReactor` | `RecordThumbnail` | `ThumbnailGenerated` |
+| `NoteCaptured` | `ThumbnailReactor` | `RecordImageThumbnail` × N | `ImageThumbnailGenerated` × N |
 
 A link whose title/description cannot be fetched is still saved with its URL — the absence
 of `LinkMetadataFetched` is not a failure.
@@ -154,26 +166,29 @@ empty state.
 
 | View | Subscribes to | Purpose | Read by |
 |---|---|---|---|
-| `ItemsView` | 4 capture events | Captured content, type, source | Inbox item detail |
+| `ItemsView` | 5 capture events | Captured content, type, source, note blocks and images | Inbox item detail |
 | `ItemStateView` | 4 location events | Triage state (inbox/library/trash) | Drop / Restore / Delete / Empty triggers |
 | `ItemTagsView` | `ItemTagged` | Item-to-tag mapping | Library item |
 | `TagsView` | `TagCreated`, `TagRenamed` | Tag names | Tags screen |
 | `LinksToEnrichView` | `LinkCaptured`, `LinkMetadataFetched` | Links still needing metadata | LinkMetadataReactor |
-| `ImagesToThumbnailView` | `ImageCaptured`, `ThumbnailGenerated` | Images still needing thumbnails | ThumbnailReactor |
+| `ImagesToThumbnailView` | `ImageCaptured`, `ThumbnailGenerated`, `NoteCaptured`, `ImageThumbnailGenerated` | Images still needing thumbnails | ThumbnailReactor |
 | `TrashToPurgeView` | `TrashEmptied`, `ItemDeleted` | Items an empty-trash still owes a delete | EmptyTrashReactor |
 
 The items read model is split into content (`ItemsView`) and state (`ItemStateView`) —
 the same content-vs-location boundary as the events. At implementation these two join into
 one `items` table (as the proposal specifies), and the enrichment events
 (`LinkMetadataFetched`, `ThumbnailGenerated`) additionally fill the title/description and
-thumbnail columns. The Inbox is the set of captured items whose state is still "inbox".
+thumbnail columns. A note stores its block list on the item row and each image in
+`item_images`, ordered by position; the read model hydrates image metadata into the blocks
+so clients can render a note without a second request. The Inbox is the set of captured
+items whose state is still "inbox".
 
 ## Autonomous Components
 
 | Component | Owned events | Owned commands | Consumes from |
 |---|---|---|---|
 | Identity | `SignedIn`, `SignedOut` | `SignIn`, `SignOut` | Google |
-| Item | `TextCaptured`…`ItemDeleted`, `ItemTagged`, `LinkMetadataFetched`, `ThumbnailGenerated` | capture / enrich / keep / tag / drop / restore / delete | — |
+| Item | `TextCaptured`…`ItemDeleted`, `ItemTagged`, `LinkMetadataFetched`, `ThumbnailGenerated`, `NoteCaptured`, `ImageThumbnailGenerated` | capture / enrich / keep / tag / drop / restore / delete | — |
 | Trash | `TrashEmptied` | `EmptyTrash` | — |
 | Tag | `TagCreated`, `TagRenamed` | `CreateTag`, `RenameTag` | — |
 
@@ -206,6 +221,7 @@ fetch). No saga, process manager, policy, or scheduler.
 | 7 | Drop / restore / delete | Item | `ItemDropped`, `ItemRestored`, `ItemDeleted` | `DropItem`, `RestoreItem`, `DeleteItem` | `ItemStateView` |
 | 8 | Empty trash | Trash | `TrashEmptied`, `ItemDeleted` | `EmptyTrash`, `DeleteItem` | `TrashToPurgeView` |
 | 9 | Tags | Tag | `TagCreated`, `TagRenamed` | `CreateTag`, `RenameTag` | `TagsView` |
+| 10 | Capture note with inline images | Item | `NoteCaptured`, `ImageThumbnailGenerated` | `CaptureNote`, `RecordImageThumbnail` | `ItemsView`, `ImagesToThumbnailView` |
 
 ## Decisions & Assumptions
 
@@ -218,3 +234,9 @@ fetch). No saga, process manager, policy, or scheduler.
 - **Keep-without-tags** — left open; the stories say "can assign", not "must".
 - **Restore target** — derived from history (inbox if never kept, library if kept); the
   stories flag this as an open question and the model assumes it.
+- **Notes are one item with ordered blocks** — images are placed inline at the caret in the
+  composer, not collected into a separate image item or a thumbnail strip. The document
+  travels in `NoteCaptured`, so the note is one triage unit.
+- **Images are uploaded with the note** — the composer keeps pasted images in memory and
+  sends the document plus the files in one multipart request on Save. Limits are 10 images
+  and 100 MB per note, with the existing 25 MB per-image limit.
