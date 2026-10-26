@@ -1,0 +1,2 @@
+DROP TABLE IF EXISTS item_images;
+ALTER TABLE items DROP COLUMN IF EXISTS note_blocks;

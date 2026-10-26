@@ -11,6 +11,7 @@ import (
 	"github.com/hpcsc/stash/internal/use_cases/item"
 	"github.com/hpcsc/stash/internal/use_cases/item/command"
 	"github.com/hpcsc/stash/internal/use_cases/item/event"
+	"github.com/hpcsc/stash/internal/use_cases/item/note"
 	"github.com/stretchr/testify/require"
 )
 
@@ -192,6 +193,132 @@ func TestItem(t *testing.T) {
 		})
 	})
 
+	t.Run("capture note", func(t *testing.T) {
+		t.Run("captures text and images in order", func(t *testing.T) {
+			var i item.Item
+			cmd := captureNote()
+
+			require.NoError(t, i.CaptureNote(cmd))
+
+			recorded := onlyRecorded(t, &i)
+			require.Equal(t, &event.NoteCaptured{
+				ItemID:     cmd.ItemID,
+				Blocks:     cmd.Blocks,
+				CapturedAt: capturedAt,
+			}, recorded.Payload)
+			require.Equal(t, cmd.ItemID, i.ID())
+		})
+
+		t.Run("captures a note with only images", func(t *testing.T) {
+			var i item.Item
+			cmd := captureNote()
+			cmd.Blocks = cmd.Blocks[1:2]
+
+			require.NoError(t, i.CaptureNote(cmd))
+			require.Equal(t, cmd.ItemID, i.ID())
+		})
+
+		t.Run("rejects a second capture", func(t *testing.T) {
+			i := given(noteCaptured())
+
+			require.ErrorIs(t, i.CaptureNote(captureNote()), item.ErrAlreadyCaptured)
+			require.Empty(t, i.Recorded())
+		})
+
+		t.Run("rejects a note with no text or images", func(t *testing.T) {
+			i := given()
+			cmd := captureNote()
+			cmd.Blocks = nil
+
+			require.ErrorIs(t, i.CaptureNote(cmd), item.ErrNoteEmpty)
+			require.Empty(t, i.Recorded())
+		})
+
+		t.Run("rejects a note with only blank text", func(t *testing.T) {
+			i := given()
+			cmd := captureNote()
+			cmd.Blocks = []note.Block{{Type: note.TypeText, Text: "   "}}
+
+			require.ErrorIs(t, i.CaptureNote(cmd), item.ErrNoteEmpty)
+			require.Empty(t, i.Recorded())
+		})
+
+		t.Run("rejects an unknown block type", func(t *testing.T) {
+			i := given()
+			cmd := captureNote()
+			cmd.Blocks = append(cmd.Blocks, note.Block{Type: "video"})
+
+			require.ErrorIs(t, i.CaptureNote(cmd), item.ErrInvalidNoteBlock)
+			require.Empty(t, i.Recorded())
+		})
+
+		t.Run("rejects the same image twice", func(t *testing.T) {
+			i := given()
+			cmd := captureNote()
+			cmd.Blocks = append(cmd.Blocks, cmd.Blocks[1])
+
+			require.ErrorIs(t, i.CaptureNote(cmd), item.ErrInvalidNoteBlock)
+			require.Empty(t, i.Recorded())
+		})
+
+		t.Run("rejects a non-image block", func(t *testing.T) {
+			i := given()
+			cmd := captureNote()
+			cmd.Blocks[1].Image.MimeType = "application/pdf"
+
+			require.ErrorIs(t, i.CaptureNote(cmd), item.ErrInvalidNoteBlock)
+			require.Empty(t, i.Recorded())
+		})
+
+		t.Run("rejects a video block", func(t *testing.T) {
+			i := given()
+			cmd := captureNote()
+			cmd.Blocks[1].Image.MimeType = "video/mp4"
+
+			require.ErrorIs(t, i.CaptureNote(cmd), item.ErrVideoRejected)
+			require.Empty(t, i.Recorded())
+		})
+
+		t.Run("rejects an image larger than the limit", func(t *testing.T) {
+			i := given()
+			cmd := captureNote()
+			cmd.Blocks[1].Image.FileSize = command.MaxFileSize + 1
+
+			require.ErrorIs(t, i.CaptureNote(cmd), item.ErrFileTooLarge)
+			require.Empty(t, i.Recorded())
+		})
+
+		t.Run("rejects more images than the limit", func(t *testing.T) {
+			i := given()
+			cmd := captureNote()
+			cmd.Blocks = nil
+			for n := 0; n <= command.MaxNoteImages; n++ {
+				cmd.Blocks = append(cmd.Blocks, note.Block{
+					Type:  note.TypeImage,
+					Image: &note.Image{ID: uuid.New(), FileRef: "images/photo.jpg", FileSize: 1, MimeType: "image/jpeg"},
+				})
+			}
+
+			require.ErrorIs(t, i.CaptureNote(cmd), item.ErrTooManyImages)
+			require.Empty(t, i.Recorded())
+		})
+
+		t.Run("rejects a note larger than the total limit", func(t *testing.T) {
+			i := given()
+			cmd := captureNote()
+			cmd.Blocks = nil
+			for n := 0; n < 5; n++ {
+				cmd.Blocks = append(cmd.Blocks, note.Block{
+					Type:  note.TypeImage,
+					Image: &note.Image{ID: uuid.New(), FileRef: "images/photo.jpg", FileSize: command.MaxFileSize, MimeType: "image/jpeg"},
+				})
+			}
+
+			require.ErrorIs(t, i.CaptureNote(cmd), item.ErrNoteTooLarge)
+			require.Empty(t, i.Recorded())
+		})
+	})
+
 	t.Run("record thumbnail", func(t *testing.T) {
 		t.Run("records a thumbnail for an image item", func(t *testing.T) {
 			i := given(imageCaptured())
@@ -208,6 +335,41 @@ func TestItem(t *testing.T) {
 			i := given(imageCaptured(), thumbnailGenerated())
 
 			require.ErrorIs(t, i.RecordThumbnail("new-thumb.jpg"), item.ErrThumbnailAlreadyRecorded)
+			require.Empty(t, i.Recorded())
+		})
+	})
+
+	t.Run("record image thumbnail", func(t *testing.T) {
+		t.Run("records a thumbnail for a note image", func(t *testing.T) {
+			i := given(noteCaptured())
+
+			require.NoError(t, i.RecordImageThumbnail(imageID, "thumbnails/photo.jpg"))
+
+			require.Equal(t, &event.ImageThumbnailGenerated{
+				ItemID:       itemID,
+				ImageID:      imageID,
+				ThumbnailRef: "thumbnails/photo.jpg",
+			}, onlyRecorded(t, i).Payload)
+		})
+
+		t.Run("rejects an image that is not in the note", func(t *testing.T) {
+			i := given(noteCaptured())
+
+			require.ErrorIs(t, i.RecordImageThumbnail(uuid.New(), "thumbnails/other.jpg"), item.ErrImageNotAttached)
+			require.Empty(t, i.Recorded())
+		})
+
+		t.Run("rejects an image that already has a thumbnail", func(t *testing.T) {
+			i := given(noteCaptured(), imageThumbnailGenerated())
+
+			require.ErrorIs(t, i.RecordImageThumbnail(imageID, "thumbnails/photo.jpg"), item.ErrThumbnailAlreadyRecorded)
+			require.Empty(t, i.Recorded())
+		})
+
+		t.Run("rejects a note that is not captured", func(t *testing.T) {
+			var i item.Item
+
+			require.ErrorIs(t, i.RecordImageThumbnail(imageID, "thumbnails/photo.jpg"), item.ErrNotCaptured)
 			require.Empty(t, i.Recorded())
 		})
 	})
@@ -290,6 +452,7 @@ func TestItem(t *testing.T) {
 
 var (
 	itemID     = uuid.MustParse("6f1c2a54-7b0e-4f6a-9a51-2d8f0c3e9b71")
+	imageID    = uuid.MustParse("c2d5a1e8-3f47-4b90-8e61-7a4c9d2b5f03")
 	capturedAt = time.Date(2026, 10, 24, 12, 0, 0, 0, time.UTC)
 )
 
@@ -320,6 +483,18 @@ func captureFile() command.CaptureFile {
 		FileName:   "report.pdf",
 		FileSize:   1024,
 		MimeType:   "application/pdf",
+		CapturedAt: capturedAt,
+	}
+}
+
+func captureNote() command.CaptureNote {
+	return command.CaptureNote{
+		ItemID: itemID,
+		Blocks: []note.Block{
+			{Type: note.TypeText, Text: "before"},
+			{Type: note.TypeImage, Image: &note.Image{ID: imageID, FileRef: "images/photo.jpg", FileName: "photo.jpg", FileSize: 1024, MimeType: "image/jpeg"}},
+			{Type: note.TypeText, Text: "after"},
+		},
 		CapturedAt: capturedAt,
 	}
 }
@@ -370,6 +545,15 @@ func fileCaptured() domain.Event {
 
 func thumbnailGenerated() domain.Event {
 	return domain.NewEvent(&event.ThumbnailGenerated{ItemID: itemID, ThumbnailRef: "thumbnails/photo.jpg"})
+}
+
+func noteCaptured() domain.Event {
+	cmd := captureNote()
+	return domain.NewEvent(&event.NoteCaptured{ItemID: cmd.ItemID, Blocks: cmd.Blocks, CapturedAt: cmd.CapturedAt})
+}
+
+func imageThumbnailGenerated() domain.Event {
+	return domain.NewEvent(&event.ImageThumbnailGenerated{ItemID: itemID, ImageID: imageID, ThumbnailRef: "thumbnails/photo.jpg"})
 }
 
 func kept() domain.Event {

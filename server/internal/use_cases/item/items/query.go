@@ -2,6 +2,7 @@ package items
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -26,6 +27,25 @@ type Item struct {
 	FileSize      int64     `json:"fileSize,omitempty"`
 	MimeType      string    `json:"mimeType,omitempty"`
 	CapturedAt    time.Time `json:"capturedAt"`
+	Images        []Image   `json:"images,omitempty"`
+	Blocks        []Block   `json:"blocks,omitempty"`
+
+	stored []storedBlock
+}
+
+type Image struct {
+	ID            string `json:"id"`
+	FilePath      string `json:"filePath"`
+	ThumbnailPath string `json:"thumbnailPath,omitempty"`
+	FileName      string `json:"fileName,omitempty"`
+	FileSize      int64  `json:"fileSize,omitempty"`
+	MimeType      string `json:"mimeType,omitempty"`
+}
+
+type Block struct {
+	Type  string `json:"type"`
+	Text  string `json:"text,omitempty"`
+	Image *Image `json:"image,omitempty"`
 }
 
 func NewQuery(pool *pgxpool.Pool) *Query {
@@ -38,7 +58,7 @@ type Query struct {
 
 func (q *Query) List(ctx context.Context, search string, states ...string) ([]Item, error) {
 	query := `
-		SELECT id::text, type, body, state, source_app, source_url, title, description, file_path, thumbnail_path, file_name, file_size, mime_type, captured_at
+		SELECT id::text, type, body, state, source_app, source_url, title, description, file_path, thumbnail_path, file_name, file_size, mime_type, captured_at, note_blocks
 		FROM items
 	`
 	var args []any
@@ -72,25 +92,130 @@ func (q *Query) List(ctx context.Context, search string, states ...string) ([]It
 	}
 	defer rows.Close()
 
-	return pgx.CollectRows(rows, func(r pgx.CollectableRow) (Item, error) {
-		var i Item
-		err := r.Scan(&i.ID, &i.Type, &i.Body, &i.State, &i.SourceApp, &i.SourceURL, &i.Title, &i.Description, &i.FilePath, &i.ThumbnailPath, &i.FileName, &i.FileSize, &i.MimeType, &i.CapturedAt)
-		return i, err
-	})
+	list, err := pgx.CollectRows(rows, scanItem)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list items: %w", err)
+	}
+	if err := q.attachImages(ctx, list); err != nil {
+		return nil, err
+	}
+	return list, nil
 }
 
 func (q *Query) ByID(ctx context.Context, id string) (*Item, error) {
 	var i Item
+	var blocks json.RawMessage
 	err := q.pool.QueryRow(ctx, `
-		SELECT id::text, type, body, state, source_app, source_url, title, description, file_path, thumbnail_path, file_name, file_size, mime_type, captured_at
+		SELECT id::text, type, body, state, source_app, source_url, title, description, file_path, thumbnail_path, file_name, file_size, mime_type, captured_at, note_blocks
 		FROM items
 		WHERE id = $1
-	`, id).Scan(&i.ID, &i.Type, &i.Body, &i.State, &i.SourceApp, &i.SourceURL, &i.Title, &i.Description, &i.FilePath, &i.ThumbnailPath, &i.FileName, &i.FileSize, &i.MimeType, &i.CapturedAt)
+	`, id).Scan(&i.ID, &i.Type, &i.Body, &i.State, &i.SourceApp, &i.SourceURL, &i.Title, &i.Description, &i.FilePath, &i.ThumbnailPath, &i.FileName, &i.FileSize, &i.MimeType, &i.CapturedAt, &blocks)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to read item %s: %w", id, err)
 	}
-	return &i, nil
+	if i.Type == "note" {
+		if err := i.readNoteBlocks(blocks); err != nil {
+			return nil, err
+		}
+	}
+
+	list := []Item{i}
+	if err := q.attachImages(ctx, list); err != nil {
+		return nil, err
+	}
+	return &list[0], nil
+}
+
+func scanItem(r pgx.CollectableRow) (Item, error) {
+	var i Item
+	var blocks json.RawMessage
+	err := r.Scan(&i.ID, &i.Type, &i.Body, &i.State, &i.SourceApp, &i.SourceURL, &i.Title, &i.Description, &i.FilePath, &i.ThumbnailPath, &i.FileName, &i.FileSize, &i.MimeType, &i.CapturedAt, &blocks)
+	if err != nil {
+		return i, err
+	}
+	if i.Type == "note" {
+		if err := i.readNoteBlocks(blocks); err != nil {
+			return i, err
+		}
+	}
+	return i, nil
+}
+
+func (i *Item) readNoteBlocks(raw json.RawMessage) error {
+	if len(raw) == 0 {
+		return nil
+	}
+	if err := json.Unmarshal(raw, &i.stored); err != nil {
+		return fmt.Errorf("failed to read note blocks for item %s: %w", i.ID, err)
+	}
+	return nil
+}
+
+func (q *Query) attachImages(ctx context.Context, list []Item) error {
+	ids := make([]string, 0, len(list))
+	for _, i := range list {
+		if i.Type == "note" {
+			ids = append(ids, i.ID)
+		}
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+
+	rows, err := q.pool.Query(ctx, `
+		SELECT id::text, item_id::text, file_path, COALESCE(thumbnail_path, ''), file_name, file_size, mime_type
+		FROM item_images
+		WHERE item_id::text = ANY($1)
+		ORDER BY item_id, sort_order
+	`, ids)
+	if err != nil {
+		return fmt.Errorf("failed to read note images: %w", err)
+	}
+	defer rows.Close()
+
+	byItem := make(map[string][]Image, len(ids))
+	for rows.Next() {
+		var image Image
+		var itemID string
+		if err := rows.Scan(&image.ID, &itemID, &image.FilePath, &image.ThumbnailPath, &image.FileName, &image.FileSize, &image.MimeType); err != nil {
+			return fmt.Errorf("failed to read note images: %w", err)
+		}
+		byItem[itemID] = append(byItem[itemID], image)
+	}
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("failed to read note images: %w", err)
+	}
+
+	for idx := range list {
+		if list[idx].Type != "note" {
+			continue
+		}
+		list[idx].Images = byItem[list[idx].ID]
+		list[idx].Blocks = blocksWithImages(list[idx].stored, list[idx].Images)
+	}
+	return nil
+}
+
+func blocksWithImages(stored []storedBlock, images []Image) []Block {
+	byID := make(map[string]Image, len(images))
+	for _, image := range images {
+		byID[image.ID] = image
+	}
+
+	blocks := make([]Block, 0, len(stored))
+	for _, b := range stored {
+		if b.Type == "image" {
+			image, ok := byID[b.ImageID]
+			if !ok {
+				continue
+			}
+			blocks = append(blocks, Block{Type: "image", Image: &image})
+			continue
+		}
+		blocks = append(blocks, Block{Type: "text", Text: b.Text})
+	}
+	return blocks
 }

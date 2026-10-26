@@ -44,15 +44,23 @@ func (r *Reaction) Name() string {
 }
 
 func (r *Reaction) EventTypes() []string {
-	return []string{event.ImageCaptured{}.EventType()}
+	return []string{
+		event.ImageCaptured{}.EventType(),
+		event.NoteCaptured{}.EventType(),
+	}
 }
 
 func (r *Reaction) Handle(ctx context.Context, evt *domain.Event) error {
-	captured, ok := evt.Payload.(*event.ImageCaptured)
-	if !ok {
-		return nil
+	switch captured := evt.Payload.(type) {
+	case *event.ImageCaptured:
+		return r.handleImage(ctx, evt, captured)
+	case *event.NoteCaptured:
+		return r.handleNote(ctx, evt, captured)
 	}
+	return nil
+}
 
+func (r *Reaction) handleImage(ctx context.Context, evt *domain.Event, captured *event.ImageCaptured) error {
 	thumbnailRef, err := r.generate(ctx, captured.FileRef)
 	if err != nil {
 		r.logger.Warn("failed to generate thumbnail",
@@ -75,6 +83,49 @@ func (r *Reaction) Handle(ctx context.Context, evt *domain.Event) error {
 		return err
 	}
 
+	return r.items.Save(ctx, i, dispatch.CommandIDFor(r.Name(), evt))
+}
+
+func (r *Reaction) handleNote(ctx context.Context, evt *domain.Event, captured *event.NoteCaptured) error {
+	i, err := r.items.Load(ctx, captured.ItemID)
+	if err != nil {
+		return fmt.Errorf("loading item %s for thumbnails: %w", captured.ItemID, err)
+	}
+
+	recorded := false
+	for _, b := range captured.Blocks {
+		if b.Image == nil {
+			continue
+		}
+
+		thumbnailRef, err := r.generate(ctx, b.Image.FileRef)
+		if err != nil {
+			r.logger.Warn("failed to generate thumbnail",
+				"fileRef", b.Image.FileRef,
+				"itemId", captured.ItemID,
+				"imageId", b.Image.ID,
+				"error", err,
+			)
+			continue
+		}
+
+		if err := i.RecordImageThumbnail(b.Image.ID, thumbnailRef); err != nil {
+			if err == item.ErrThumbnailAlreadyRecorded {
+				continue
+			}
+			r.logger.Warn("failed to record image thumbnail",
+				"itemId", captured.ItemID,
+				"imageId", b.Image.ID,
+				"error", err,
+			)
+			continue
+		}
+		recorded = true
+	}
+
+	if !recorded {
+		return nil
+	}
 	return r.items.Save(ctx, i, dispatch.CommandIDFor(r.Name(), evt))
 }
 
