@@ -13,6 +13,7 @@ import (
 	"github.com/hpcsc/stash/internal/api/middleware"
 	"github.com/hpcsc/stash/internal/api/route"
 	"github.com/hpcsc/stash/internal/api/session"
+	"github.com/hpcsc/stash/internal/api/websocket"
 	apiIdentity "github.com/hpcsc/stash/internal/api/use_cases/identity"
 	apiItem "github.com/hpcsc/stash/internal/api/use_cases/item"
 	apiTag "github.com/hpcsc/stash/internal/api/use_cases/tag"
@@ -80,11 +81,14 @@ func allRoutes(pool *pgxpool.Pool, issuer *session.Issuer, verifiers map[string]
 	bus := command.NewBus()
 	coreUseCases.RegisterHandlers(bus, stream.NewPostgres(pool, reg))
 
+	wsHub := websocket.NewHub(slog.Default())
+
 	routables := []route.Routable{
 		root.NewHandler(),
 		apiIdentity.NewHandler(bus, verifiers, issuer),
 		apiItem.NewHandler(bus, items.NewQuery(pool)),
 		apiTag.NewHandler(bus, tags.NewQuery(pool)),
+		websocket.NewHandler(wsHub, issuer, slog.Default()),
 	}
 
 	var routes []*route.Route

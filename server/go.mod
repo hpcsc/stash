@@ -15,6 +15,7 @@ require (
 )
 
 require (
+	github.com/coder/websocket v1.8.15 // indirect
 	github.com/fsnotify/fsnotify v1.10.0 // indirect
 	github.com/go-jose/go-jose/v4 v4.1.4 // indirect
 	github.com/gookit/filter v1.2.3 // indirect
