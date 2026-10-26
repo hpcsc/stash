@@ -26,3 +26,6 @@ go.work
 tmp
 tags
 bin
+
+# Runtime file storage (STORAGE_DIR)
+server/data/
