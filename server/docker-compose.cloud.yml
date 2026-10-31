@@ -9,6 +9,7 @@ services:
       DB_PASSWORD: ${DB_PASSWORD}
       DB_HOST: ${DB_HOST}
       DB_PORT: ${DB_PORT}
+      DB_SSLMODE: ${DB_SSLMODE}
     entrypoint: /app/entrypoint.sh
     volumes:
       - ./scripts/local/migrate/entrypoint.sh:/app/entrypoint.sh
