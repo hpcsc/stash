@@ -1,3 +1,5 @@
+import { browser } from './browser.js'
+
 export const menus = [
   { id: 'save-selection', title: 'Save selection to Stash', contexts: ['selection'] },
   { id: 'save-image', title: 'Save image to Stash', contexts: ['image'] },
@@ -6,6 +8,6 @@ export const menus = [
 
 export function installMenus() {
   for (const menu of menus) {
-    chrome.contextMenus.create(menu)
+    browser.contextMenus.create(menu)
   }
 }

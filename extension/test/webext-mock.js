@@ -1,9 +1,9 @@
 import { vi } from 'vitest'
 
-export function installChromeMock() {
+function buildMock() {
   const data = new Map()
 
-  const chrome = {
+  const api = {
     runtime: {
       id: 'test-extension-id',
       onInstalled: { addListener: vi.fn() },
@@ -42,6 +42,19 @@ export function installChromeMock() {
     },
   }
 
-  globalThis.chrome = chrome
-  return { chrome, data }
+  return { api, data }
+}
+
+export function installChromeMock() {
+  const { api, data } = buildMock()
+  globalThis.chrome = api
+  delete globalThis.browser
+  return { chrome: api, data }
+}
+
+export function installBrowserMock() {
+  const { api, data } = buildMock()
+  globalThis.browser = api
+  delete globalThis.chrome
+  return { browser: api, data }
 }

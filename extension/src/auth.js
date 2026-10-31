@@ -1,4 +1,5 @@
 import { apiBaseUrl, googleClientId } from './config.js'
+import { browser } from './browser.js'
 import { clearToken, getToken, setToken } from './storage.js'
 
 export class SignInFailed extends Error {
@@ -9,7 +10,9 @@ export class SignInFailed extends Error {
 }
 
 export async function signInWithGoogle() {
-  const redirectUri = `https://${chrome.runtime.id}.chromiumapp.org/`
+  const redirectUri = browser.identity.getRedirectURL
+    ? browser.identity.getRedirectURL()
+    : `https://${browser.runtime.id}.chromiumapp.org/`
   const nonce = crypto.randomUUID()
   const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth')
   authUrl.searchParams.set('client_id', googleClientId)
@@ -18,7 +21,7 @@ export async function signInWithGoogle() {
   authUrl.searchParams.set('scope', 'openid email profile')
   authUrl.searchParams.set('nonce', nonce)
 
-  const resultUrl = await chrome.identity.launchWebAuthFlow({ url: authUrl.toString(), interactive: true })
+  const resultUrl = await browser.identity.launchWebAuthFlow({ url: authUrl.toString(), interactive: true })
   const fragment = (resultUrl ?? '').split('#')[1] ?? ''
   const idToken = new URLSearchParams(fragment).get('id_token')
   if (!idToken) {

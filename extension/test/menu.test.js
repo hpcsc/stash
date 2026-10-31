@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { installMenus, menus } from '../src/menu.js'
-import { installChromeMock } from './chrome-mock.js'
+import { installChromeMock } from './webext-mock.js'
 
 describe('installMenus', () => {
   let chrome

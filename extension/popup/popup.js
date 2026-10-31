@@ -1,4 +1,5 @@
 import { signInWithGoogle, signOut } from '../src/auth.js'
+import { browser } from '../src/browser.js'
 import { getToken } from '../src/storage.js'
 
 const statusEl = document.getElementById('status')
@@ -6,7 +7,7 @@ const signInBtn = document.getElementById('sign-in')
 const signOutBtn = document.getElementById('sign-out')
 
 async function render() {
-  await chrome.action.setBadgeText({ text: '' })
+  await browser.action.setBadgeText({ text: '' })
   const token = await getToken()
   const signedIn = Boolean(token)
   statusEl.textContent = signedIn ? 'Signed in' : 'Not signed in'

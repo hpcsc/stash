@@ -6,11 +6,17 @@
   "permissions": ["contextMenus", "storage", "identity"],
   "host_permissions": ["<all_urls>"],
   "background": {
+    "scripts": ["src/background.js"],
     "service_worker": "src/background.js",
     "type": "module"
   },
   "action": {
     "default_popup": "popup/popup.html",
     "default_title": "Stash"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "stash@example.com"
+    }
   }
 }

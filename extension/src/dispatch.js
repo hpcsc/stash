@@ -1,3 +1,4 @@
+import { browser } from './browser.js'
 import { saveImage, saveLink, saveText } from './api.js'
 import { getToken } from './storage.js'
 
@@ -49,17 +50,17 @@ function imageName(url) {
 }
 
 async function markSaved() {
-  await chrome.action.setBadgeBackgroundColor({ color: '#2f855a' })
-  await chrome.action.setBadgeText({ text: '✓' })
+  await browser.action.setBadgeBackgroundColor({ color: '#2f855a' })
+  await browser.action.setBadgeText({ text: '✓' })
 }
 
 async function markFailed() {
-  await chrome.action.setBadgeBackgroundColor({ color: '#c53030' })
-  await chrome.action.setBadgeText({ text: '!' })
+  await browser.action.setBadgeBackgroundColor({ color: '#c53030' })
+  await browser.action.setBadgeText({ text: '!' })
 }
 
 async function openPopup() {
-  if (chrome.action.openPopup) {
-    await chrome.action.openPopup()
+  if (browser.action.openPopup) {
+    await browser.action.openPopup()
   }
 }

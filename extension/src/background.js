@@ -1,5 +1,6 @@
-import { handleMenuClick } from './dispatch.js'
+import { browser } from './browser.js'
 import { installMenus } from './menu.js'
+import { handleMenuClick } from './dispatch.js'
 
-chrome.runtime.onInstalled.addListener(installMenus)
-chrome.contextMenus.onClicked.addListener(handleMenuClick)
+browser.runtime.onInstalled.addListener(installMenus)
+browser.contextMenus.onClicked.addListener(handleMenuClick)

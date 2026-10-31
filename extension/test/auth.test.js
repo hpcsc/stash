@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SignInFailed, signInWithGoogle, signOut } from '../src/auth.js'
-import { installChromeMock } from './chrome-mock.js'
+import { installBrowserMock, installChromeMock } from './webext-mock.js'
 
 vi.mock('../src/config.js', () => ({
   apiBaseUrl: 'http://test',
@@ -62,5 +62,21 @@ describe('auth', () => {
 
     const stored = await chrome.storage.local.get('sessionToken')
     expect(stored.sessionToken).toBeUndefined()
+  })
+
+  it('uses getRedirectURL for the redirect URI when running in Firefox', async () => {
+    const { browser } = installBrowserMock()
+    browser.identity.getRedirectURL = vi.fn(() => 'https://test-extension-id.extensions.allizom.org/')
+    browser.identity.launchWebAuthFlow.mockResolvedValue(
+      'https://test-extension-id.extensions.allizom.org/#id_token=google-token',
+    )
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
+      jsonResponse({ successful: true, messages: [], data: { token: 'session-token' } }),
+    ))
+
+    await signInWithGoogle()
+
+    const { url } = browser.identity.launchWebAuthFlow.mock.calls[0][0]
+    expect(new URL(url).searchParams.get('redirect_uri')).toBe('https://test-extension-id.extensions.allizom.org/')
   })
 })

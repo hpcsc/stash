@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError, saveImage, saveLink, saveText } from '../src/api.js'
-import { installChromeMock } from './chrome-mock.js'
+import { installChromeMock } from './webext-mock.js'
 
 vi.mock('../src/config.js', () => ({
   apiBaseUrl: 'http://test',

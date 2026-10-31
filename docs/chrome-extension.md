@@ -3,7 +3,8 @@
 The extension captures text, links, and images into the same Inbox as the web app, over the
 same API and with the same Google account. It signs in with Google via
 `chrome.identity.launchWebAuthFlow` and reuses the Web application OAuth client, so the API's
-`GOOGLE_CLIENT_ID` and the extension's `googleClientId` are the same value.
+`GOOGLE_CLIENT_ID` and the extension's `googleClientId` are the same value. The same directory
+also runs in Firefox — see [firefox-extension.md](firefox-extension.md).
 
 ## 1. Google Cloud (one-time)
 
