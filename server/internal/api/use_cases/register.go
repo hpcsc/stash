@@ -54,7 +54,7 @@ func Register(router chi.Router, cfg *api.Config, pool *pgxpool.Pool, logger *sl
 	reg := registry.New()
 	coreUseCases.RegisterEvents(reg)
 
-	store, err := storage.NewDisk(cfg.StorageDir)
+	store, err := storage.New(ctx, cfg.Storage)
 	if err != nil {
 		return nil, fmt.Errorf("storage: %w", err)
 	}

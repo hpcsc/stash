@@ -32,8 +32,8 @@ import (
 )
 
 type Config struct {
-	DB         config.DB
-	StorageDir string `env:"STORAGE_DIR" envDefault:"./data"`
+	DB      config.DB
+	Storage storage.Config
 }
 
 func main() {
@@ -51,7 +51,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	fileStore, err := storage.NewDisk(cfg.StorageDir)
+	fileStore, err := storage.New(context.Background(), cfg.Storage)
 	if err != nil {
 		logger.Error(err.Error())
 		os.Exit(1)
