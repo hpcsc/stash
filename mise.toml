@@ -2,6 +2,7 @@
 go = "1.27.3"
 flutter = "3.47.8"
 hugo-extended = "0.156.0"
+terraform = "1.16.4"
 "aqua:go-task/task" = "3.42.1"
 "aqua:gotestyourself/gotestsum" = "1.12.1"
 "aqua:koalaman/shellcheck" = "0.10.0"

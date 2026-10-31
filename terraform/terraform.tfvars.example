@@ -1,0 +1,21 @@
+# Copy to terraform.tfvars and fill in the real values. Never commit terraform.tfvars.
+project_name = "stash"
+
+oci_tenancy_ocid     = "ocid1.tenancy.oc1..xxxx"
+oci_user_ocid        = "ocid1.user.oc1..xxxx"
+oci_fingerprint      = "xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx"
+oci_private_key      = <<-EOT
+-----BEGIN PRIVATE KEY-----
+...
+-----END PRIVATE KEY-----
+EOT
+oci_region           = "ap-sydney-1"
+oci_compartment_ocid = "ocid1.compartment.oc1..xxxx"
+
+instance_shape = "VM.Standard.E2.1.Micro" # or "VM.Standard.A1.Flex" (ARM)
+
+neon_org_id   = "org-xxxx-xxxx"
+neon_region_id = "aws-us-east-1"
+
+cloudflare_account_id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+r2_bucket_name        = "stash"
