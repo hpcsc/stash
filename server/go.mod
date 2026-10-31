@@ -1,6 +1,6 @@
 module github.com/hpcsc/stash
 
-go 1.27.1
+go 1.27.3
 
 require (
 	github.com/caarlos0/env/v6 v6.10.1
