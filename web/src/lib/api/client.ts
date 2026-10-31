@@ -17,26 +17,77 @@ export class ApiError extends Error {
 }
 
 let token: string | null = null
+let onUnauthorized: (() => void) | null = null
+
+const REQUEST_TIMEOUT_MS = 15_000
+const UPLOAD_TIMEOUT_MS = 30_000
 
 export function setToken(value: string | null): void {
   token = value
 }
 
+export function setUnauthorizedHandler(handler: (() => void) | null): void {
+  onUnauthorized = handler
+}
+
+function toApiError(e: unknown): ApiError {
+  if (e instanceof ApiError) return e
+  if (e instanceof DOMException && (e.name === 'AbortError' || e.name === 'TimeoutError')) {
+    return new ApiError('The server took too long to respond. Try again.')
+  }
+  if (e instanceof TypeError) {
+    return new ApiError("Can't reach the server. Check your connection and try again.")
+  }
+  if (e instanceof Error) return new ApiError(e.message)
+  return new ApiError('Something went wrong. Try again.')
+}
+
+async function exchange(
+  method: string,
+  path: string,
+  body: BodyInit | undefined,
+  headers: Record<string, string>,
+  timeoutMs: number,
+): Promise<Envelope> {
+  const authed = token !== null
+  let response: Response
+  try {
+    response = await fetch(`${apiBaseUrl}${path}`, {
+      method,
+      headers,
+      body,
+      signal: AbortSignal.timeout(timeoutMs),
+    })
+  } catch (e) {
+    throw toApiError(e)
+  }
+
+  const text = await response.text()
+  let envelope: Envelope
+  try {
+    envelope = JSON.parse(text) as Envelope
+  } catch {
+    if (authed && response.status === 401) {
+      onUnauthorized?.()
+      throw new ApiError('Your session has expired. Please sign in again.', 401)
+    }
+    throw new ApiError('The server returned an unexpected response. Try again.', response.status)
+  }
+
+  if (authed && response.status === 401) {
+    onUnauthorized?.()
+    throw new ApiError('Your session has expired. Please sign in again.', 401)
+  }
+  if (envelope.successful !== true) {
+    throw new ApiError((envelope.messages ?? []).join('\n') || 'The request failed. Try again.', response.status)
+  }
+  return envelope
+}
+
 async function request(method: string, path: string, body?: object): Promise<Envelope> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
   if (token) headers.Authorization = `Bearer ${token}`
-
-  const response = await fetch(`${apiBaseUrl}${path}`, {
-    method,
-    headers,
-    body: body === undefined ? undefined : JSON.stringify(body),
-  })
-
-  const envelope = (await response.json()) as Envelope
-  if (envelope.successful !== true) {
-    throw new ApiError(envelope.messages.join('\n') || 'request failed', response.status)
-  }
-  return envelope
+  return exchange(method, path, body === undefined ? undefined : JSON.stringify(body), headers, REQUEST_TIMEOUT_MS)
 }
 
 export async function signIn(idToken: string): Promise<string> {
@@ -129,18 +180,7 @@ export interface CapturedAttachment {
 async function postForm(path: string, form: FormData): Promise<Envelope> {
   const headers: Record<string, string> = {}
   if (token) headers.Authorization = `Bearer ${token}`
-
-  const response = await fetch(`${apiBaseUrl}${path}`, {
-    method: 'POST',
-    headers,
-    body: form,
-  })
-
-  const envelope = (await response.json()) as Envelope
-  if (envelope.successful !== true) {
-    throw new ApiError(envelope.messages.join('\n') || 'request failed', response.status)
-  }
-  return envelope
+  return exchange('POST', path, form, headers, UPLOAD_TIMEOUT_MS)
 }
 
 export async function captureAttachment(file: File): Promise<CapturedAttachment> {

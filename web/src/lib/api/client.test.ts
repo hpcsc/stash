@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { setToken, signIn, signOut, listItems, captureText, captureLink, captureNote, restoreItem, deleteItem, emptyTrash } from './client'
+import { setToken, setUnauthorizedHandler, signIn, signOut, listItems, captureText, captureLink, captureNote, restoreItem, deleteItem, emptyTrash } from './client'
 
 function jsonResponse(body: object, status = 200): Response {
   return new Response(JSON.stringify(body), { status })
@@ -8,6 +8,7 @@ function jsonResponse(body: object, status = 200): Response {
 describe('client', () => {
   afterEach(() => {
     setToken(null)
+    setUnauthorizedHandler(null)
     vi.unstubAllGlobals()
   })
 
@@ -169,5 +170,33 @@ describe('client', () => {
     const [url, init] = fetchMock.mock.calls[0]
     expect(url).toBe('http://127.0.0.1:3333/trash/empty')
     expect(init.method).toBe('POST')
+  })
+
+  it('maps a network failure to a friendly message', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')))
+
+    await expect(listItems()).rejects.toThrow("Can't reach the server. Check your connection and try again.")
+  })
+
+  it('maps a timeout to a friendly message', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new DOMException('timed out', 'TimeoutError')))
+
+    await expect(listItems()).rejects.toThrow('The server took too long to respond. Try again.')
+  })
+
+  it('maps a non-JSON response to a friendly message', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('<html>502 Bad Gateway</html>', { status: 502 })))
+
+    await expect(listItems()).rejects.toThrow('The server returned an unexpected response. Try again.')
+  })
+
+  it('signs out on a 401 to an authenticated request', async () => {
+    setToken('session-token')
+    const onUnauthorized = vi.fn()
+    setUnauthorizedHandler(onUnauthorized)
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse({ successful: false, messages: ['expired'] }, 401)))
+
+    await expect(listItems()).rejects.toThrow('Your session has expired. Please sign in again.')
+    expect(onUnauthorized).toHaveBeenCalledOnce()
   })
 })
