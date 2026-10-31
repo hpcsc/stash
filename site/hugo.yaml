@@ -1,0 +1,45 @@
+title: Stash
+
+baseURL: https://stash.pnguyen.au/
+
+module:
+  imports:
+    - path: github.com/imfing/hextra
+
+markup:
+  # allow raw html
+  goldmark:
+    renderer:
+      unsafe: true
+
+  # enable hextra syntax highlight
+  highlight:
+    noClasses: false
+
+menu:
+  main:
+    - name: Docs
+      pageRef: /docs
+      weight: 1
+    - name: Search
+      weight: 2
+      params:
+        type: search
+    - name: GitHub
+      weight: 3
+      url: "https://github.com/hpcsc/stash"
+      params:
+        icon: github
+
+params:
+  navbar:
+    displayTitle: true
+    displayLogo: false
+
+  footer:
+    displayCopyright: false
+    displayPoweredBy: true
+
+  editURL:
+    enable: true
+    base: "https://github.com/hpcsc/stash/edit/main/site/content"

@@ -10,6 +10,8 @@ its projections both in PostgreSQL.
   the `US-*` stories build.
 - `web/` — the Svelte + TypeScript web app (triage and search).
 - `app/` — the Flutter client for Android (share target + offline queue).
+- `extension/` — the Chrome and Firefox browser extension (context-menu capture).
+- `site/` — the public website (Hugo + Hextra), deployed to GitHub Pages.
 - `docs/`, `user-stories/`, `tasks/` — shared: the event model, the stories, and the plans.
 
 ## Status

@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 420" fill="none" role="img" aria-label="Text, links, images, and files dropping into a Stash inbox">
+  <defs>
+    <linearGradient id="tray" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#8b5fbf"/>
+      <stop offset="1" stop-color="#6a3f93"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="88" y="256" width="304" height="108" rx="22" fill="url(#tray)"/>
+  <rect x="88" y="256" width="304" height="26" rx="13" fill="#ffffff" opacity="0.18"/>
+
+  <g transform="translate(150 132) rotate(-7)">
+    <rect width="100" height="72" rx="12" fill="#ffffff" stroke="#e7e3ee" stroke-width="2"/>
+    <rect x="16" y="16" width="68" height="8" rx="4" fill="#d8d3e0"/>
+    <rect x="16" y="32" width="52" height="8" rx="4" fill="#e7e3ee"/>
+    <rect x="16" y="48" width="60" height="8" rx="4" fill="#e7e3ee"/>
+  </g>
+
+  <g transform="translate(258 108) rotate(6)">
+    <rect width="100" height="72" rx="12" fill="#ffffff" stroke="#e7e3ee" stroke-width="2"/>
+    <rect x="16" y="12" width="68" height="38" rx="6" fill="#eee8f7"/>
+    <circle cx="32" cy="28" r="6" fill="#7a4fa3"/>
+    <path d="M24 50 L38 38 L48 44 L60 36 L76 50 Z" fill="#7a4fa3" opacity="0.5"/>
+    <rect x="16" y="56" width="44" height="6" rx="3" fill="#d8d3e0"/>
+  </g>
+
+  <g transform="translate(200 84) rotate(2)">
+    <rect width="100" height="72" rx="12" fill="#ffffff" stroke="#e7e3ee" stroke-width="2"/>
+    <circle cx="36" cy="36" r="11" stroke="#7a4fa3" stroke-width="3"/>
+    <circle cx="64" cy="36" r="11" stroke="#7a4fa3" stroke-width="3"/>
+    <path d="M47 36 H53" stroke="#7a4fa3" stroke-width="3" stroke-linecap="round"/>
+    <rect x="16" y="58" width="48" height="6" rx="3" fill="#e7e3ee"/>
+  </g>
+
+  <circle cx="140" cy="70" r="6" fill="#7a4fa3" opacity="0.25"/>
+  <circle cx="360" cy="74" r="8" fill="#7a4fa3" opacity="0.18"/>
+  <circle cx="382" cy="180" r="5" fill="#c9b8dc"/>
+  <circle cx="104" cy="206" r="4" fill="#c9b8dc"/>
+</svg>
