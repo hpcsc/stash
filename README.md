@@ -61,7 +61,9 @@ but signing in needs a real Google OAuth client ID — see
 ## Deploy
 
 To run Stash as a self-hosted service with `docker compose` — and reach it from your phone
-over Tailscale — see [docs/self-hosting.md](docs/self-hosting.md).
+over Tailscale — see [docs/self-hosting.md](docs/self-hosting.md). To run it on a cloud
+provider with managed Postgres and an S3 bucket, see
+[docs/cloud-deploy.md](docs/cloud-deploy.md).
 
 ## Sign in
 
