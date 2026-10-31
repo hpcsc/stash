@@ -23,3 +23,15 @@ saved so that I don't unknowingly keep copies.
 - [x] Capturing something new shows no such notice.
 
 **Depends on:** US-003
+
+### US-012: Capture from the Chrome extension
+
+**Description:** As a user, I want to save selected text, the current page, or an image from
+Chrome so that I can capture while browsing.
+
+**Acceptance Criteria:**
+- [x] Selecting text in Chrome and saving it adds the text to my Inbox.
+- [x] Saving the current page adds the page as a link to my Inbox.
+- [x] Saving a right-clicked image adds the image to my Inbox.
+
+**Depends on:** US-003, US-004
