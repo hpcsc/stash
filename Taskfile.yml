@@ -16,6 +16,9 @@ includes:
   web:
     taskfile: web/Taskfile.yml
     dir: web
+  extension:
+    taskfile: extension/Taskfile.yml
+    dir: extension
 
 tasks:
   test:shellcheck:
