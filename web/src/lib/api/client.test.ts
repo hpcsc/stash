@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { setToken, signIn, signOut, listItems, captureText, captureNote, restoreItem, deleteItem, emptyTrash } from './client'
+import { setToken, signIn, signOut, listItems, captureText, captureLink, captureNote, restoreItem, deleteItem, emptyTrash } from './client'
 
 function jsonResponse(body: object, status = 200): Response {
   return new Response(JSON.stringify(body), { status })
@@ -75,19 +75,39 @@ describe('client', () => {
     expect(url).toContain('state=inbox')
   })
 
-  it('captureText posts the body and returns the id', async () => {
+  it('captureText posts the body and returns the item id', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       jsonResponse({ successful: true, messages: [], data: { id: 'item-1' } }),
     )
     vi.stubGlobal('fetch', fetchMock)
 
-    const id = await captureText('remember this')
+    const captured = await captureText('remember this')
 
-    expect(id).toBe('item-1')
+    expect(captured.id).toBe('item-1')
+    expect(captured.duplicate).toBe(false)
     const [url, init] = fetchMock.mock.calls[0]
     expect(url).toBe('http://127.0.0.1:3333/items')
     expect(init.method).toBe('POST')
     expect(JSON.parse(init.body)).toEqual({ body: 'remember this' })
+  })
+
+  it('captureLink returns the duplicate info when the URL is already saved', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({
+        successful: true,
+        messages: [],
+        data: { id: 'item-1', duplicate: true, duplicateState: 'kept' },
+      }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    const captured = await captureLink('https://example.com')
+
+    expect(captured).toEqual({ id: 'item-1', duplicate: true, duplicateState: 'kept' })
+    const [url, init] = fetchMock.mock.calls[0]
+    expect(url).toBe('http://127.0.0.1:3333/items')
+    expect(init.method).toBe('POST')
+    expect(JSON.parse(init.body)).toEqual({ body: 'https://example.com', type: 'link' })
   })
 
   it('captureNote posts the document and images as multipart', async () => {

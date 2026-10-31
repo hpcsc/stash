@@ -13,10 +13,17 @@
 
   const urlRe = /^https?:\/\/\S+$/i
 
+  const locationLabels: Record<string, string> = { inbox: 'Inbox', kept: 'Library', dropped: 'Trash' }
+
+  function duplicateNotice(state?: string): string {
+    return `You already saved this — it's in your ${locationLabels[state ?? ''] ?? 'Inbox'}.`
+  }
+
   let items = $state<Item[]>([])
   let loading = $state(true)
   let saving = $state(false)
   let error = $state<string | null>(null)
+  let warning = $state<string | null>(null)
   let selected = $state<Item | null>(null)
   let query = $state('')
 
@@ -77,6 +84,7 @@
   async function save(upload: NoteUpload) {
     saving = true
     error = null
+    warning = null
     try {
       if (upload.images.length > 0) {
         const item = await captureNote(upload.document, upload.images)
@@ -88,17 +96,19 @@
       if (!body) return
 
       if (urlRe.test(body)) {
-        const id = await captureLink(body)
+        const captured = await captureLink(body)
         items = [
-          { id, type: 'link', body, state: 'inbox', capturedAt: new Date().toISOString() },
+          { id: captured.id, type: 'link', body, state: 'inbox', capturedAt: new Date().toISOString() },
           ...items,
         ]
+        if (captured.duplicate) warning = duplicateNotice(captured.duplicateState)
       } else {
-        const id = await captureText(body)
+        const captured = await captureText(body)
         items = [
-          { id, type: 'text', body, state: 'inbox', capturedAt: new Date().toISOString() },
+          { id: captured.id, type: 'text', body, state: 'inbox', capturedAt: new Date().toISOString() },
           ...items,
         ]
+        if (captured.duplicate) warning = duplicateNotice(captured.duplicateState)
       }
     } catch (e) {
       error = e instanceof Error ? e.message : 'Failed to save'
@@ -190,6 +200,16 @@
     </div>
   {/if}
 
+  {#if warning}
+    <div class="warning-banner">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M8 2.5 14.5 13H1.5L8 2.5z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
+        <path d="M8 6.5v3M8 11.5v.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+      </svg>
+      {warning}
+    </div>
+  {/if}
+
   <div class="section-header">
     <h2>All items</h2>
     <span class="count">{items.length} item{items.length !== 1 ? 's' : ''}</span>
@@ -253,6 +273,19 @@
     color: var(--color-danger);
     background: var(--color-danger-subtle);
     border: 1px solid var(--color-danger);
+    border-radius: var(--radius-md);
+  }
+
+  .warning-banner {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-4);
+    margin-bottom: var(--space-6);
+    font-size: var(--text-sm);
+    color: var(--color-warning);
+    background: var(--color-warning-subtle);
+    border: 1px solid var(--color-warning);
     border-radius: var(--radius-md);
   }
 </style>

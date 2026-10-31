@@ -101,14 +101,22 @@ export async function listItems(search?: string, states?: string[]): Promise<Ite
   return envelope.data as Item[]
 }
 
-export async function captureText(body: string): Promise<string> {
-  const envelope = await request('POST', '/items', { body })
-  return (envelope.data as { id: string }).id
+export interface Captured {
+  id: string
+  duplicate: boolean
+  duplicateState?: string
 }
 
-export async function captureLink(url: string): Promise<string> {
+export async function captureText(body: string): Promise<Captured> {
+  const envelope = await request('POST', '/items', { body })
+  const data = envelope.data as { id: string; duplicate?: boolean; duplicateState?: string }
+  return { id: data.id, duplicate: data.duplicate ?? false, duplicateState: data.duplicateState }
+}
+
+export async function captureLink(url: string): Promise<Captured> {
   const envelope = await request('POST', '/items', { body: url, type: 'link' })
-  return (envelope.data as { id: string }).id
+  const data = envelope.data as { id: string; duplicate?: boolean; duplicateState?: string }
+  return { id: data.id, duplicate: data.duplicate ?? false, duplicateState: data.duplicateState }
 }
 
 export interface CapturedAttachment {
