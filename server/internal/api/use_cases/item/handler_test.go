@@ -63,6 +63,50 @@ func TestHandler(t *testing.T) {
 			require.Equal(t, payload.ItemID.String(), body.Data.(map[string]any)["id"])
 		})
 
+		t.Run("marks a captured link as a duplicate when its URL is already saved", func(t *testing.T) {
+			handler := fake.NewHandler[itemCommand.CaptureLink]()
+			bus := command.NewBus()
+			bus.Register[itemCommand.CaptureLink](handler)
+			router := newRouter(bus, fakeReader{existing: &items.Item{ID: "existing", State: "kept"}})
+
+			w := send(router, "POST", "/items", `{"body": "https://example.com", "type": "link"}`)
+
+			require.Equal(t, http.StatusOK, w.Code)
+			body := commonTest.UnmarshalJson[response.Response](t, w.Body.Bytes())
+			data := body.Data.(map[string]any)
+			require.Equal(t, true, data["duplicate"])
+			require.Equal(t, "kept", data["duplicateState"])
+		})
+
+		t.Run("marks captured text as a duplicate when its body is already saved", func(t *testing.T) {
+			handler := fake.NewHandler[itemCommand.CaptureText]()
+			bus := command.NewBus()
+			bus.Register[itemCommand.CaptureText](handler)
+			router := newRouter(bus, fakeReader{existing: &items.Item{ID: "existing", State: "inbox"}})
+
+			w := send(router, "POST", "/items", `{"body": "remember this"}`)
+
+			require.Equal(t, http.StatusOK, w.Code)
+			body := commonTest.UnmarshalJson[response.Response](t, w.Body.Bytes())
+			data := body.Data.(map[string]any)
+			require.Equal(t, true, data["duplicate"])
+			require.Equal(t, "inbox", data["duplicateState"])
+		})
+
+		t.Run("does not mark a new capture as a duplicate", func(t *testing.T) {
+			handler := fake.NewHandler[itemCommand.CaptureText]()
+			bus := command.NewBus()
+			bus.Register[itemCommand.CaptureText](handler)
+			router := newRouter(bus, fakeReader{})
+
+			w := send(router, "POST", "/items", `{"body": "brand new"}`)
+
+			require.Equal(t, http.StatusOK, w.Code)
+			body := commonTest.UnmarshalJson[response.Response](t, w.Body.Bytes())
+			data := body.Data.(map[string]any)
+			require.Equal(t, false, data["duplicate"])
+		})
+
 		t.Run("rejects a body without text", func(t *testing.T) {
 			bus := command.NewBus()
 			bus.Register[itemCommand.CaptureText](fake.NewHandler[itemCommand.CaptureText]())
@@ -382,8 +426,9 @@ func TestHandler(t *testing.T) {
 }
 
 type fakeReader struct {
-	items []items.Item
-	item  *items.Item
+	items    []items.Item
+	item     *items.Item
+	existing *items.Item
 }
 
 func (f fakeReader) List(_ context.Context, _ string, _ ...string) ([]items.Item, error) {
@@ -392,6 +437,10 @@ func (f fakeReader) List(_ context.Context, _ string, _ ...string) ([]items.Item
 
 func (f fakeReader) ByID(context.Context, string) (*items.Item, error) {
 	return f.item, nil
+}
+
+func (f fakeReader) Existing(_ context.Context, _ string, _ string) (*items.Item, error) {
+	return f.existing, nil
 }
 
 func newRouter(bus *command.Bus, reader item.ItemReader) http.Handler {

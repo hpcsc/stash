@@ -175,6 +175,29 @@ func TestProjection(t *testing.T) {
 		require.Equal(t, "newer", all[0].Body)
 		require.Equal(t, "older", all[1].Body)
 	})
+
+	t.Run("finds an existing item by type and body", func(t *testing.T) {
+		pool := test.NewDBPool(t)
+		clearState(t, pool)
+		checkpointStore := store.NewPostgres(pool)
+		id := uuid.New()
+		sub := subscription.NewFake().WithEventChannel(closedChannel(
+			textCapturedEvent(6, 1, id, "remember this", "", time.Date(2026, 10, 24, 12, 0, 0, 0, time.UTC)),
+		))
+
+		err := projection.NewProjector(items.NewProjection(), pool, checkpointStore, sub, test.DiscardLogger()).Start(context.Background())
+		require.ErrorIs(t, err, event.ErrSubscriptionEnded)
+
+		existing, err := items.NewQuery(pool).Existing(context.Background(), "text", "remember this")
+		require.NoError(t, err)
+		require.NotNil(t, existing)
+		require.Equal(t, id.String(), existing.ID)
+		require.Equal(t, "inbox", existing.State)
+
+		missing, err := items.NewQuery(pool).Existing(context.Background(), "text", "something else")
+		require.NoError(t, err)
+		require.Nil(t, missing)
+	})
 }
 
 func textCapturedEvent(txID, sequence uint64, id uuid.UUID, body, sourceApp string, capturedAt time.Time) domain.Event {

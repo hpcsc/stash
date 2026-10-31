@@ -30,6 +30,7 @@ import (
 type ItemReader interface {
 	List(ctx context.Context, search string, states ...string) ([]items.Item, error)
 	ByID(ctx context.Context, id string) (*items.Item, error)
+	Existing(ctx context.Context, itemType, body string) (*items.Item, error)
 }
 
 var _ route.Routable = (*handler)(nil)
@@ -89,7 +90,7 @@ func (h *handler) capture(w http.ResponseWriter, req *http.Request) {
 		}) {
 			return
 		}
-		_ = h.renderer.JSON(w, http.StatusOK, response.SucceedWithData(map[string]string{"id": itemID.String()}))
+		_ = h.renderer.JSON(w, http.StatusOK, response.SucceedWithData(h.captureResponse(req, itemID, "link", body.Body)))
 	default:
 		if !h.dispatch(w, req, itemCommand.CaptureText{
 			ItemID:     itemID,
@@ -100,8 +101,19 @@ func (h *handler) capture(w http.ResponseWriter, req *http.Request) {
 		}) {
 			return
 		}
-		_ = h.renderer.JSON(w, http.StatusOK, response.SucceedWithData(map[string]string{"id": itemID.String()}))
+		_ = h.renderer.JSON(w, http.StatusOK, response.SucceedWithData(h.captureResponse(req, itemID, "text", body.Body)))
 	}
+}
+
+func (h *handler) captureResponse(req *http.Request, itemID uuid.UUID, itemType, body string) CaptureResponse {
+	resp := CaptureResponse{ID: itemID.String()}
+	existing, err := h.items.Existing(req.Context(), itemType, body)
+	if err != nil || existing == nil {
+		return resp
+	}
+	resp.Duplicate = true
+	resp.DuplicateState = existing.State
+	return resp
 }
 
 func (h *handler) list(w http.ResponseWriter, req *http.Request) {

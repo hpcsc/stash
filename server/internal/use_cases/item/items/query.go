@@ -129,6 +129,24 @@ func (q *Query) ByID(ctx context.Context, id string) (*Item, error) {
 	return &list[0], nil
 }
 
+func (q *Query) Existing(ctx context.Context, itemType, body string) (*Item, error) {
+	var i Item
+	err := q.pool.QueryRow(ctx, `
+		SELECT id::text, state
+		FROM items
+		WHERE type = $1 AND body = $2
+		ORDER BY captured_at DESC
+		LIMIT 1
+	`, itemType, body).Scan(&i.ID, &i.State)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to find existing %s %s: %w", itemType, body, err)
+	}
+	return &i, nil
+}
+
 func scanItem(r pgx.CollectableRow) (Item, error) {
 	var i Item
 	var blocks json.RawMessage
