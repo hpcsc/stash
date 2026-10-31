@@ -64,3 +64,17 @@ I'm never left staring at nothing.
   messages.
 
 **Depends on:** US-005, US-006
+
+### US-016: Deploy self-hosted with docker compose
+
+**Description:** As a user, I want to run Stash on my own machine with docker compose so that
+I keep control of my data.
+
+**Acceptance Criteria:**
+- [x] One `docker compose` command builds and starts the API, the consumer, PostgreSQL, the
+  migration runner, and the web app.
+- [x] The database and uploaded files live in named volumes and survive a container restart.
+- [x] The web app is served same-origin and talks to the API through the same hostname.
+- [x] The steps to run it and reach it over Tailscale are documented.
+
+**Depends on:** US-015
