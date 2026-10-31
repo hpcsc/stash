@@ -4,12 +4,14 @@
   import ItemCard from './ItemCard.svelte'
   import ItemDetail from './ItemDetail.svelte'
   import EmptyState from './EmptyState.svelte'
+  import ErrorBanner from './ErrorBanner.svelte'
   import SkeletonCard from './SkeletonCard.svelte'
   import SearchBar from './SearchBar.svelte'
 
   let items = $state<Item[]>([])
   let loading = $state(true)
   let error = $state<string | null>(null)
+  let query = $state('')
   let selected = $state<Item | null>(null)
   let emptying = $state(false)
 
@@ -30,6 +32,7 @@
   }
 
   function handleSearch(q: string) {
+    query = q
     load(q)
   }
 
@@ -84,13 +87,7 @@
 {:else}
   <SearchBar placeholder="Search trash…" onsearch={handleSearch} />
   {#if error}
-    <div class="error-banner">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5" />
-        <path d="M8 5v3M8 10.5v.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
-      </svg>
-      {error}
-    </div>
+    <ErrorBanner message={error} onretry={() => load(query)} />
   {/if}
 
   <div class="section-header">
@@ -185,18 +182,5 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-3);
-  }
-
-  .error-banner {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    padding: var(--space-3) var(--space-4);
-    margin-bottom: var(--space-6);
-    font-size: var(--text-sm);
-    color: var(--color-danger);
-    background: var(--color-danger-subtle);
-    border: 1px solid var(--color-danger);
-    border-radius: var(--radius-md);
   }
 </style>
