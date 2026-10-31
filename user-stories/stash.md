@@ -35,3 +35,15 @@ Chrome so that I can capture while browsing.
 - [x] Saving a right-clicked image adds the image to my Inbox.
 
 **Depends on:** US-003, US-004
+
+### US-013: Capture from the Firefox extension
+
+**Description:** As a user, I want to save selected text, the current page, or an image from
+Firefox so that I capture no matter which browser I use.
+
+**Acceptance Criteria:**
+- [x] Selecting text in Firefox and saving it adds the text to my Inbox.
+- [x] Saving the current page adds the page as a link to my Inbox.
+- [x] Saving a right-clicked image adds the image to my Inbox.
+
+**Depends on:** US-012
