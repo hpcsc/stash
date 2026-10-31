@@ -1,13 +1,14 @@
 # Deployment to Oracle + Neon + R2
 
 Provision the whole cloud stack with Terraform — an Oracle VM, a Neon Postgres, and a
-Cloudflare R2 bucket — and deploy the app to the VM from GitHub Actions. Every push to
-`main` that publishes images also deploys.
+Cloudflare R2 bucket — and deploy the app to the VM from GitHub Actions. One workflow builds
+and pushes the backend images, then deploys.
 
 ```
 push to main
-  └─► Publish images (GHCR)
-        └─► Deploy (this workflow)
+  └─► Deploy (this workflow)
+        ├─► publish   (build + push api/catchup to GHCR)
+        └─► deploy    (needs publish)
               ├─► terraform apply  (Oracle VM + Neon project + R2 bucket)
               └─► SSH to the VM → docker compose up  (pulls api/catchup, builds web)
 ```
@@ -76,10 +77,13 @@ adding matching repository variables and passing them as `TF_VAR_*`.
 
 Push to `main`, or run the workflow manually from the Actions tab. The `Deploy` workflow:
 
-1. `terraform apply` — provisions (or updates) the VM, the Neon project, and the R2 bucket.
-2. Writes `server/.env.cloud` on the VM from the Terraform outputs and the app secrets.
-3. Clones (or pulls) the repo on the VM and runs `docker compose up` — pulls the published
+1. Builds the `api` and `catchup` images and pushes them to GHCR.
+2. `terraform apply` — provisions (or updates) the VM, the Neon project, and the R2 bucket.
+3. Writes `server/.env.cloud` on the VM from the Terraform outputs and the app secrets.
+4. Clones (or pulls) the repo on the VM and runs `docker compose up` — pulls the published
    `api`/`catchup` images, builds the web app, runs the migrations, and starts everything.
+
+A `v*` tag pushes images but skips the deploy.
 
 Reach the app at `http://<vm-ip>:8080`.
 
