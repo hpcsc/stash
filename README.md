@@ -58,6 +58,11 @@ and `catchup` processes.
 but signing in needs a real Google OAuth client ID — see
 [docs/google-sign-in.md](docs/google-sign-in.md).
 
+## Deploy
+
+To run Stash as a self-hosted service with `docker compose` — and reach it from your phone
+over Tailscale — see [docs/self-hosting.md](docs/self-hosting.md).
+
 ## Sign in
 
 To set up a real Google client and test sign-in end to end, see
