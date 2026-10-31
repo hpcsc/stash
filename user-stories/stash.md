@@ -47,3 +47,20 @@ Firefox so that I capture no matter which browser I use.
 - [x] Saving a right-clicked image adds the image to my Inbox.
 
 **Depends on:** US-012
+
+### US-015: Recover gracefully from failures
+
+**Description:** As a user, I want the app to recover gracefully when a request fails so that
+I'm never left staring at nothing.
+
+**Acceptance Criteria:**
+- [x] When the server can't be reached, the Inbox, Library, and Trash show a clear error with
+  a Retry button instead of a blank screen.
+- [x] When a request times out, the app shows a clear "took too long" message instead of an
+  endless spinner.
+- [x] Retrying after a failure reloads the current view without a full page refresh, keeping
+  my search.
+- [x] When my session expires, I'm returned to sign-in instead of being stuck behind error
+  messages.
+
+**Depends on:** US-005, US-006
