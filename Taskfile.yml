@@ -82,3 +82,15 @@ tasks:
     dir: server
     cmds:
       - docker compose --env-file .env.production -f docker-compose.production.yml down
+
+  cloud:up:
+    desc: start the cloud stack from published images (docs/cloud-deploy.md)
+    dir: server
+    cmds:
+      - docker compose --env-file .env.cloud -f docker-compose.cloud.yml up -d
+
+  cloud:down:
+    desc: stop the cloud stack
+    dir: server
+    cmds:
+      - docker compose --env-file .env.cloud -f docker-compose.cloud.yml down
