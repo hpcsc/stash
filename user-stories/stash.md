@@ -78,3 +78,18 @@ I keep control of my data.
 - [x] The steps to run it and reach it over Tailscale are documented.
 
 **Depends on:** US-015
+
+### US-017: Deploy to a cloud provider
+
+**Description:** As a user, I want to deploy Stash to a cloud provider so that I use it
+without running a server at home.
+
+**Acceptance Criteria:**
+- [x] File bytes can be stored in an S3-compatible bucket, selected via config, alongside
+  local disk.
+- [x] The API and consumer images publish to a container registry.
+- [x] A compose file runs the stack against managed Postgres and S3 storage, pulling published
+  images.
+- [x] The steps to deploy to a cloud provider are documented.
+
+**Depends on:** US-016
