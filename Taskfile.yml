@@ -70,3 +70,15 @@ tasks:
     deps: [run-dependencies]
     cmds:
       - tmuxp load -a server/.tmuxp.yaml
+
+  self-host:up:
+    desc: build and start the self-hosted stack (docs/self-hosting.md)
+    dir: server
+    cmds:
+      - docker compose --env-file .env.production -f docker-compose.production.yml up -d --build
+
+  self-host:down:
+    desc: stop the self-hosted stack
+    dir: server
+    cmds:
+      - docker compose --env-file .env.production -f docker-compose.production.yml down
