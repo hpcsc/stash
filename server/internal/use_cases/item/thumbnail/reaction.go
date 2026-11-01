@@ -66,7 +66,7 @@ func (r *Reaction) Handle(ctx context.Context, evt *domain.Event) error {
 }
 
 func (r *Reaction) handleImage(ctx context.Context, evt *domain.Event, user domain.UserID, captured *event.ImageCaptured) error {
-	thumbnailRef, err := r.generate(ctx, captured.FileRef)
+	thumbnailRef, err := r.generate(ctx, user, captured.FileRef)
 	if err != nil {
 		r.logger.Warn("failed to generate thumbnail",
 			"fileRef", captured.FileRef,
@@ -105,7 +105,7 @@ func (r *Reaction) handleNote(ctx context.Context, evt *domain.Event, user domai
 			continue
 		}
 
-		thumbnailRef, err := r.generate(ctx, b.Image.FileRef)
+		thumbnailRef, err := r.generate(ctx, user, b.Image.FileRef)
 		if err != nil {
 			r.logger.Warn("failed to generate thumbnail",
 				"fileRef", b.Image.FileRef,
@@ -136,7 +136,7 @@ func (r *Reaction) handleNote(ctx context.Context, evt *domain.Event, user domai
 	return items.Save(ctx, i, dispatch.CommandIDFor(r.Name(), evt))
 }
 
-func (r *Reaction) generate(ctx context.Context, fileRef string) (string, error) {
+func (r *Reaction) generate(ctx context.Context, user domain.UserID, fileRef string) (string, error) {
 	reader, err := r.store.Open(ctx, fileRef)
 	if err != nil {
 		return "", fmt.Errorf("opening image %s: %w", fileRef, err)
@@ -155,7 +155,7 @@ func (r *Reaction) generate(ctx context.Context, fileRef string) (string, error)
 		return "", fmt.Errorf("encoding thumbnail: %w", err)
 	}
 
-	thumbnailRef := thumbnailKey(fileRef)
+	thumbnailRef := thumbnailKey(user, fileRef)
 	if _, err := r.store.Save(ctx, thumbnailRef, &buf); err != nil {
 		return "", fmt.Errorf("saving thumbnail: %w", err)
 	}
@@ -177,7 +177,7 @@ func resize(src image.Image, width int) image.Image {
 	return dst
 }
 
-func thumbnailKey(fileRef string) string {
-	name := strings.TrimPrefix(fileRef, "images/")
-	return "thumbnails/" + name
+func thumbnailKey(user domain.UserID, fileRef string) string {
+	name := strings.TrimPrefix(fileRef, domain.UserStream(user, "images/"))
+	return domain.UserStream(user, "thumbnails/"+name)
 }

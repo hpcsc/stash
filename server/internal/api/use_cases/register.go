@@ -102,7 +102,7 @@ func allRoutes(pool *pgxpool.Pool, issuer *session.Issuer, verifiers map[string]
 	routables := []route.Routable{
 		root.NewHandler(),
 		apiIdentity.NewHandler(bus, verifiers, issuer),
-		apiItem.NewHandler(bus, items.NewQuery(pool), store),
+		apiItem.NewHandler(bus, items.NewQuery(pool), store, issuer),
 		apiTag.NewHandler(bus, tags.NewQuery(pool)),
 		websocket.NewHandler(wsHub, issuer, slog.Default()),
 	}

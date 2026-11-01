@@ -5,6 +5,7 @@ package item_test
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -16,18 +17,23 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/hpcsc/stash/internal/api/middleware"
 	"github.com/hpcsc/stash/internal/api/response"
+	"github.com/hpcsc/stash/internal/api/session"
 	apiTest "github.com/hpcsc/stash/internal/api/test"
 	"github.com/hpcsc/stash/internal/api/use_cases/item"
 	commonTest "github.com/hpcsc/stash/internal/common/test"
 	"github.com/hpcsc/stash/internal/domain"
 	"github.com/hpcsc/stash/internal/domain/command"
 	"github.com/hpcsc/stash/internal/domain/command/fake"
+	"github.com/hpcsc/stash/internal/storage"
 	itemCommand "github.com/hpcsc/stash/internal/use_cases/item/command"
 	"github.com/hpcsc/stash/internal/use_cases/item/items"
 	trashCommand "github.com/hpcsc/stash/internal/use_cases/trash/command"
 	"github.com/stretchr/testify/require"
 )
+
+var testUser = domain.UserID("test-user")
 
 func TestHandler(t *testing.T) {
 	t.Run("capture", func(t *testing.T) {
@@ -129,7 +135,7 @@ func TestHandler(t *testing.T) {
 
 			require.Equal(t, http.StatusOK, w.Code)
 			payload := handler.TriggeredWithCommand().Payload
-			require.True(t, strings.HasPrefix(payload.FileRef, "images/"))
+			require.True(t, strings.HasPrefix(payload.FileRef, "user/test-user/images/"))
 			require.True(t, strings.HasSuffix(payload.FileRef, ".png"))
 		})
 
@@ -147,7 +153,7 @@ func TestHandler(t *testing.T) {
 			require.Equal(t, "report.pdf", payload.FileName)
 			require.Equal(t, int64(len("pdf-bytes")), payload.FileSize)
 			require.Equal(t, "application/pdf", payload.MimeType)
-			require.True(t, strings.HasPrefix(payload.FileRef, "files/"))
+			require.True(t, strings.HasPrefix(payload.FileRef, "user/test-user/files/"))
 			require.True(t, strings.HasSuffix(payload.FileRef, ".pdf"))
 
 			responseBody := commonTest.UnmarshalJson[response.Response](t, w.Body.Bytes())
@@ -184,7 +190,7 @@ func TestHandler(t *testing.T) {
 			payload := handler.TriggeredWithCommand().Payload
 			require.Len(t, payload.Blocks, 3)
 			require.Equal(t, "before", payload.Blocks[0].Text)
-			require.True(t, strings.HasPrefix(payload.Blocks[1].Image.FileRef, "images/"))
+			require.True(t, strings.HasPrefix(payload.Blocks[1].Image.FileRef, "user/test-user/images/"))
 			require.True(t, strings.HasSuffix(payload.Blocks[1].Image.FileRef, ".png"))
 			require.Equal(t, "photo.png", payload.Blocks[1].Image.FileName)
 			require.Equal(t, "image/png", payload.Blocks[1].Image.MimeType)
@@ -424,6 +430,37 @@ func TestHandler(t *testing.T) {
 			require.Contains(t, w.Body.String(), "trash is empty")
 		})
 	})
+
+	t.Run("serve file", func(t *testing.T) {
+		store := fakeStore{files: map[string]string{
+			"user/test-user/files/report.pdf":  "pdf-bytes",
+			"user/other-user/files/report.pdf": "someone else's bytes",
+		}}
+		router := newRouterWithStore(command.NewBus(), fakeReader{}, store)
+		issuer := session.New([]byte("test-secret"), time.Hour)
+		token, err := issuer.Issue(string(testUser))
+		require.NoError(t, err)
+
+		t.Run("rejects a request without a token", func(t *testing.T) {
+			w := sendFile(router, "/files/user/test-user/files/report.pdf")
+
+			require.Equal(t, http.StatusUnauthorized, w.Code)
+		})
+
+		t.Run("rejects another user's file", func(t *testing.T) {
+			w := sendFile(router, "/files/user/other-user/files/report.pdf?token="+token)
+
+			require.Equal(t, http.StatusNotFound, w.Code)
+			require.NotContains(t, w.Body.String(), "someone else's bytes")
+		})
+
+		t.Run("serves the signed-in user's file", func(t *testing.T) {
+			w := sendFile(router, "/files/user/test-user/files/report.pdf?token="+token)
+
+			require.Equal(t, http.StatusOK, w.Code)
+			require.Equal(t, "pdf-bytes", w.Body.String())
+		})
+	})
 }
 
 type fakeReader struct {
@@ -449,12 +486,25 @@ func (f fakeReader) Existing(_ context.Context, _ string, _ string) (*items.Item
 }
 
 func newRouter(bus *command.Bus, reader item.ItemReader) http.Handler {
-	return apiTest.NewRouterWithRoutable(item.NewHandler(bus, reader, fakeStore{}))
+	return newRouterWithStore(bus, reader, fakeStore{})
+}
+
+func newRouterWithStore(bus *command.Bus, reader item.ItemReader, store storage.Storage) http.Handler {
+	issuer := session.New([]byte("test-secret"), time.Hour)
+	return apiTest.NewRouterWithRoutable(item.NewHandler(bus, reader, store, issuer))
 }
 
 func send(router http.Handler, method, path, body string) *httptest.ResponseRecorder {
 	w := httptest.NewRecorder()
-	router.ServeHTTP(w, httptest.NewRequest(method, path, strings.NewReader(body)))
+	req := httptest.NewRequest(method, path, strings.NewReader(body))
+	req = req.WithContext(middleware.WithUser(req.Context(), testUser))
+	router.ServeHTTP(w, req)
+	return w
+}
+
+func sendFile(router http.Handler, path string) *httptest.ResponseRecorder {
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, httptest.NewRequest("GET", path, nil))
 	return w
 }
 
@@ -507,11 +557,21 @@ func sendMultipart(router http.Handler, body *bytes.Buffer, contentType string) 
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest("POST", "/items", body)
 	req.Header.Set("Content-Type", contentType)
+	req = req.WithContext(middleware.WithUser(req.Context(), testUser))
 	router.ServeHTTP(w, req)
 	return w
 }
 
-type fakeStore struct{}
+type fakeStore struct {
+	files map[string]string
+}
 
 func (fakeStore) Save(_ context.Context, _ string, _ io.Reader) (string, error) { return "key", nil }
-func (fakeStore) Open(_ context.Context, _ string) (io.ReadCloser, error)       { return nil, nil }
+
+func (f fakeStore) Open(_ context.Context, key string) (io.ReadCloser, error) {
+	content, ok := f.files[key]
+	if !ok {
+		return nil, errors.New("file not found")
+	}
+	return io.NopCloser(strings.NewReader(content)), nil
+}

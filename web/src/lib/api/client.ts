@@ -199,7 +199,9 @@ export async function captureNote(document: NoteDocument, images: File[]): Promi
 }
 
 export function fileUrl(path: string): string {
-  return `${apiBaseUrl}/files/${path}`
+  const url = `${apiBaseUrl}/files/${path}`
+  if (!token) return url
+  return `${url}${url.includes('?') ? '&' : '?'}token=${encodeURIComponent(token)}`
 }
 
 export async function keepItem(id: string, tags?: string[]): Promise<void> {

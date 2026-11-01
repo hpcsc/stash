@@ -16,6 +16,7 @@ import (
 	"github.com/hpcsc/stash/internal/api/middleware"
 	"github.com/hpcsc/stash/internal/api/response"
 	"github.com/hpcsc/stash/internal/api/route"
+	"github.com/hpcsc/stash/internal/api/session"
 	"github.com/hpcsc/stash/internal/domain"
 	"github.com/hpcsc/stash/internal/domain/command"
 	"github.com/hpcsc/stash/internal/domain/event"
@@ -33,12 +34,13 @@ type ItemReader interface {
 
 var _ route.Routable = (*handler)(nil)
 
-func NewHandler(bus *command.Bus, items ItemReader, store storage.Storage) route.Routable {
+func NewHandler(bus *command.Bus, items ItemReader, store storage.Storage, issuer *session.Issuer) route.Routable {
 	return &handler{
 		renderer: render.New(),
 		bus:      bus,
 		items:    items,
 		storage:  store,
+		issuer:   issuer,
 	}
 }
 
@@ -47,6 +49,7 @@ type handler struct {
 	bus      *command.Bus
 	items    ItemReader
 	storage  storage.Storage
+	issuer   *session.Issuer
 }
 
 func (h *handler) Routes() []*route.Route {
@@ -304,7 +307,7 @@ func (h *handler) captureUpload(w http.ResponseWriter, req *http.Request) {
 	now := time.Now()
 
 	if isImage(mimeType) {
-		key := fmt.Sprintf("images/%s%s", itemID, ext)
+		key := domain.UserStream(middleware.UserFromContext(req.Context()), "images/"+itemID.String()+ext)
 		if !h.saveUpload(w, req, key, file) {
 			return
 		}
@@ -323,7 +326,7 @@ func (h *handler) captureUpload(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	key := fmt.Sprintf("files/%s%s", itemID, ext)
+	key := domain.UserStream(middleware.UserFromContext(req.Context()), "files/"+itemID.String()+ext)
 	if !h.saveUpload(w, req, key, file) {
 		return
 	}
@@ -438,7 +441,7 @@ func (h *handler) captureNote(w http.ResponseWriter, req *http.Request) {
 
 		imageID := uuid.New()
 		fileName := filepath.Base(header.Filename)
-		key := fmt.Sprintf("images/%s%s", imageID, filepath.Ext(fileName))
+		key := domain.UserStream(middleware.UserFromContext(req.Context()), "images/"+imageID.String()+filepath.Ext(fileName))
 		if !h.saveUpload(w, req, key, file) {
 			file.Close()
 			return
@@ -535,7 +538,21 @@ func isImage(mime string) bool {
 }
 
 func (h *handler) serveFile(w http.ResponseWriter, req *http.Request) {
+	user := h.fileSessionUser(req)
+	if user == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		_ = json.NewEncoder(w).Encode(response.Fail("sign in to continue"))
+		return
+	}
+
 	key := chi.URLParam(req, "*")
+	owner, err := domain.UserOf(key)
+	if err != nil || owner != user {
+		_ = h.renderer.JSON(w, http.StatusNotFound, response.Fail("file not found"))
+		return
+	}
+
 	reader, err := h.storage.Open(req.Context(), key)
 	if err != nil {
 		_ = h.renderer.JSON(w, http.StatusNotFound, response.Fail("file not found"))
@@ -543,11 +560,25 @@ func (h *handler) serveFile(w http.ResponseWriter, req *http.Request) {
 	}
 	defer reader.Close()
 
+	w.Header().Set("Cache-Control", "private, max-age=86400")
 	if seeker, ok := reader.(io.ReadSeeker); ok {
 		http.ServeContent(w, req, key, time.Now(), seeker)
 		return
 	}
 
-	w.Header().Set("Cache-Control", "public, max-age=86400")
 	io.Copy(w, reader)
+}
+
+func (h *handler) fileSessionUser(req *http.Request) domain.UserID {
+	token := req.URL.Query().Get("token")
+	if token == "" {
+		token = strings.TrimPrefix(req.Header.Get("Authorization"), "Bearer ")
+	}
+
+	subject, err := h.issuer.Verify(token)
+	user := domain.UserID(subject)
+	if err != nil || !user.Valid() {
+		return ""
+	}
+	return user
 }

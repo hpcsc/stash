@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { setToken, setUnauthorizedHandler, signIn, signOut, listItems, captureText, captureLink, captureNote, restoreItem, deleteItem, emptyTrash } from './client'
+import { setToken, setUnauthorizedHandler, signIn, signOut, listItems, captureText, captureLink, captureNote, restoreItem, deleteItem, emptyTrash, fileUrl } from './client'
 
 function jsonResponse(body: object, status = 200): Response {
   return new Response(JSON.stringify(body), { status })
@@ -170,6 +170,15 @@ describe('client', () => {
     const [url, init] = fetchMock.mock.calls[0]
     expect(url).toBe('http://127.0.0.1:3333/trash/empty')
     expect(init.method).toBe('POST')
+  })
+
+  it('fileUrl appends the session token', () => {
+    setToken('session-token')
+    expect(fileUrl('user/1/files/a.png')).toBe('http://127.0.0.1:3333/files/user/1/files/a.png?token=session-token')
+  })
+
+  it('fileUrl omits the token when signed out', () => {
+    expect(fileUrl('user/1/files/a.png')).toBe('http://127.0.0.1:3333/files/user/1/files/a.png')
   })
 
   it('maps a network failure to a friendly message', async () => {
