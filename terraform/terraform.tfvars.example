@@ -2,12 +2,15 @@
 project_name = "stash"
 
 gcp_project_id = "your-project-id"
-gcp_region     = "us-central1" # us-west1, us-central1, or us-east1 (Always Free)
+gcp_sa_key     = file("key.json")             # or paste the JSON directly
+gcp_region     = "us-central1"                # us-west1, us-central1, or us-east1 (Always Free)
 gcp_zone       = "us-central1-a"
 instance_type  = "e2-micro"
 
 neon_org_id    = "org-xxxx-xxxx"
+neon_api_key   = "your-neon-api-key"
 neon_region_id = "aws-us-east-1"
 
-cloudflare_account_id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-r2_bucket_name        = "stash"
+cloudflare_account_id  = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+cloudflare_api_token    = "your-cloudflare-api-token"
+r2_bucket_name         = "stash"

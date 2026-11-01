@@ -1,14 +1,14 @@
 provider "google" {
-  # Reads GOOGLE_CREDENTIALS (service account key JSON) from the environment.
-  project = var.gcp_project_id
-  region  = var.gcp_region
-  zone    = var.gcp_zone
+  credentials = var.gcp_sa_key != "" ? var.gcp_sa_key : null
+  project     = var.gcp_project_id
+  region      = var.gcp_region
+  zone        = var.gcp_zone
 }
 
 provider "neon" {
-  # Reads NEON_API_KEY from the environment.
+  api_key = var.neon_api_key
 }
 
 provider "cloudflare" {
-  # Reads CLOUDFLARE_API_TOKEN from the environment.
+  api_token = var.cloudflare_api_token
 }

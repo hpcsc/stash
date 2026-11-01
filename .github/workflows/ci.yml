@@ -97,11 +97,11 @@ jobs:
     env:
       TF_TOKEN_app_terraform_io: ${{ secrets.TF_TOKEN_APP_TERRAFORM_IO }}
       TF_VAR_gcp_project_id: ${{ vars.GCP_PROJECT_ID }}
-      GOOGLE_CREDENTIALS: ${{ secrets.GCP_SA_KEY }}
+      TF_VAR_gcp_sa_key: ${{ secrets.GCP_SA_KEY }}
       TF_VAR_neon_org_id: ${{ vars.NEON_ORG_ID }}
+      TF_VAR_neon_api_key: ${{ secrets.NEON_API_KEY }}
       TF_VAR_cloudflare_account_id: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
-      NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      TF_VAR_cloudflare_api_token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 
     steps:
       - uses: actions/checkout@v4
@@ -123,42 +123,47 @@ jobs:
         id: tf
         working-directory: terraform
         run: |
+          ip=$(terraform output -raw instance_public_ip)
+          db_host=$(terraform output -raw db_host)
+          db_name=$(terraform output -raw db_name)
+          db_user=$(terraform output -raw db_user)
+          db_password=$(terraform output -raw db_password)
+          r2_endpoint=$(terraform output -raw r2_endpoint)
+          r2_bucket=$(terraform output -raw r2_bucket)
+
           {
-            echo "ip=$(terraform output -raw instance_public_ip)"
-            echo "db_host=$(terraform output -raw db_host)"
-            echo "db_name=$(terraform output -raw db_name)"
-            echo "db_user=$(terraform output -raw db_user)"
-            echo "db_password=$(terraform output -raw db_password)"
-            echo "r2_endpoint=$(terraform output -raw r2_endpoint)"
-            echo "r2_bucket=$(terraform output -raw r2_bucket)"
-            echo "ssh_key=$(terraform output -raw ssh_private_key)"
+            echo "ip=$ip"
+            echo "db_host=$db_host"
+            echo "db_name=$db_name"
+            echo "db_user=$db_user"
+            echo "db_password=$db_password"
+            echo "r2_endpoint=$r2_endpoint"
+            echo "r2_bucket=$r2_bucket"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Prepare SSH and env
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ steps.tf.outputs.ssh_key }}" > ~/.ssh/id_rsa
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          terraform output -raw ssh_private_key > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           {
             echo "Host stash-vm"
-            echo "  HostName ${{ steps.tf.outputs.ip }}"
+            echo "  HostName $ip"
             echo "  User ubuntu"
             echo "  StrictHostKeyChecking no"
             echo "  UserKnownHostsFile /dev/null"
           } > ~/.ssh/config
 
           cat > /tmp/env.cloud <<ENV
-          DB_HOST=${{ steps.tf.outputs.db_host }}
+          DB_HOST=$db_host
           DB_PORT=5432
-          DB_NAME=${{ steps.tf.outputs.db_name }}
-          DB_USERNAME=${{ steps.tf.outputs.db_user }}
-          DB_PASSWORD=${{ steps.tf.outputs.db_password }}
+          DB_NAME=$db_name
+          DB_USERNAME=$db_user
+          DB_PASSWORD=$db_password
           DB_SSLMODE=require
           SESSION_SECRET=${{ secrets.SESSION_SECRET }}
           GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
-          S3_BUCKET=${{ steps.tf.outputs.r2_bucket }}
+          S3_BUCKET=$r2_bucket
           S3_REGION=auto
-          S3_ENDPOINT=${{ steps.tf.outputs.r2_endpoint }}
+          S3_ENDPOINT=$r2_endpoint
           S3_ACCESS_KEY_ID=${{ secrets.R2_ACCESS_KEY_ID }}
           S3_SECRET_ACCESS_KEY=${{ secrets.R2_SECRET_ACCESS_KEY }}
           S3_PATH_STYLE=true

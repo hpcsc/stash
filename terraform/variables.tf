@@ -11,6 +11,13 @@ variable "gcp_project_id" {
   type        = string
 }
 
+variable "gcp_sa_key" {
+  description = "Google Cloud service account key JSON (set from GOOGLE_CREDENTIALS in CI)."
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
 variable "gcp_region" {
   description = "Region for the VM and its network. The Always Free e2-micro is only free in us-west1, us-central1, and us-east1."
   type        = string
@@ -47,6 +54,13 @@ variable "neon_org_id" {
   type        = string
 }
 
+variable "neon_api_key" {
+  description = "Neon API key (set from NEON_API_KEY in CI)."
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
 variable "neon_region_id" {
   description = "Neon region (e.g. aws-us-east-1, aws-ap-southeast-2)."
   type        = string
@@ -58,6 +72,13 @@ variable "neon_region_id" {
 variable "cloudflare_account_id" {
   description = "Cloudflare account ID."
   type        = string
+}
+
+variable "cloudflare_api_token" {
+  description = "Cloudflare API token (set from CLOUDFLARE_API_TOKEN in CI)."
+  type        = string
+  sensitive   = true
+  default     = ""
 }
 
 variable "r2_bucket_name" {
