@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -50,6 +51,15 @@ func newHandler(name string, cfg *api.Config, pool *pgxpool.Pool, logger *slog.L
 
 	r.Options("/*", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
+	})
+
+	spa := webHandler(cfg.WebDir)
+	r.NotFound(func(w http.ResponseWriter, req *http.Request) {
+		if strings.HasPrefix(req.URL.Path, "/api") {
+			http.NotFound(w, req)
+			return
+		}
+		spa(w, req)
 	})
 
 	return r, cleanup, nil

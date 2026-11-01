@@ -8,11 +8,14 @@ workflow builds and pushes the backend images, then deploys.
 push to main
   └─► CI (this workflow)
         ├─► test      (shellcheck, unit, integration, vulnerabilities)
-        ├─► publish   (needs test; build + push api/catchup to GHCR)
+        ├─► publish   (needs test; build + push api/catchup to GHCR; api bundles the web app)
         └─► deploy    (needs publish)
               ├─► terraform apply  (GCP VM + Neon project + R2 bucket)
-              └─► SSH to the VM → docker compose up  (pulls api/catchup, builds web)
+              └─► SSH to the VM → docker compose up  (pulls api/catchup, runs migrations)
 ```
+
+The API serves the built web app and its own `/api/*` routes from one container, so there is
+no separate web/nginx container. Cloudflare Tunnel forwards the API port (3333) to the edge.
 
 The VM is an `e2-micro` in `us-central1`, which the Google Cloud free tier covers: the machine
 and a 30 GB standard disk. A Cloudflare Tunnel provides TLS and avoids a static external IP
@@ -134,11 +137,13 @@ Push to `main`, or run the workflow manually from the Actions tab. The `CI` work
 
 1. Runs the shellcheck, unit, integration, and vulnerability checks. Nothing is published or
    deployed unless they pass.
-2. Builds the `api` and `catchup` images and pushes them to GHCR.
+2. Builds the `api` and `catchup` images and pushes them to GHCR. The `api` image bundles
+   the built web app (the Google client ID is baked in as a build arg).
 3. `terraform apply` — provisions (or updates) the VM, the Neon project, and the R2 bucket.
 4. Writes `server/.env.cloud` on the VM from the Terraform outputs and the app secrets.
 5. Clones (or pulls) the repo on the VM and runs `docker compose up` — pulls the published
-   `api`/`catchup` images, builds the web app, runs the migrations, and starts everything.
+   `api`/`catchup` images, runs the migrations, and starts everything. The `api` container
+   serves both the web app and the API.
 
 A `v*` tag pushes images but skips the deploy. The first deploy waits for the VM's first-boot
 script to install Docker and add a swap file.
@@ -147,8 +152,8 @@ Reach the app at the tunnel URL printed in the deploy log (a `*.trycloudflare.co
 Add that origin to your Google OAuth client's authorised JavaScript origins before signing in.
 
 The tunnel is a free Cloudflare Tunnel running as a systemd service on the VM. It forwards
-port 8080 to the Cloudflare edge with automatic TLS, so the app has HTTPS with no certificate
-setup and no static external IP.
+the API port (3333) to the Cloudflare edge with automatic TLS, so the app has HTTPS with no
+certificate setup and no static external IP.
 
 ## Caveats
 
@@ -157,16 +162,14 @@ setup and no static external IP.
   adjustments. Run it locally first with `cd terraform && terraform init && terraform plan`.
 - **R2 S3 credentials are manual.** Terraform creates the bucket; the S3 access key + secret
   come from the dashboard and are GitHub secrets.
-- **The VM is small.** `e2-micro` gives 1 GB of RAM and a quarter of a core, so building the
-  web image on it is slow (minutes, not seconds). Terraform adds a 2 GB swap file so the build
-  is not killed. If that is too slow, publish the web image to GHCR as well and have the cloud
-  compose pull it.
+- **The VM is small.** `e2-micro` gives 1 GB of RAM and a quarter of a core. Nothing is built
+  on it — the `api` image is built in CI and pulled — so the small machine is plenty. The
+  Terraform startup script still adds a 2 GB swap file as a safety net.
 - **The external IP is free.** The VM gets an ephemeral IP for outbound traffic (the tunnel
   needs it to connect to Cloudflare). Terraform no longer provisions a static IP.
 - **State lives in HCP Terraform.** If you'd rather not use it, remove `terraform/backend.tf`
   and store the state elsewhere (e.g. a GCS bucket), otherwise deploys are not idempotent.
 - **The repo is cloned publicly on the VM.** If the repository is private, the clone step
   needs a deploy key instead.
-- **TLS is provided by Cloudflare Tunnel.** The compose file serves plain HTTP on `:8080`;
-  `cloudflared` adds TLS between the browser and the Cloudflare edge. No certificate
-  management needed.
+- **TLS is provided by Cloudflare Tunnel.** The API serves plain HTTP on `:3333`; `cloudflared`
+  adds TLS between the browser and the Cloudflare edge. No certificate management needed.

@@ -1,4 +1,4 @@
-import { wsBaseUrl } from '../config'
+import { apiPrefix, wsBaseUrl } from '../config'
 
 type MessageHandler = (msg: ServerMessage) => void
 
@@ -15,7 +15,7 @@ const handlers = new Set<MessageHandler>()
 export function connect(token: string): void {
   if (ws && ws.readyState === WebSocket.OPEN) return
 
-  const url = `${wsBaseUrl}/ws?token=${encodeURIComponent(token)}`
+  const url = `${wsBaseUrl}${apiPrefix}/ws?token=${encodeURIComponent(token)}`
   ws = new WebSocket(url)
 
   ws.onopen = () => {

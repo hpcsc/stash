@@ -4,6 +4,7 @@ import { installBrowserMock, installChromeMock } from './webext-mock.js'
 
 vi.mock('../src/config.js', () => ({
   apiBaseUrl: 'http://test',
+  apiPrefix: '/api',
   googleClientId: 'client-id.apps.googleusercontent.com',
 }))
 
@@ -41,7 +42,7 @@ describe('auth', () => {
     expect(auth.searchParams.get('nonce')).toBeTruthy()
 
     const [apiUrl, init] = fetchMock.mock.calls[0]
-    expect(apiUrl).toBe('http://test/auth/signin')
+    expect(apiUrl).toBe('http://test/api/auth/signin')
     expect(JSON.parse(init.body)).toEqual({ provider: 'google', idToken: 'google-token' })
 
     const stored = await chrome.storage.local.get('sessionToken')

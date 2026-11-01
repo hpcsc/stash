@@ -9,7 +9,7 @@ with its page title and description.
 ```
 Browser                          Server (cmd/api)
   │                                  │
-  │  GET /ws?token=... ──upgrade──►  │  websocket.Accept()
+  │  GET /api/ws?token=... ──upgrade──►  │  websocket.Accept()
   │                                  │
   │◄──── {type:"link-metadata",  ─── │  hub.Broadcast()
   │       data:{id,title,desc}}      │
@@ -194,7 +194,7 @@ func (h *Hub) Shutdown(ctx context.Context) {
 ## Client (browser)
 
 ```ts
-const ws = new WebSocket(`ws://localhost:3333/ws?token=${token}`)
+const ws = new WebSocket(`ws://localhost:3333/api/ws?token=${token}`)
 
 ws.onmessage = (event) => {
   const msg = JSON.parse(event.data)

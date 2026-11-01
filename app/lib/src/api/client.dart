@@ -29,7 +29,7 @@ class ApiClient {
     String path, {
     Map<String, dynamic>? body,
   }) async {
-    final request = http.Request(method, Uri.parse('$_baseUrl$path'));
+    final request = http.Request(method, Uri.parse('$_baseUrl$apiPrefix$path'));
     request.headers['Content-Type'] = 'application/json';
     if (token != null) {
       request.headers['Authorization'] = 'Bearer $token';

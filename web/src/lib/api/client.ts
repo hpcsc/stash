@@ -1,4 +1,4 @@
-import { apiBaseUrl } from '../config'
+import { apiBaseUrl, apiPrefix } from '../config'
 
 interface Envelope {
   successful: boolean
@@ -52,7 +52,7 @@ async function exchange(
   const authed = token !== null
   let response: Response
   try {
-    response = await fetch(`${apiBaseUrl}${path}`, {
+    response = await fetch(`${apiBaseUrl}${apiPrefix}${path}`, {
       method,
       headers,
       body,
@@ -168,7 +168,7 @@ export async function captureNote(markdown: string, images: File[] = []): Promis
 }
 
 export function fileUrl(path: string): string {
-  const url = `${apiBaseUrl}/files/${path}`
+  const url = `${apiBaseUrl}${apiPrefix}/files/${path}`
   if (!token) return url
   return `${url}${url.includes('?') ? '&' : '?'}token=${encodeURIComponent(token)}`
 }

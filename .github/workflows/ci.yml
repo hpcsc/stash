@@ -1,7 +1,6 @@
 # Tests every push, then publishes the backend images and deploys them to the
 # free-tier GCP VM from main. Nothing is built or pushed until the tests pass.
-# The web image is built on the VM because it bakes the Google client ID in as a
-# build arg.
+# The api image bundles the web app and bakes the Google client ID in as a build arg.
 name: CI
 
 on:
@@ -48,7 +47,7 @@ jobs:
         app:
           - name: api
             dockerfile: server/Dockerfile.api
-            context: server
+            context: .
           - name: catchup
             dockerfile: server/Dockerfile.catchup
             context: server
@@ -83,6 +82,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             VERSION=${{ github.sha }}
+            VITE_GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
 
   deploy:
     needs: publish
@@ -209,11 +209,11 @@ jobs:
             sudo docker login ghcr.io -u "${{ github.actor }}" --password-stdin < /tmp/ghcr-token
             rm -f /tmp/ghcr-token /tmp/env.cloud
 
-            sudo docker compose --env-file server/.env.cloud -f server/docker-compose.cloud.yml up -d --build --pull always
+            sudo docker compose --env-file server/.env.cloud -f server/docker-compose.cloud.yml up -d --pull always
 
             # Start cloudflared if it is not already running.
             if ! systemctl is-active --quiet cloudflared-stash 2>/dev/null; then
-              sudo sh -c 'printf "%s" "W1VuaXRdCkRlc2NyaXB0aW9uPUNsb3VkZmxhcmUgVHVubmVsIGZvciBTdGFzaApBZnRlcj1uZXR3b3JrLW9ubGluZS50YXJnZXQKV2FudHM9bmV0d29yay1vbmxpbmUudGFyZ2V0CgpbU2VydmljZV0KVHlwZT1ub3RpZnkKRXhlY1N0YXJ0PS91c3IvbG9jYWwvYmluL2Nsb3VkZmxhcmVkIHR1bm5lbCAtLXVybCBodHRwOi8vbG9jYWxob3N0OjgwODAgLS1uby1hdXRvdXBkYXRlClJlc3RhcnQ9b24tZmFpbHVyZQpSZXN0YXJ0U2VjPTUKCltJbnN0YWxsXQpXYW50ZWRCeT1tdWx0aS11c2VyLnRhcmdldAo=" | base64 -d > /etc/systemd/system/cloudflared-stash.service'
+              sudo sh -c 'printf "%s" "W1VuaXRdCkRlc2NyaXB0aW9uPUNsb3VkZmxhcmUgVHVubmVsIGZvciBTdGFzaApBZnRlcj1uZXR3b3JrLW9ubGluZS50YXJnZXQKV2FudHM9bmV0d29yay1vbmxpbmUudGFyZ2V0CgpbU2VydmljZV0KVHlwZT1ub3RpZnkKRXhlY1N0YXJ0PS91c3IvbG9jYWwvYmluL2Nsb3VkZmxhcmVkIHR1bm5lbCAtLXVybCBodHRwOi8vbG9jYWxob3N0OjMzMzMgLS1uby1hdXRvdXBkYXRlClJlc3RhcnQ9b24tZmFpbHVyZQpSZXN0YXJ0U2VjPTUKCltJbnN0YWxsXQpXYW50ZWRCeT1tdWx0aS11c2VyLnRhcmdldAo=" | base64 -d > /etc/systemd/system/cloudflared-stash.service'
               sudo systemctl daemon-reload
               sudo systemctl enable --now cloudflared-stash
             fi

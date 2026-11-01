@@ -11,7 +11,8 @@ services:
       migrate:
         condition: service_completed_successfully
     build:
-      dockerfile: Dockerfile.api
+      context: ..
+      dockerfile: server/Dockerfile.api
       args:
         VERSION: main
     volumes:

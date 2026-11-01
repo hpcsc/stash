@@ -22,4 +22,4 @@ tasks:
           -t stash-api:{{ default "latest" .TAG }} \
           -f Dockerfile.api \
           --build-arg=VERSION=$(git rev-parse HEAD 2>/dev/null || echo main) \
-          .
+          ..

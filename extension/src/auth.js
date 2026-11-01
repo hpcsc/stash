@@ -1,4 +1,4 @@
-import { apiBaseUrl, googleClientId } from './config.js'
+import { apiBaseUrl, apiPrefix, googleClientId } from './config.js'
 import { browser } from './browser.js'
 import { clearToken, getToken, setToken } from './storage.js'
 
@@ -28,7 +28,7 @@ export async function signInWithGoogle() {
     throw new SignInFailed('Google sign-in did not return an ID token')
   }
 
-  const response = await fetch(`${apiBaseUrl}/auth/signin`, {
+  const response = await fetch(`${apiBaseUrl}${apiPrefix}/auth/signin`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ provider: 'google', idToken }),
@@ -53,7 +53,7 @@ export async function signOut() {
   const token = await getToken()
   if (token) {
     try {
-      await fetch(`${apiBaseUrl}/auth/signout`, {
+      await fetch(`${apiBaseUrl}${apiPrefix}/auth/signout`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       })

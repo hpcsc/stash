@@ -1,13 +1,30 @@
-FROM golang:1.27.3 AS build-env
+# Build the web app, which the API serves alongside its /api routes.
+FROM node:22-alpine AS web-build
+WORKDIR /build
+
+COPY web/package.json web/package-lock.json ./
+RUN npm ci
+
+COPY web/ .
+
+ARG VITE_API_BASE_URL=""
+ARG VITE_GOOGLE_CLIENT_ID=""
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL \
+    VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID
+
+RUN npm run build
+
+# Build the API binary.
+FROM golang:1.27.3 AS go-build
 WORKDIR /build
 
 ARG VERSION=main
 
-COPY go.mod go.sum ./
+COPY server/go.mod server/go.sum ./
 RUN --mount=type=cache,target=/go/pkg/mod go mod download
 
-COPY internal internal
-COPY cmd/api cmd/api
+COPY server/internal internal
+COPY server/cmd/api cmd/api
 
 RUN --mount=type=cache,target=/go/pkg/mod \
     GOOS=linux \
@@ -19,6 +36,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 FROM gcr.io/distroless/static
 WORKDIR /app
 
-COPY --from=build-env /build/api .
+COPY --from=go-build /build/api .
+COPY --from=web-build /build/dist ./web
 
 ENTRYPOINT ["/app/api"]

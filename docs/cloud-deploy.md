@@ -7,8 +7,8 @@ managed Postgres, so nothing survives on the VM's disk and the API and consumer 
 
 Two images — `ghcr.io/hpcsc/stash-api` and `ghcr.io/hpcsc/stash-catchup` — are published to
 GitHub Container Registry on every push to `main` (see `.github/workflows/ci.yml`, the
-`publish` job).
-The web app is built at deploy time because it bakes the Google client ID in.
+`publish` job). The `api` image bundles the built web app (the Google client ID is baked in as
+a build arg), so no web build happens at deploy time.
 
 ## Cheapest options (provider cheat sheet)
 
@@ -104,7 +104,8 @@ task cloud:up
 ```
 
 This pulls the published backend images, runs the migrations against the managed Postgres,
-builds and starts the web app, and starts the API and consumer. Logs:
+and starts the API (which serves both the web app and the `/api/*` routes) and the consumer.
+Logs:
 
 ```sh
 docker compose --env-file server/.env.cloud -f server/docker-compose.cloud.yml logs -f
@@ -112,8 +113,10 @@ docker compose --env-file server/.env.cloud -f server/docker-compose.cloud.yml l
 
 ## 4. Reach it
 
-- Web app: `https://<your-domain-or-ip>:8080`
-- API (for the Android app and the browser extension): `https://<your-domain-or-ip>:3333`
+The API container serves everything on one port: the web app on `/` and the API under `/api`.
+
+- Web app: `https://<your-domain-or-ip>:3333`
+- API (for the Android app and the browser extension): `https://<your-domain-or-ip>:3333/api`
 
 Put the web app behind TLS (a reverse proxy, or the provider's load balancer) so Google
 sign-in works over HTTPS.
@@ -130,7 +133,7 @@ Images are published automatically by the `publish` job of the `CI` workflow. To
 by hand:
 
 ```sh
-docker build -t ghcr.io/hpcsc/stash-api:main   -f server/Dockerfile.api     server
+docker build -t ghcr.io/hpcsc/stash-api:main   -f server/Dockerfile.api .
 docker build -t ghcr.io/hpcsc/stash-catchup:main -f server/Dockerfile.catchup server
 docker push ghcr.io/hpcsc/stash-api:main
 docker push ghcr.io/hpcsc/stash-catchup:main

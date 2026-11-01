@@ -2,7 +2,7 @@
 
 How to point Stash at a real Google OAuth client and test sign-in from the web app or the Android app.
 
-The flow: the app obtains a Google ID token, posts it to `POST /auth/signin`, and the API
+The flow: the app obtains a Google ID token, posts it to `POST /api/auth/signin`, and the API
 validates the token's audience (`aud`) against `GOOGLE_CLIENT_ID`, records `SignedIn`, and
 returns a session token.
 

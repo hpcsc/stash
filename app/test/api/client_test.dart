@@ -11,7 +11,7 @@ void main() {
     test('returns the session token', () async {
       final client = apiClientWith(MockClient((request) async {
         expect(request.method, 'POST');
-        expect(request.url.path, '/auth/signin');
+        expect(request.url.path, '/api/auth/signin');
         expect(
           jsonDecode(request.body),
           {'provider': 'google', 'idToken': 'google-token'},
@@ -53,7 +53,7 @@ void main() {
     test('sends the bearer token', () async {
       final client = apiClientWith(MockClient((request) async {
         expect(request.method, 'POST');
-        expect(request.url.path, '/auth/signout');
+        expect(request.url.path, '/api/auth/signout');
         expect(request.headers['Authorization'], 'Bearer session-token');
         return jsonResponse({'successful': true, 'messages': <String>[]});
       }));

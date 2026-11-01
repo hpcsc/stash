@@ -79,18 +79,20 @@ func Register(router chi.Router, cfg *api.Config, pool *pgxpool.Pool, logger *sl
 		}
 	}
 
-	for _, r := range publicRoutes {
-		router.MethodFunc(r.Method, r.Pattern, r.Handler)
-		logger.Info(fmt.Sprintf("registered public route %s %s", r.Method, r.Pattern))
-	}
-
-	router.Group(func(protectedRouter chi.Router) {
-		protectedRouter.Use(authMiddleware)
-
-		for _, r := range protectedRoutes {
-			protectedRouter.MethodFunc(r.Method, r.Pattern, r.Handler)
-			logger.Info(fmt.Sprintf("registered protected route %s %s", r.Method, r.Pattern))
+	router.Route("/api", func(apiRouter chi.Router) {
+		for _, r := range publicRoutes {
+			apiRouter.MethodFunc(r.Method, r.Pattern, r.Handler)
+			logger.Info(fmt.Sprintf("registered public route %s %s", r.Method, r.Pattern))
 		}
+
+		apiRouter.Group(func(protectedRouter chi.Router) {
+			protectedRouter.Use(authMiddleware)
+
+			for _, r := range protectedRoutes {
+				protectedRouter.MethodFunc(r.Method, r.Pattern, r.Handler)
+				logger.Info(fmt.Sprintf("registered protected route %s %s", r.Method, r.Pattern))
+			}
+		})
 	})
 
 	return cleanup, nil

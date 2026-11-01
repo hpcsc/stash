@@ -4,8 +4,8 @@ Run Stash on your own machine with `docker compose`, and reach it from your phon
 [Tailscale](https://tailscale.com) — no public exposure, no TLS to manage.
 
 The stack is five containers: PostgreSQL, the migration runner, the API, the event
-consumer (`catchup`), and nginx (which serves the web app and proxies the API). Data lives
-in two named volumes so it survives a container restart:
+consumer (`catchup`), and nginx (which serves the web app and proxies the API's `/api/*`
+routes). Data lives in two named volumes so it survives a container restart:
 
 | Volume | Holds |
 | --- | --- |

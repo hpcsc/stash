@@ -23,7 +23,7 @@ type handler struct {
 
 func (h *handler) Routes() []*route.Route {
 	return []*route.Route{
-		route.Public("GET", "/", h.get),
+		route.Public("GET", "/version", h.get),
 	}
 }
 

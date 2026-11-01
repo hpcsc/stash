@@ -22,7 +22,7 @@ describe('client', () => {
 
     expect(token).toBe('session-token')
     const [url, init] = fetchMock.mock.calls[0]
-    expect(url).toBe('http://127.0.0.1:3333/auth/signin')
+    expect(url).toBe('http://127.0.0.1:3333/api/auth/signin')
     expect(init.method).toBe('POST')
     expect(JSON.parse(init.body)).toEqual({ provider: 'google', idToken: 'google-token' })
   })
@@ -86,7 +86,7 @@ describe('client', () => {
 
     expect(item.id).toBe('item-1')
     const [url, init] = fetchMock.mock.calls[0]
-    expect(url).toBe('http://127.0.0.1:3333/items')
+    expect(url).toBe('http://127.0.0.1:3333/api/items')
     expect(init.method).toBe('POST')
     expect(JSON.parse(init.body)).toEqual({ body: 'remember this' })
   })
@@ -105,7 +105,7 @@ describe('client', () => {
 
     expect(captured).toEqual({ id: 'item-1', duplicate: true, duplicateState: 'kept' })
     const [url, init] = fetchMock.mock.calls[0]
-    expect(url).toBe('http://127.0.0.1:3333/items')
+    expect(url).toBe('http://127.0.0.1:3333/api/items')
     expect(init.method).toBe('POST')
     expect(JSON.parse(init.body)).toEqual({ body: 'https://example.com', type: 'link' })
   })
@@ -125,7 +125,7 @@ describe('client', () => {
 
     expect(item.type).toBe('note')
     const [url, init] = fetchMock.mock.calls[0]
-    expect(url).toBe('http://127.0.0.1:3333/items')
+    expect(url).toBe('http://127.0.0.1:3333/api/items')
     expect(init.body).toBeInstanceOf(FormData)
     const form = init.body as FormData
     expect(form.get('markdown')).toBe('![](@stash-image-0)')
@@ -139,7 +139,7 @@ describe('client', () => {
     await restoreItem('item-1')
 
     const [url, init] = fetchMock.mock.calls[0]
-    expect(url).toBe('http://127.0.0.1:3333/items/item-1/restore')
+    expect(url).toBe('http://127.0.0.1:3333/api/items/item-1/restore')
     expect(init.method).toBe('POST')
   })
 
@@ -150,7 +150,7 @@ describe('client', () => {
     await deleteItem('item-1')
 
     const [url, init] = fetchMock.mock.calls[0]
-    expect(url).toBe('http://127.0.0.1:3333/items/item-1/delete')
+    expect(url).toBe('http://127.0.0.1:3333/api/items/item-1/delete')
     expect(init.method).toBe('POST')
   })
 
@@ -161,17 +161,17 @@ describe('client', () => {
     await emptyTrash()
 
     const [url, init] = fetchMock.mock.calls[0]
-    expect(url).toBe('http://127.0.0.1:3333/trash/empty')
+    expect(url).toBe('http://127.0.0.1:3333/api/trash/empty')
     expect(init.method).toBe('POST')
   })
 
   it('fileUrl appends the session token', () => {
     setToken('session-token')
-    expect(fileUrl('user/1/files/a.png')).toBe('http://127.0.0.1:3333/files/user/1/files/a.png?token=session-token')
+    expect(fileUrl('user/1/files/a.png')).toBe('http://127.0.0.1:3333/api/files/user/1/files/a.png?token=session-token')
   })
 
   it('fileUrl omits the token when signed out', () => {
-    expect(fileUrl('user/1/files/a.png')).toBe('http://127.0.0.1:3333/files/user/1/files/a.png')
+    expect(fileUrl('user/1/files/a.png')).toBe('http://127.0.0.1:3333/api/files/user/1/files/a.png')
   })
 
   it('maps a network failure to a friendly message', async () => {

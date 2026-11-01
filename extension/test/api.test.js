@@ -4,6 +4,7 @@ import { installChromeMock } from './webext-mock.js'
 
 vi.mock('../src/config.js', () => ({
   apiBaseUrl: 'http://test',
+  apiPrefix: '/api',
   googleClientId: '',
 }))
 
@@ -26,7 +27,7 @@ describe('api', () => {
     await saveText('remember this')
 
     const [url, init] = fetchMock.mock.calls[0]
-    expect(url).toBe('http://test/items')
+    expect(url).toBe('http://test/api/items')
     expect(init.method).toBe('POST')
     expect(JSON.parse(init.body)).toEqual({ body: 'remember this' })
   })
@@ -48,7 +49,7 @@ describe('api', () => {
     await saveImage(new Blob(['bytes'], { type: 'image/png' }), 'photo.png')
 
     const [url, init] = fetchMock.mock.calls[0]
-    expect(url).toBe('http://test/items')
+    expect(url).toBe('http://test/api/items')
     expect(init.method).toBe('POST')
     expect(init.body).toBeInstanceOf(FormData)
     expect(init.body.get('file').name).toBe('photo.png')

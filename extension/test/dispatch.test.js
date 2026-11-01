@@ -4,6 +4,7 @@ import { installBrowserMock, installChromeMock } from './webext-mock.js'
 
 vi.mock('../src/config.js', () => ({
   apiBaseUrl: 'http://test',
+  apiPrefix: '/api',
   googleClientId: '',
 }))
 
