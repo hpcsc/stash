@@ -18,6 +18,7 @@ import (
 	"github.com/hpcsc/stash/internal/api/use_cases/root"
 	apiTag "github.com/hpcsc/stash/internal/api/use_cases/tag"
 	"github.com/hpcsc/stash/internal/api/websocket"
+	"github.com/hpcsc/stash/internal/domain"
 	"github.com/hpcsc/stash/internal/domain/command"
 	"github.com/hpcsc/stash/internal/domain/event/registry"
 	"github.com/hpcsc/stash/internal/domain/event/stream"
@@ -135,9 +136,15 @@ func subscribeToPushEvents(ctx context.Context, pool *pgxpool.Pool, reg *registr
 	}
 
 	for evt := range events {
+		user, err := domain.UserOf(evt.StreamID)
+		if err != nil {
+			logger.Warn("skipping push event with no user stream", "stream", evt.StreamID, "error", err)
+			continue
+		}
+
 		switch payload := evt.Payload.(type) {
 		case *event.LinkMetadataFetched:
-			hub.Broadcast(context.Background(), websocket.Message{
+			hub.Broadcast(context.Background(), user, websocket.Message{
 				Type: "link-metadata-fetched",
 				Data: map[string]string{
 					"id":          payload.ItemID.String(),
@@ -146,7 +153,7 @@ func subscribeToPushEvents(ctx context.Context, pool *pgxpool.Pool, reg *registr
 				},
 			})
 		case *event.ThumbnailGenerated:
-			hub.Broadcast(context.Background(), websocket.Message{
+			hub.Broadcast(context.Background(), user, websocket.Message{
 				Type: "thumbnail-generated",
 				Data: map[string]string{
 					"id":            payload.ItemID.String(),
@@ -154,7 +161,7 @@ func subscribeToPushEvents(ctx context.Context, pool *pgxpool.Pool, reg *registr
 				},
 			})
 		case *event.ImageThumbnailGenerated:
-			hub.Broadcast(context.Background(), websocket.Message{
+			hub.Broadcast(context.Background(), user, websocket.Message{
 				Type: "image-thumbnail-generated",
 				Data: map[string]string{
 					"id":            payload.ItemID.String(),

@@ -7,6 +7,7 @@ import (
 	"github.com/coder/websocket"
 	"github.com/hpcsc/stash/internal/api/route"
 	"github.com/hpcsc/stash/internal/api/session"
+	"github.com/hpcsc/stash/internal/domain"
 )
 
 var _ route.Routable = (*Handler)(nil)
@@ -33,7 +34,9 @@ func (h *Handler) Routes() []*route.Route {
 
 func (h *Handler) serve(w http.ResponseWriter, r *http.Request) {
 	token := r.URL.Query().Get("token")
-	if _, err := h.issuer.Verify(token); err != nil {
+	subject, err := h.issuer.Verify(token)
+	user := domain.UserID(subject)
+	if err != nil || !user.Valid() {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -47,8 +50,8 @@ func (h *Handler) serve(w http.ResponseWriter, r *http.Request) {
 	}
 	defer conn.Close(websocket.StatusNormalClosure, "")
 
-	h.hub.Register(conn)
-	defer h.hub.Unregister(conn)
+	h.hub.Register(user, conn)
+	defer h.hub.Unregister(user, conn)
 
 	ctx := r.Context()
 	for {
