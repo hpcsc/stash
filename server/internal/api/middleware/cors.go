@@ -19,6 +19,15 @@ func NewCORSMiddleware(allowedOrigins []string) func(http.Handler) http.Handler 
 					w.Header().Set("Access-Control-Max-Age", "86400")
 				}
 			}
+
+			// Answer preflight requests here. A catch-all OPTIONS route never
+			// runs for a path that already has a GET/POST route, because chi
+			// answers those with 405 before the wildcard is reached.
+			if r.Method == http.MethodOptions {
+				w.WriteHeader(http.StatusNoContent)
+				return
+			}
+
 			next.ServeHTTP(w, r)
 		})
 	}

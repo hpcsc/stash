@@ -60,4 +60,16 @@ func TestCORSMiddleware(t *testing.T) {
 		require.Contains(t, w.Header().Get("Access-Control-Allow-Methods"), "POST")
 		require.Contains(t, w.Header().Get("Access-Control-Allow-Headers"), "Authorization")
 	})
+
+	t.Run("answers a preflight for a path that already has a route", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		req := httptest.NewRequest("OPTIONS", "/items", nil)
+		req.Header.Set("Origin", "http://localhost:8080")
+		req.Header.Set("Access-Control-Request-Method", "GET")
+
+		newRouter().ServeHTTP(w, req)
+
+		require.Equal(t, http.StatusNoContent, w.Code)
+		require.Equal(t, "http://localhost:8080", w.Header().Get("Access-Control-Allow-Origin"))
+	})
 }

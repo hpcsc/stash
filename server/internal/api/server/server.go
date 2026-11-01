@@ -49,10 +49,6 @@ func newHandler(name string, cfg *api.Config, pool *pgxpool.Pool, logger *slog.L
 		return nil, nil, err
 	}
 
-	r.Options("/*", func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusNoContent)
-	})
-
 	spa := webHandler(cfg.WebDir)
 	r.NotFound(func(w http.ResponseWriter, req *http.Request) {
 		if strings.HasPrefix(req.URL.Path, "/api") {
