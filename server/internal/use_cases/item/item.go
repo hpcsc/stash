@@ -2,7 +2,6 @@ package item
 
 import (
 	"errors"
-	"fmt"
 	"strings"
 
 	"github.com/google/uuid"
@@ -29,8 +28,8 @@ var ErrImageNotAttached = errors.New("image is not attached to the note")
 
 var _ domain.Aggregate = (*Item)(nil)
 
-func StreamID(id uuid.UUID) string {
-	return fmt.Sprintf("item-%s", id)
+func StreamID(user domain.UserID, id uuid.UUID) string {
+	return domain.UserStream(user, "item-"+id.String())
 }
 
 type Item struct {

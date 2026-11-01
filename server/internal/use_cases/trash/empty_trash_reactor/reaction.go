@@ -42,9 +42,15 @@ func (r *Reaction) Handle(ctx context.Context, evt *domain.Event) error {
 		return nil
 	}
 
+	user, err := domain.UserOf(evt.StreamID)
+	if err != nil {
+		return err
+	}
+
 	for _, itemID := range emptied.ItemIDs {
 		cmd := domain.Command[itemCommand.Delete]{
 			ID:      dispatch.CommandIDForTarget(r.Name(), evt, itemID.String()),
+			Actor:   user,
 			Payload: itemCommand.Delete{ItemID: itemID},
 		}
 		err := r.bus.Dispatch(ctx, cmd)

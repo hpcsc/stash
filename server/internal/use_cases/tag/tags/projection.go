@@ -26,13 +26,18 @@ func (p *Projection) EventTypes() []string {
 }
 
 func (p *Projection) Handle(ctx context.Context, tx pgx.Tx, evt *domain.Event) error {
+	user, err := domain.UserOf(evt.StreamID)
+	if err != nil {
+		return err
+	}
+
 	switch payload := evt.Payload.(type) {
 	case *event.TagCreated:
 		_, err := tx.Exec(ctx, `
-			INSERT INTO tags (id, name, version)
-			VALUES ($1, $2, $3)
+			INSERT INTO tags (id, user_id, name, version)
+			VALUES ($1, $2, $3, $4)
 			ON CONFLICT (id) DO NOTHING
-		`, payload.TagID, payload.Name, evt.Version)
+		`, payload.TagID, user.String(), payload.Name, evt.Version)
 		return err
 	case *event.TagRenamed:
 		_, err := tx.Exec(ctx, `

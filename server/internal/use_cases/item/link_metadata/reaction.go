@@ -83,6 +83,12 @@ func (r *Reaction) Handle(ctx context.Context, evt *domain.Event) error {
 		return nil
 	}
 
+	user, err := domain.UserOf(evt.StreamID)
+	if err != nil {
+		return err
+	}
+	items := r.items.For(user)
+
 	meta, err := fetchTitle(captured.URL)
 	if err != nil {
 		r.logger.Warn("failed to fetch link metadata",
@@ -97,7 +103,7 @@ func (r *Reaction) Handle(ctx context.Context, evt *domain.Event) error {
 		return nil
 	}
 
-	i, err := r.items.Load(ctx, captured.ItemID)
+	i, err := items.Load(ctx, captured.ItemID)
 	if err != nil {
 		return fmt.Errorf("loading item %s for metadata enrichment: %w", captured.ItemID, err)
 	}
@@ -109,5 +115,5 @@ func (r *Reaction) Handle(ctx context.Context, evt *domain.Event) error {
 		return err
 	}
 
-	return r.items.Save(ctx, i, dispatch.CommandIDFor(r.Name(), evt))
+	return items.Save(ctx, i, dispatch.CommandIDFor(r.Name(), evt))
 }

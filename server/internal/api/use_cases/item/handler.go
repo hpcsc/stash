@@ -1,7 +1,6 @@
 package item
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -29,9 +28,7 @@ import (
 )
 
 type ItemReader interface {
-	List(ctx context.Context, search string, states ...string) ([]items.Item, error)
-	ByID(ctx context.Context, id string) (*items.Item, error)
-	Existing(ctx context.Context, itemType, body string) (*items.Item, error)
+	For(user domain.UserID) items.View
 }
 
 var _ route.Routable = (*handler)(nil)
@@ -106,9 +103,13 @@ func (h *handler) capture(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
+func (h *handler) view(req *http.Request) items.View {
+	return h.items.For(middleware.UserFromContext(req.Context()))
+}
+
 func (h *handler) captureResponse(req *http.Request, itemID uuid.UUID, itemType, body string) CaptureResponse {
 	resp := CaptureResponse{ID: itemID.String()}
-	existing, err := h.items.Existing(req.Context(), itemType, body)
+	existing, err := h.view(req).Existing(req.Context(), itemType, body)
 	if err != nil || existing == nil {
 		return resp
 	}
@@ -120,7 +121,7 @@ func (h *handler) captureResponse(req *http.Request, itemID uuid.UUID, itemType,
 func (h *handler) list(w http.ResponseWriter, req *http.Request) {
 	search := req.URL.Query().Get("q")
 	states := req.URL.Query()["state"]
-	all, err := h.items.List(req.Context(), search, states...)
+	all, err := h.view(req).List(req.Context(), search, states...)
 	if err != nil {
 		_ = h.renderer.JSON(w, http.StatusInternalServerError, response.Fail(err.Error()))
 		return
@@ -133,7 +134,7 @@ func (h *handler) list(w http.ResponseWriter, req *http.Request) {
 }
 
 func (h *handler) get(w http.ResponseWriter, req *http.Request) {
-	i, err := h.items.ByID(req.Context(), chi.URLParam(req, "id"))
+	i, err := h.view(req).ByID(req.Context(), chi.URLParam(req, "id"))
 	if err != nil {
 		_ = h.renderer.JSON(w, http.StatusInternalServerError, response.Fail(err.Error()))
 		return
@@ -206,7 +207,7 @@ func (h *handler) deleteItem(w http.ResponseWriter, req *http.Request) {
 }
 
 func (h *handler) emptyTrash(w http.ResponseWriter, req *http.Request) {
-	dropped, err := h.items.List(req.Context(), "", "dropped")
+	dropped, err := h.view(req).List(req.Context(), "", "dropped")
 	if err != nil {
 		_ = h.renderer.JSON(w, http.StatusInternalServerError, response.Fail(err.Error()))
 		return

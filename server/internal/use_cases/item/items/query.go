@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hpcsc/stash/internal/domain"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -56,14 +57,32 @@ type Query struct {
 	pool *pgxpool.Pool
 }
 
-func (q *Query) List(ctx context.Context, search string, states ...string) ([]Item, error) {
+func (q *Query) For(user domain.UserID) View {
+	return &Reader{
+		pool: q.pool,
+		user: user,
+	}
+}
+
+type View interface {
+	List(ctx context.Context, search string, states ...string) ([]Item, error)
+	ByID(ctx context.Context, id string) (*Item, error)
+	Existing(ctx context.Context, itemType, body string) (*Item, error)
+}
+
+type Reader struct {
+	pool *pgxpool.Pool
+	user domain.UserID
+}
+
+func (r *Reader) List(ctx context.Context, search string, states ...string) ([]Item, error) {
 	query := `
 		SELECT id::text, type, body, state, source_app, source_url, title, description, file_path, thumbnail_path, file_name, file_size, mime_type, captured_at, note_blocks
 		FROM items
 	`
-	var args []any
-	var clauses []string
-	argIdx := 1
+	args := []any{r.user.String()}
+	clauses := []string{"user_id = $1"}
+	argIdx := 2
 
 	if search != "" {
 		clauses = append(clauses, fmt.Sprintf("body ILIKE '%%' || $%d || '%%'", argIdx))
@@ -81,12 +100,10 @@ func (q *Query) List(ctx context.Context, search string, states ...string) ([]It
 		clauses = append(clauses, fmt.Sprintf("state IN (%s)", strings.Join(placeholders, ", ")))
 	}
 
-	if len(clauses) > 0 {
-		query += " WHERE " + strings.Join(clauses, " AND ")
-	}
+	query += " WHERE " + strings.Join(clauses, " AND ")
 	query += " ORDER BY captured_at DESC"
 
-	rows, err := q.pool.Query(ctx, query, args...)
+	rows, err := r.pool.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list items: %w", err)
 	}
@@ -96,20 +113,20 @@ func (q *Query) List(ctx context.Context, search string, states ...string) ([]It
 	if err != nil {
 		return nil, fmt.Errorf("failed to list items: %w", err)
 	}
-	if err := q.attachImages(ctx, list); err != nil {
+	if err := r.attachImages(ctx, list); err != nil {
 		return nil, err
 	}
 	return list, nil
 }
 
-func (q *Query) ByID(ctx context.Context, id string) (*Item, error) {
+func (r *Reader) ByID(ctx context.Context, id string) (*Item, error) {
 	var i Item
 	var blocks json.RawMessage
-	err := q.pool.QueryRow(ctx, `
+	err := r.pool.QueryRow(ctx, `
 		SELECT id::text, type, body, state, source_app, source_url, title, description, file_path, thumbnail_path, file_name, file_size, mime_type, captured_at, note_blocks
 		FROM items
-		WHERE id = $1
-	`, id).Scan(&i.ID, &i.Type, &i.Body, &i.State, &i.SourceApp, &i.SourceURL, &i.Title, &i.Description, &i.FilePath, &i.ThumbnailPath, &i.FileName, &i.FileSize, &i.MimeType, &i.CapturedAt, &blocks)
+		WHERE id = $1 AND user_id = $2
+	`, id, r.user.String()).Scan(&i.ID, &i.Type, &i.Body, &i.State, &i.SourceApp, &i.SourceURL, &i.Title, &i.Description, &i.FilePath, &i.ThumbnailPath, &i.FileName, &i.FileSize, &i.MimeType, &i.CapturedAt, &blocks)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
@@ -123,21 +140,21 @@ func (q *Query) ByID(ctx context.Context, id string) (*Item, error) {
 	}
 
 	list := []Item{i}
-	if err := q.attachImages(ctx, list); err != nil {
+	if err := r.attachImages(ctx, list); err != nil {
 		return nil, err
 	}
 	return &list[0], nil
 }
 
-func (q *Query) Existing(ctx context.Context, itemType, body string) (*Item, error) {
+func (r *Reader) Existing(ctx context.Context, itemType, body string) (*Item, error) {
 	var i Item
-	err := q.pool.QueryRow(ctx, `
+	err := r.pool.QueryRow(ctx, `
 		SELECT id::text, state
 		FROM items
-		WHERE type = $1 AND body = $2
+		WHERE user_id = $1 AND type = $2 AND body = $3
 		ORDER BY captured_at DESC
 		LIMIT 1
-	`, itemType, body).Scan(&i.ID, &i.State)
+	`, r.user.String(), itemType, body).Scan(&i.ID, &i.State)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
@@ -172,7 +189,7 @@ func (i *Item) readNoteBlocks(raw json.RawMessage) error {
 	return nil
 }
 
-func (q *Query) attachImages(ctx context.Context, list []Item) error {
+func (r *Reader) attachImages(ctx context.Context, list []Item) error {
 	ids := make([]string, 0, len(list))
 	for _, i := range list {
 		if i.Type == "note" {
@@ -183,7 +200,7 @@ func (q *Query) attachImages(ctx context.Context, list []Item) error {
 		return nil
 	}
 
-	rows, err := q.pool.Query(ctx, `
+	rows, err := r.pool.Query(ctx, `
 		SELECT id::text, item_id::text, file_path, COALESCE(thumbnail_path, ''), file_name, file_size, mime_type
 		FROM item_images
 		WHERE item_id::text = ANY($1)

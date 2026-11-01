@@ -4,11 +4,14 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/hpcsc/stash/internal/domain"
 	"github.com/hpcsc/stash/internal/domain/event"
 	"github.com/hpcsc/stash/internal/domain/event/store"
 )
 
-const StreamID = "trash"
+func StreamID(user domain.UserID) string {
+	return domain.UserStream(user, "trash")
+}
 
 func NewRepository(stream event.Stream) *Repository {
 	return &Repository{
@@ -20,10 +23,22 @@ type Repository struct {
 	events *store.OfEvents
 }
 
-func (r *Repository) Load(ctx context.Context) (*Trash, error) {
-	return r.events.Load[Trash](ctx, StreamID)
+func (r *Repository) For(user domain.UserID) *Scoped {
+	return &Scoped{
+		events: r.events,
+		user:   user,
+	}
 }
 
-func (r *Repository) Save(ctx context.Context, t *Trash, causeID uuid.UUID) error {
-	return r.events.Save(ctx, StreamID, t, causeID)
+type Scoped struct {
+	events *store.OfEvents
+	user   domain.UserID
+}
+
+func (s *Scoped) Load(ctx context.Context) (*Trash, error) {
+	return s.events.Load[Trash](ctx, StreamID(s.user))
+}
+
+func (s *Scoped) Save(ctx context.Context, t *Trash, causeID uuid.UUID) error {
+	return s.events.Save(ctx, StreamID(s.user), t, causeID)
 }

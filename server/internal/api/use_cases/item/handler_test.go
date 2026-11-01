@@ -20,6 +20,7 @@ import (
 	apiTest "github.com/hpcsc/stash/internal/api/test"
 	"github.com/hpcsc/stash/internal/api/use_cases/item"
 	commonTest "github.com/hpcsc/stash/internal/common/test"
+	"github.com/hpcsc/stash/internal/domain"
 	"github.com/hpcsc/stash/internal/domain/command"
 	"github.com/hpcsc/stash/internal/domain/command/fake"
 	itemCommand "github.com/hpcsc/stash/internal/use_cases/item/command"
@@ -429,6 +430,10 @@ type fakeReader struct {
 	items    []items.Item
 	item     *items.Item
 	existing *items.Item
+}
+
+func (f fakeReader) For(domain.UserID) items.View {
+	return f
 }
 
 func (f fakeReader) List(_ context.Context, _ string, _ ...string) ([]items.Item, error) {

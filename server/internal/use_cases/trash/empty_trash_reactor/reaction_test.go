@@ -111,5 +111,9 @@ func given(t *testing.T, handler *recordingDeletes) *empty_trash_reactor.Reactio
 }
 
 func trashEmptiedEvent(id string, itemIDs ...uuid.UUID) *domain.Event {
-	return &domain.Event{ID: id, Payload: &event.TrashEmptied{ItemIDs: itemIDs}}
+	return &domain.Event{
+		ID:       id,
+		StreamID: domain.UserStream("test-user", "trash"),
+		Payload:  &event.TrashEmptied{ItemIDs: itemIDs},
+	}
 }

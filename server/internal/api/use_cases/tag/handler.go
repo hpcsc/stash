@@ -1,7 +1,6 @@
 package tag
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -22,8 +21,7 @@ import (
 )
 
 type TagReader interface {
-	List(ctx context.Context) ([]tags.Tag, error)
-	ByID(ctx context.Context, id string) (*tags.Tag, error)
+	For(user domain.UserID) tags.View
 }
 
 var _ route.Routable = (*handler)(nil)
@@ -68,7 +66,7 @@ func (h *handler) create(w http.ResponseWriter, req *http.Request) {
 }
 
 func (h *handler) list(w http.ResponseWriter, req *http.Request) {
-	all, err := h.tags.List(req.Context())
+	all, err := h.tags.For(middleware.UserFromContext(req.Context())).List(req.Context())
 	if err != nil {
 		_ = h.renderer.JSON(w, http.StatusInternalServerError, response.Fail(err.Error()))
 		return

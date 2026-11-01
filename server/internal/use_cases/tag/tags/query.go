@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/hpcsc/stash/internal/domain"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -22,10 +23,27 @@ type Query struct {
 	pool *pgxpool.Pool
 }
 
-func (q *Query) List(ctx context.Context) ([]Tag, error) {
-	rows, err := q.pool.Query(ctx, `
-		SELECT id::text, name FROM tags ORDER BY LOWER(name)
-	`)
+func (q *Query) For(user domain.UserID) View {
+	return &Reader{
+		pool: q.pool,
+		user: user,
+	}
+}
+
+type View interface {
+	List(ctx context.Context) ([]Tag, error)
+	ByID(ctx context.Context, id string) (*Tag, error)
+}
+
+type Reader struct {
+	pool *pgxpool.Pool
+	user domain.UserID
+}
+
+func (r *Reader) List(ctx context.Context) ([]Tag, error) {
+	rows, err := r.pool.Query(ctx, `
+		SELECT id::text, name FROM tags WHERE user_id = $1 ORDER BY LOWER(name)
+	`, r.user.String())
 	if err != nil {
 		return nil, fmt.Errorf("failed to list tags: %w", err)
 	}
@@ -38,11 +56,11 @@ func (q *Query) List(ctx context.Context) ([]Tag, error) {
 	})
 }
 
-func (q *Query) ByID(ctx context.Context, id string) (*Tag, error) {
+func (r *Reader) ByID(ctx context.Context, id string) (*Tag, error) {
 	var t Tag
-	err := q.pool.QueryRow(ctx, `
-		SELECT id::text, name FROM tags WHERE id = $1
-	`, id).Scan(&t.ID, &t.Name)
+	err := r.pool.QueryRow(ctx, `
+		SELECT id::text, name FROM tags WHERE id = $1 AND user_id = $2
+	`, id, r.user.String()).Scan(&t.ID, &t.Name)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}

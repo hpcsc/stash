@@ -21,6 +21,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var testUser = domain.UserID("test-user")
+
 func TestProjection(t *testing.T) {
 	t.Run("projects a captured text item", func(t *testing.T) {
 		pool := test.NewDBPool(t)
@@ -34,7 +36,7 @@ func TestProjection(t *testing.T) {
 		err := projection.NewProjector(items.NewProjection(), pool, checkpointStore, sub, test.DiscardLogger()).Start(context.Background())
 		require.ErrorIs(t, err, event.ErrSubscriptionEnded)
 
-		item, err := items.NewQuery(pool).ByID(context.Background(), id.String())
+		item, err := items.NewQuery(pool).For(testUser).ByID(context.Background(), id.String())
 		require.NoError(t, err)
 		require.NotNil(t, item)
 		require.Equal(t, "text", item.Type)
@@ -54,7 +56,7 @@ func TestProjection(t *testing.T) {
 		err := projection.NewProjector(items.NewProjection(), pool, checkpointStore, sub, test.DiscardLogger()).Start(context.Background())
 		require.ErrorIs(t, err, event.ErrSubscriptionEnded)
 
-		item, err := items.NewQuery(pool).ByID(context.Background(), id.String())
+		item, err := items.NewQuery(pool).For(testUser).ByID(context.Background(), id.String())
 		require.NoError(t, err)
 		require.NotNil(t, item)
 		require.Equal(t, "file", item.Type)
@@ -79,7 +81,7 @@ func TestProjection(t *testing.T) {
 		err := projection.NewProjector(items.NewProjection(), pool, checkpointStore, sub, test.DiscardLogger()).Start(context.Background())
 		require.ErrorIs(t, err, event.ErrSubscriptionEnded)
 
-		item, err := items.NewQuery(pool).ByID(context.Background(), id.String())
+		item, err := items.NewQuery(pool).For(testUser).ByID(context.Background(), id.String())
 		require.NoError(t, err)
 		require.NotNil(t, item)
 		require.Equal(t, "note", item.Type)
@@ -109,7 +111,7 @@ func TestProjection(t *testing.T) {
 		err := projection.NewProjector(items.NewProjection(), pool, checkpointStore, sub, test.DiscardLogger()).Start(context.Background())
 		require.ErrorIs(t, err, event.ErrSubscriptionEnded)
 
-		item, err := items.NewQuery(pool).ByID(context.Background(), id.String())
+		item, err := items.NewQuery(pool).For(testUser).ByID(context.Background(), id.String())
 		require.NoError(t, err)
 		require.NotNil(t, item)
 		require.Equal(t, "inbox", item.State)
@@ -131,7 +133,7 @@ func TestProjection(t *testing.T) {
 		err := projection.NewProjector(items.NewProjection(), pool, checkpointStore, sub, test.DiscardLogger()).Start(context.Background())
 		require.ErrorIs(t, err, event.ErrSubscriptionEnded)
 
-		item, err := items.NewQuery(pool).ByID(context.Background(), id.String())
+		item, err := items.NewQuery(pool).For(testUser).ByID(context.Background(), id.String())
 		require.NoError(t, err)
 		require.NotNil(t, item)
 		require.Equal(t, "kept", item.State)
@@ -152,7 +154,7 @@ func TestProjection(t *testing.T) {
 		err := projection.NewProjector(items.NewProjection(), pool, checkpointStore, sub, test.DiscardLogger()).Start(context.Background())
 		require.ErrorIs(t, err, event.ErrSubscriptionEnded)
 
-		item, err := items.NewQuery(pool).ByID(context.Background(), id.String())
+		item, err := items.NewQuery(pool).For(testUser).ByID(context.Background(), id.String())
 		require.NoError(t, err)
 		require.Nil(t, item)
 	})
@@ -169,7 +171,7 @@ func TestProjection(t *testing.T) {
 		err := projection.NewProjector(items.NewProjection(), pool, checkpointStore, sub, test.DiscardLogger()).Start(context.Background())
 		require.ErrorIs(t, err, event.ErrSubscriptionEnded)
 
-		all, err := items.NewQuery(pool).List(context.Background(), "")
+		all, err := items.NewQuery(pool).For(testUser).List(context.Background(), "")
 		require.NoError(t, err)
 		require.Len(t, all, 2)
 		require.Equal(t, "newer", all[0].Body)
@@ -188,13 +190,13 @@ func TestProjection(t *testing.T) {
 		err := projection.NewProjector(items.NewProjection(), pool, checkpointStore, sub, test.DiscardLogger()).Start(context.Background())
 		require.ErrorIs(t, err, event.ErrSubscriptionEnded)
 
-		existing, err := items.NewQuery(pool).Existing(context.Background(), "text", "remember this")
+		existing, err := items.NewQuery(pool).For(testUser).Existing(context.Background(), "text", "remember this")
 		require.NoError(t, err)
 		require.NotNil(t, existing)
 		require.Equal(t, id.String(), existing.ID)
 		require.Equal(t, "inbox", existing.State)
 
-		missing, err := items.NewQuery(pool).Existing(context.Background(), "text", "something else")
+		missing, err := items.NewQuery(pool).For(testUser).Existing(context.Background(), "text", "something else")
 		require.NoError(t, err)
 		require.Nil(t, missing)
 	})
@@ -202,7 +204,7 @@ func TestProjection(t *testing.T) {
 
 func textCapturedEvent(txID, sequence uint64, id uuid.UUID, body, sourceApp string, capturedAt time.Time) domain.Event {
 	return domain.Event{
-		StreamID: "item-" + id.String(),
+		StreamID: domain.UserStream(testUser, "item-"+id.String()),
 		Version:  1,
 		Position: domain.Position{TransactionID: txID, Sequence: sequence},
 		Payload: &itemEvent.TextCaptured{
@@ -216,7 +218,7 @@ func textCapturedEvent(txID, sequence uint64, id uuid.UUID, body, sourceApp stri
 
 func fileCapturedEvent(txID, sequence uint64, id uuid.UUID, capturedAt time.Time) domain.Event {
 	return domain.Event{
-		StreamID: "item-" + id.String(),
+		StreamID: domain.UserStream(testUser, "item-"+id.String()),
 		Version:  1,
 		Position: domain.Position{TransactionID: txID, Sequence: sequence},
 		Payload: &itemEvent.FileCaptured{
@@ -232,7 +234,7 @@ func fileCapturedEvent(txID, sequence uint64, id uuid.UUID, capturedAt time.Time
 
 func noteCapturedEvent(txID, sequence uint64, id, imageID uuid.UUID, capturedAt time.Time) domain.Event {
 	return domain.Event{
-		StreamID: "item-" + id.String(),
+		StreamID: domain.UserStream(testUser, "item-"+id.String()),
 		Version:  1,
 		Position: domain.Position{TransactionID: txID, Sequence: sequence},
 		Payload: &itemEvent.NoteCaptured{
@@ -255,7 +257,7 @@ func noteCapturedEvent(txID, sequence uint64, id, imageID uuid.UUID, capturedAt 
 
 func imageThumbnailGeneratedEvent(txID, sequence uint64, id, imageID uuid.UUID) domain.Event {
 	return domain.Event{
-		StreamID: "item-" + id.String(),
+		StreamID: domain.UserStream(testUser, "item-"+id.String()),
 		Version:  2,
 		Position: domain.Position{TransactionID: txID, Sequence: sequence},
 		Payload: &itemEvent.ImageThumbnailGenerated{
@@ -268,7 +270,7 @@ func imageThumbnailGeneratedEvent(txID, sequence uint64, id, imageID uuid.UUID) 
 
 func itemKeptEvent(txID, sequence, version uint64, id uuid.UUID) domain.Event {
 	return domain.Event{
-		StreamID: "item-" + id.String(),
+		StreamID: domain.UserStream(testUser, "item-"+id.String()),
 		Version:  version,
 		Position: domain.Position{TransactionID: txID, Sequence: sequence},
 		Payload:  &itemEvent.ItemKept{ItemID: id},
@@ -277,7 +279,7 @@ func itemKeptEvent(txID, sequence, version uint64, id uuid.UUID) domain.Event {
 
 func itemDroppedEvent(txID, sequence, version uint64, id uuid.UUID) domain.Event {
 	return domain.Event{
-		StreamID: "item-" + id.String(),
+		StreamID: domain.UserStream(testUser, "item-"+id.String()),
 		Version:  version,
 		Position: domain.Position{TransactionID: txID, Sequence: sequence},
 		Payload:  &itemEvent.ItemDropped{ItemID: id},
@@ -286,7 +288,7 @@ func itemDroppedEvent(txID, sequence, version uint64, id uuid.UUID) domain.Event
 
 func itemRestoredEvent(txID, sequence, version uint64, id uuid.UUID, restoredTo string) domain.Event {
 	return domain.Event{
-		StreamID: "item-" + id.String(),
+		StreamID: domain.UserStream(testUser, "item-"+id.String()),
 		Version:  version,
 		Position: domain.Position{TransactionID: txID, Sequence: sequence},
 		Payload:  &itemEvent.ItemRestored{ItemID: id, RestoredTo: restoredTo},
@@ -295,7 +297,7 @@ func itemRestoredEvent(txID, sequence, version uint64, id uuid.UUID, restoredTo 
 
 func itemDeletedEvent(txID, sequence, version uint64, id uuid.UUID) domain.Event {
 	return domain.Event{
-		StreamID: "item-" + id.String(),
+		StreamID: domain.UserStream(testUser, "item-"+id.String()),
 		Version:  version,
 		Position: domain.Position{TransactionID: txID, Sequence: sequence},
 		Payload:  &itemEvent.ItemDeleted{ItemID: id},

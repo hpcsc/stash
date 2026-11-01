@@ -38,20 +38,25 @@ func (p *Projection) EventTypes() []string {
 }
 
 func (p *Projection) Handle(ctx context.Context, tx pgx.Tx, evt *domain.Event) error {
+	user, err := domain.UserOf(evt.StreamID)
+	if err != nil {
+		return err
+	}
+
 	switch payload := evt.Payload.(type) {
 	case *event.TextCaptured:
 		_, err := tx.Exec(ctx, `
-			INSERT INTO items (id, type, body, source_app, source_url, captured_at, state, version)
-			VALUES ($1, 'text', $2, $3, $4, $5, 'inbox', $6)
+			INSERT INTO items (id, user_id, type, body, source_app, source_url, captured_at, state, version)
+			VALUES ($1, $2, 'text', $3, $4, $5, $6, 'inbox', $7)
 			ON CONFLICT (id) DO NOTHING
-		`, payload.ItemID, payload.Body, payload.SourceApp, payload.SourceURL, payload.CapturedAt, evt.Version)
+		`, payload.ItemID, user.String(), payload.Body, payload.SourceApp, payload.SourceURL, payload.CapturedAt, evt.Version)
 		return err
 	case *event.LinkCaptured:
 		_, err := tx.Exec(ctx, `
-			INSERT INTO items (id, type, body, captured_at, state, version)
-			VALUES ($1, 'link', $2, $3, 'inbox', $4)
+			INSERT INTO items (id, user_id, type, body, captured_at, state, version)
+			VALUES ($1, $2, 'link', $3, $4, 'inbox', $5)
 			ON CONFLICT (id) DO NOTHING
-		`, payload.ItemID, payload.URL, payload.CapturedAt, evt.Version)
+		`, payload.ItemID, user.String(), payload.URL, payload.CapturedAt, evt.Version)
 		return err
 	case *event.LinkMetadataFetched:
 		_, err := tx.Exec(ctx, `
@@ -61,10 +66,10 @@ func (p *Projection) Handle(ctx context.Context, tx pgx.Tx, evt *domain.Event) e
 		return err
 	case *event.ImageCaptured:
 		_, err := tx.Exec(ctx, `
-			INSERT INTO items (id, type, body, file_path, captured_at, state, version)
-			VALUES ($1, 'image', '', $2, $3, 'inbox', $4)
+			INSERT INTO items (id, user_id, type, body, file_path, captured_at, state, version)
+			VALUES ($1, $2, 'image', '', $3, $4, 'inbox', $5)
 			ON CONFLICT (id) DO NOTHING
-		`, payload.ItemID, payload.FileRef, payload.CapturedAt, evt.Version)
+		`, payload.ItemID, user.String(), payload.FileRef, payload.CapturedAt, evt.Version)
 		return err
 	case *event.ThumbnailGenerated:
 		_, err := tx.Exec(ctx, `
@@ -86,10 +91,10 @@ func (p *Projection) Handle(ctx context.Context, tx pgx.Tx, evt *domain.Event) e
 		return err
 	case *event.FileCaptured:
 		_, err := tx.Exec(ctx, `
-			INSERT INTO items (id, type, body, file_path, file_name, file_size, mime_type, captured_at, state, version)
-			VALUES ($1, 'file', '', $2, $3, $4, $5, $6, 'inbox', $7)
+			INSERT INTO items (id, user_id, type, body, file_path, file_name, file_size, mime_type, captured_at, state, version)
+			VALUES ($1, $2, 'file', '', $3, $4, $5, $6, $7, 'inbox', $8)
 			ON CONFLICT (id) DO NOTHING
-		`, payload.ItemID, payload.FileRef, payload.FileName, payload.FileSize, payload.MimeType, payload.CapturedAt, evt.Version)
+		`, payload.ItemID, user.String(), payload.FileRef, payload.FileName, payload.FileSize, payload.MimeType, payload.CapturedAt, evt.Version)
 		return err
 	case *event.NoteCaptured:
 		blocks, err := json.Marshal(blocksForStorage(payload.Blocks))
@@ -97,10 +102,10 @@ func (p *Projection) Handle(ctx context.Context, tx pgx.Tx, evt *domain.Event) e
 			return err
 		}
 		_, err = tx.Exec(ctx, `
-			INSERT INTO items (id, type, body, note_blocks, captured_at, state, version)
-			VALUES ($1, 'note', $2, $3, $4, 'inbox', $5)
+			INSERT INTO items (id, user_id, type, body, note_blocks, captured_at, state, version)
+			VALUES ($1, $2, 'note', $3, $4, $5, 'inbox', $6)
 			ON CONFLICT (id) DO NOTHING
-		`, payload.ItemID, note.PlainText(payload.Blocks), blocks, payload.CapturedAt, evt.Version)
+		`, payload.ItemID, user.String(), note.PlainText(payload.Blocks), blocks, payload.CapturedAt, evt.Version)
 		if err != nil {
 			return err
 		}

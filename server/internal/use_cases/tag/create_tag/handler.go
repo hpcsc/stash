@@ -18,12 +18,13 @@ type handler struct {
 }
 
 func (h handler) Handle(ctx context.Context, cmd domain.Command[tagCommand.CreateTag]) error {
-	t, err := h.tags.Load(ctx, cmd.Payload.TagID)
+	tags := h.tags.For(cmd.Actor)
+	t, err := tags.Load(ctx, cmd.Payload.TagID)
 	if err != nil {
 		return err
 	}
 	if err := t.Create(cmd.Payload); err != nil {
 		return err
 	}
-	return h.tags.Save(ctx, t, cmd.ID)
+	return tags.Save(ctx, t, cmd.ID)
 }

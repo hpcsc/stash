@@ -18,12 +18,13 @@ type handler struct {
 }
 
 func (h handler) Handle(ctx context.Context, cmd domain.Command[trashCommand.EmptyTrash]) error {
-	t, err := h.trash.Load(ctx)
+	scoped := h.trash.For(cmd.Actor)
+	t, err := scoped.Load(ctx)
 	if err != nil {
 		return err
 	}
 	if err := t.Empty(cmd.Payload); err != nil {
 		return err
 	}
-	return h.trash.Save(ctx, t, cmd.ID)
+	return scoped.Save(ctx, t, cmd.ID)
 }

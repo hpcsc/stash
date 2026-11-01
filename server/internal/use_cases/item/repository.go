@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/hpcsc/stash/internal/domain"
 	"github.com/hpcsc/stash/internal/domain/event"
 	"github.com/hpcsc/stash/internal/domain/event/store"
 )
@@ -18,10 +19,22 @@ type Repository struct {
 	events *store.OfEvents
 }
 
-func (r *Repository) Load(ctx context.Context, id uuid.UUID) (*Item, error) {
-	return r.events.Load[Item](ctx, StreamID(id))
+func (r *Repository) For(user domain.UserID) *Scoped {
+	return &Scoped{
+		events: r.events,
+		user:   user,
+	}
 }
 
-func (r *Repository) Save(ctx context.Context, i *Item, causeID uuid.UUID) error {
-	return r.events.Save(ctx, StreamID(i.ID()), i, causeID)
+type Scoped struct {
+	events *store.OfEvents
+	user   domain.UserID
+}
+
+func (s *Scoped) Load(ctx context.Context, id uuid.UUID) (*Item, error) {
+	return s.events.Load[Item](ctx, StreamID(s.user, id))
+}
+
+func (s *Scoped) Save(ctx context.Context, i *Item, causeID uuid.UUID) error {
+	return s.events.Save(ctx, StreamID(s.user, i.ID()), i, causeID)
 }

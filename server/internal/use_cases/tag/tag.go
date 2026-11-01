@@ -2,7 +2,6 @@ package tag
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/hpcsc/stash/internal/domain"
@@ -16,8 +15,8 @@ var ErrNameTaken = errors.New("a tag with that name already exists")
 
 var _ domain.Aggregate = (*Tag)(nil)
 
-func StreamID(id uuid.UUID) string {
-	return fmt.Sprintf("tag-%s", id)
+func StreamID(user domain.UserID, id uuid.UUID) string {
+	return domain.UserStream(user, "tag-"+id.String())
 }
 
 type Tag struct {

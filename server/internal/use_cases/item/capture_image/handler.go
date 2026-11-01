@@ -18,12 +18,13 @@ type handler struct {
 }
 
 func (h handler) Handle(ctx context.Context, cmd domain.Command[itemCommand.CaptureImage]) error {
-	i, err := h.items.Load(ctx, cmd.Payload.ItemID)
+	items := h.items.For(cmd.Actor)
+	i, err := items.Load(ctx, cmd.Payload.ItemID)
 	if err != nil {
 		return err
 	}
 	if err := i.CaptureImage(cmd.Payload); err != nil {
 		return err
 	}
-	return h.items.Save(ctx, i, cmd.ID)
+	return items.Save(ctx, i, cmd.ID)
 }

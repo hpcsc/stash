@@ -51,16 +51,21 @@ func (r *Reaction) EventTypes() []string {
 }
 
 func (r *Reaction) Handle(ctx context.Context, evt *domain.Event) error {
+	user, err := domain.UserOf(evt.StreamID)
+	if err != nil {
+		return err
+	}
+
 	switch captured := evt.Payload.(type) {
 	case *event.ImageCaptured:
-		return r.handleImage(ctx, evt, captured)
+		return r.handleImage(ctx, evt, user, captured)
 	case *event.NoteCaptured:
-		return r.handleNote(ctx, evt, captured)
+		return r.handleNote(ctx, evt, user, captured)
 	}
 	return nil
 }
 
-func (r *Reaction) handleImage(ctx context.Context, evt *domain.Event, captured *event.ImageCaptured) error {
+func (r *Reaction) handleImage(ctx context.Context, evt *domain.Event, user domain.UserID, captured *event.ImageCaptured) error {
 	thumbnailRef, err := r.generate(ctx, captured.FileRef)
 	if err != nil {
 		r.logger.Warn("failed to generate thumbnail",
@@ -71,7 +76,8 @@ func (r *Reaction) handleImage(ctx context.Context, evt *domain.Event, captured 
 		return nil
 	}
 
-	i, err := r.items.Load(ctx, captured.ItemID)
+	items := r.items.For(user)
+	i, err := items.Load(ctx, captured.ItemID)
 	if err != nil {
 		return fmt.Errorf("loading item %s for thumbnail: %w", captured.ItemID, err)
 	}
@@ -83,11 +89,12 @@ func (r *Reaction) handleImage(ctx context.Context, evt *domain.Event, captured 
 		return err
 	}
 
-	return r.items.Save(ctx, i, dispatch.CommandIDFor(r.Name(), evt))
+	return items.Save(ctx, i, dispatch.CommandIDFor(r.Name(), evt))
 }
 
-func (r *Reaction) handleNote(ctx context.Context, evt *domain.Event, captured *event.NoteCaptured) error {
-	i, err := r.items.Load(ctx, captured.ItemID)
+func (r *Reaction) handleNote(ctx context.Context, evt *domain.Event, user domain.UserID, captured *event.NoteCaptured) error {
+	items := r.items.For(user)
+	i, err := items.Load(ctx, captured.ItemID)
 	if err != nil {
 		return fmt.Errorf("loading item %s for thumbnails: %w", captured.ItemID, err)
 	}
@@ -126,7 +133,7 @@ func (r *Reaction) handleNote(ctx context.Context, evt *domain.Event, captured *
 	if !recorded {
 		return nil
 	}
-	return r.items.Save(ctx, i, dispatch.CommandIDFor(r.Name(), evt))
+	return items.Save(ctx, i, dispatch.CommandIDFor(r.Name(), evt))
 }
 
 func (r *Reaction) generate(ctx context.Context, fileRef string) (string, error) {
