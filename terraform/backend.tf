@@ -7,7 +7,7 @@
 # runner).
 terraform {
   cloud {
-    organization = "YOUR-TERRAFORM-CLOUD-ORG"
+    organization = "davidnguyen"
 
     workspaces {
       name = "stash"
