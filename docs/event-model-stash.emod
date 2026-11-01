@@ -141,50 +141,47 @@ context "Item" {
       ThumbnailRecordedOnce  = "a thumbnail is recorded at most once"
     }
 
-    slice "Capture Text" {
-      description = "The user saves a piece of text"
+    slice "Capture Note" {
+      description = "The user saves a note in markdown"
 
-      trigger "Save Text" {
-        description = "The capture form's save-text action"
+      trigger "Save Note" {
+        description = "The capture form's save action"
         actor       = User
       }
 
-      command "CaptureText" {
-        description = "Ask to save text to the Inbox"
-
-        fields {
-          itemId    = required(uuid)
-          body      = required(string)
-          sourceApp = optional(string)
-          sourceUrl = optional(string)
-        }
-      }
-
-      event "TextCaptured" {
-        description = "Text was saved to the Inbox"
+      command "CaptureNote" {
+        description = "Ask to save a markdown note to the Inbox"
 
         fields {
           itemId     = required(uuid)
-          body       = required(string)
-          sourceApp  = optional(string)
-          sourceUrl  = optional(string)
+          markdown   = required(string)
+          capturedAt = required(timestamp)
+        }
+      }
+
+      event "NoteCaptured" {
+        description = "A markdown note was saved to the Inbox"
+
+        fields {
+          itemId     = required(uuid)
+          markdown   = required(string)
           capturedAt = required(timestamp)
         }
       }
 
       flow = <<-FLOW
-        command -> event:    CaptureText -> TextCaptured
-        command -> rejected: CaptureText -> CapturedOnce
+        command -> event:    CaptureNote -> NoteCaptured
+        command -> rejected: CaptureNote -> CapturedOnce
       FLOW
 
-      spec "saves text to the Inbox" {
-        when = CaptureText
-        then = [TextCaptured]
+      spec "saves a note to the Inbox" {
+        when = CaptureNote
+        then = [NoteCaptured]
       }
 
       spec "refuses to capture an item twice" {
-        given = [TextCaptured]
-        when  = CaptureText
+        given = [NoteCaptured]
+        when  = CaptureNote
         then  = rejected(CapturedOnce)
       }
     }
@@ -346,7 +343,7 @@ context "Item" {
 
       view "ItemsView" {
         description = "An item that was captured"
-        subscribes  = [TextCaptured, LinkCaptured, ImageCaptured, FileCaptured]
+        subscribes  = [NoteCaptured, LinkCaptured, ImageCaptured, FileCaptured]
 
         fields {
           itemId = required(uuid)
@@ -355,7 +352,7 @@ context "Item" {
       }
 
       spec "shows a captured item" {
-        given = [TextCaptured]
+        given = [NoteCaptured]
         then  = view(ItemsView)
       }
     }
@@ -495,7 +492,7 @@ context "Item" {
       FLOW
 
       spec "keeps an item with tags" {
-        given = [TextCaptured]
+        given = [NoteCaptured]
         when  = KeepItem
         then  = [ItemKept, ItemTagged]
       }
@@ -556,7 +553,7 @@ context "Item" {
       }
 
       spec "refuses to tag an item that was never kept" {
-        given = [TextCaptured]
+        given = [NoteCaptured]
         when  = TagItem
         then  = rejected(TagFromLibrary)
       }
@@ -594,7 +591,7 @@ context "Item" {
       FLOW
 
       spec "drops an item into the Trash" {
-        given = [TextCaptured]
+        given = [NoteCaptured]
         when  = DropItem
         then  = [ItemDropped]
       }
@@ -645,7 +642,7 @@ context "Item" {
       }
 
       spec "refuses to restore an item not in the Trash" {
-        given = [TextCaptured]
+        given = [NoteCaptured]
         when  = RestoreItem
         then  = rejected(RestoreFromTrash)
       }
@@ -694,7 +691,7 @@ context "Item" {
       }
 
       spec "refuses to delete an item not in the Trash" {
-        given = [TextCaptured]
+        given = [NoteCaptured]
         when  = DeleteItem
         then  = rejected(DeleteFromTrash)
       }
