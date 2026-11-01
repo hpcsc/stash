@@ -99,28 +99,11 @@ export async function signOut(): Promise<void> {
   await request('POST', '/auth/signout')
 }
 
-export interface ItemImage {
-  id: string
-  filePath: string
-  thumbnailPath?: string
-  fileName?: string
-  fileSize?: number
-  mimeType?: string
-}
-
-export interface ItemBlock {
-  type: string
-  text?: string
-  image?: ItemImage
-}
-
 export interface Item {
   id: string
   type: string
   body: string
   state?: string
-  sourceApp?: string
-  sourceUrl?: string
   title?: string
   description?: string
   filePath?: string
@@ -129,18 +112,6 @@ export interface Item {
   fileSize?: number
   mimeType?: string
   capturedAt: string
-  images?: ItemImage[]
-  blocks?: ItemBlock[]
-}
-
-export interface NoteDocumentBlock {
-  type: 'text' | 'image'
-  text?: string
-  index?: number
-}
-
-export interface NoteDocument {
-  blocks: NoteDocumentBlock[]
 }
 
 export async function listItems(search?: string, states?: string[]): Promise<Item[]> {
@@ -156,12 +127,6 @@ export interface Captured {
   id: string
   duplicate: boolean
   duplicateState?: string
-}
-
-export async function captureText(body: string): Promise<Captured> {
-  const envelope = await request('POST', '/items', { body })
-  const data = envelope.data as { id: string; duplicate?: boolean; duplicateState?: string }
-  return { id: data.id, duplicate: data.duplicate ?? false, duplicateState: data.duplicateState }
 }
 
 export async function captureLink(url: string): Promise<Captured> {
@@ -190,9 +155,13 @@ export async function captureAttachment(file: File): Promise<CapturedAttachment>
   return envelope.data as CapturedAttachment
 }
 
-export async function captureNote(document: NoteDocument, images: File[]): Promise<Item> {
+export async function captureNote(markdown: string, images: File[] = []): Promise<Item> {
+  if (images.length === 0) {
+    const envelope = await request('POST', '/items', { body: markdown })
+    return envelope.data as Item
+  }
   const form = new FormData()
-  form.append('document', JSON.stringify(document))
+  form.append('markdown', markdown)
   for (const image of images) form.append('images', image, image.name)
   const envelope = await postForm('/items', form)
   return envelope.data as Item

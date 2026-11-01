@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { buildNoteUpload, readSegments, type NoteUpload } from '../note'
+  import { onMount } from 'svelte'
+  import { createNoteEditor, type NoteEditor, type NoteUpload } from '../editor'
 
   interface Props {
     saving: boolean
@@ -9,195 +10,47 @@
 
   let { saving, onsave, onattach }: Props = $props()
 
-  let editorEl: HTMLDivElement | undefined = $state()
+  let container: HTMLDivElement | undefined = $state()
   let imageEl: HTMLInputElement | undefined = $state()
   let fileEl: HTMLInputElement | undefined = $state()
+  let editor: NoteEditor | undefined = $state()
   let hasContent = $state(false)
   let charCount = $state(0)
   let imageCount = $state(0)
 
-  let keySeed = 0
-  let lastRange: Range | null = null
-  const filesByKey = new Map<string, File>()
-  const objectUrls = new Map<string, string>()
+  onMount(() => {
+    let disposed = false
+    createNoteEditor(container!, (markdown) => {
+      hasContent = markdown.trim().length > 0
+      charCount = markdown.length
+      imageCount = (markdown.match(/!\[[^\]]*\]\([^)]*\)/g) ?? []).length
+    }).then((created) => {
+      if (disposed) {
+        created.destroy()
+        return
+      }
+      editor = created
+    })
 
-  function refreshState() {
-    if (!editorEl) return
-
-    const segments = readSegments(editorEl)
-    hasContent = segments.length > 0
-    imageCount = segments.reduce((count, segment) => count + (segment.type === 'image' ? 1 : 0), 0)
-    charCount = segments.reduce((count, segment) => count + (segment.type === 'text' ? segment.text.length : 0), 0)
-  }
-
-  function rememberCaret() {
-    if (!editorEl) return
-
-    const selection = window.getSelection()
-    if (!selection || selection.rangeCount === 0) return
-
-    const range = selection.getRangeAt(0)
-    if (editorEl.contains(range.commonAncestorContainer)) {
-      lastRange = range.cloneRange()
+    return () => {
+      disposed = true
+      editor?.destroy()
     }
-  }
-
-  function focusEnd() {
-    if (!editorEl) return
-
-    const range = document.createRange()
-    range.selectNodeContents(editorEl)
-    range.collapse(false)
-
-    const selection = window.getSelection()
-    selection?.removeAllRanges()
-    selection?.addRange(range)
-    editorEl.focus()
-  }
-
-  function insertAtCaret(node: Node) {
-    if (!editorEl) return
-
-    const selection = window.getSelection()
-    const current = selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null
-    const range = current && editorEl.contains(current.commonAncestorContainer) ? current : lastRange
-
-    if (!range || !editorEl.contains(range.commonAncestorContainer)) {
-      editorEl.appendChild(node)
-      lastRange = null
-      focusEnd()
-      return
-    }
-
-    range.deleteContents()
-    range.insertNode(node)
-    range.setStartAfter(node)
-    range.collapse(true)
-    lastRange = range.cloneRange()
-
-    selection?.removeAllRanges()
-    selection?.addRange(range)
-  }
-
-  function insertTextAtCaret(text: string) {
-    insertAtCaret(document.createTextNode(text))
-    refreshState()
-  }
-
-  function insertImage(file: File) {
-    const key = `image-${++keySeed}`
-    const url = URL.createObjectURL(file)
-    filesByKey.set(key, file)
-    objectUrls.set(key, url)
-
-    const image = document.createElement('img')
-    image.src = url
-    image.dataset.key = key
-    image.alt = file.name || 'Image'
-
-    insertAtCaret(image)
-    refreshState()
-  }
-
-  function clearEditor() {
-    editorEl?.replaceChildren()
-    for (const url of objectUrls.values()) URL.revokeObjectURL(url)
-    objectUrls.clear()
-    filesByKey.clear()
-    lastRange = null
-    refreshState()
-  }
+  })
 
   function submit() {
-    if (!editorEl || saving) return
-
-    const upload = buildNoteUpload(readSegments(editorEl), filesByKey)
-    if (upload.document.blocks.length === 0) return
-
+    if (!editor || saving) return
+    const upload = editor.upload()
+    if (upload.markdown.trim() === '' && upload.images.length === 0) return
     onsave(upload)
-    clearEditor()
-  }
-
-  function handleKeydown(e: KeyboardEvent) {
-    if (e.isComposing) return
-
-    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-      e.preventDefault()
-      submit()
-      return
-    }
-    if (e.key === 'Enter') {
-      e.preventDefault()
-      insertTextAtCaret('\n')
-    }
-  }
-
-  function handlePaste(e: ClipboardEvent) {
-    const clipboard = e.clipboardData
-    if (!clipboard) return
-
-    const files = Array.from(clipboard.files ?? [])
-    const images = files.filter((file) => file.type.startsWith('image/'))
-    if (images.length > 0) {
-      e.preventDefault()
-      for (const image of images) insertImage(image)
-      return
-    }
-    if (files.length > 0) {
-      e.preventDefault()
-      for (const file of files) onattach(file)
-      return
-    }
-
-    e.preventDefault()
-    const text = clipboard.getData('text/plain')
-    if (text) insertTextAtCaret(text)
-  }
-
-  function handleDragOver(e: DragEvent) {
-    if (e.dataTransfer?.types.includes('Files')) e.preventDefault()
-  }
-
-  function handleDrop(e: DragEvent) {
-    const transfer = e.dataTransfer
-    if (!transfer) return
-
-    const files = Array.from(transfer.files ?? [])
-    if (files.length === 0) return
-
-    e.preventDefault()
-    const dropped = rangeFromPoint(e.clientX, e.clientY)
-    if (dropped) selectRange(dropped)
-
-    for (const file of files) {
-      if (file.type.startsWith('image/')) insertImage(file)
-      else onattach(file)
-    }
-  }
-
-  function rangeFromPoint(x: number, y: number): Range | null {
-    const doc = document as Document & {
-      caretRangeFromPoint?: (x: number, y: number) => Range | null
-    }
-    const range = doc.caretRangeFromPoint?.(x, y) ?? null
-    if (!range || !editorEl) return null
-    return editorEl.contains(range.commonAncestorContainer) ? range : null
-  }
-
-  function selectRange(range: Range) {
-    const selection = window.getSelection()
-    selection?.removeAllRanges()
-    selection?.addRange(range)
-    editorEl?.focus()
+    editor.clear()
   }
 
   function pickImage() {
-    rememberCaret()
     imageEl?.click()
   }
 
   function pickFile() {
-    rememberCaret()
     fileEl?.click()
   }
 
@@ -206,35 +59,20 @@
     const file = input.files?.[0]
     input.value = ''
     if (!file) return
-
-    if (file.type.startsWith('image/')) {
-      insertImage(file)
-      return
-    }
     onattach(file)
+  }
+
+  function handlePickedImage(e: Event) {
+    const input = e.target as HTMLInputElement
+    const file = input.files?.[0]
+    input.value = ''
+    if (!file || !editor) return
+    editor.insertImage(file)
   }
 </script>
 
 <form class="capture" onsubmit={(e) => { e.preventDefault(); submit() }}>
-  <div
-    bind:this={editorEl}
-    class="editor"
-    contenteditable="true"
-    role="textbox"
-    aria-multiline="true"
-    aria-label="Capture"
-    tabindex="0"
-    data-placeholder="Paste or type anything to stash…"
-    data-empty={hasContent ? 'false' : 'true'}
-    oninput={refreshState}
-    onkeydown={handleKeydown}
-    onkeyup={rememberCaret}
-    onmouseup={rememberCaret}
-    onblur={rememberCaret}
-    onpaste={handlePaste}
-    ondragover={handleDragOver}
-    ondrop={handleDrop}
-  ></div>
+  <div bind:this={container} class="editor"></div>
   <div class="capture-footer">
     <div class="footer-left">
       <button type="button" class="attach-btn" onclick={pickImage} disabled={saving} title="Attach an image">
@@ -243,7 +81,7 @@
           <path d="M5 6a1 1 0 1 0 0-2 1 1 0 0 0 0 2zM14.5 11l-4-4L3 14.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" />
         </svg>
       </button>
-      <input bind:this={imageEl} type="file" accept="image/*" onchange={handlePicked} hidden />
+      <input bind:this={imageEl} type="file" accept="image/*" onchange={handlePickedImage} hidden />
       <button type="button" class="attach-btn" onclick={pickFile} disabled={saving} title="Attach a file">
         <svg width="18" height="18" viewBox="0 0 16 16" fill="none">
           <path d="M13.5 7.5l-5.6 5.6a3.5 3.5 0 0 1-5-5l6-6a2.3 2.3 0 0 1 3.3 3.3l-6 6a1.2 1.2 0 0 1-1.7-1.7l5.3-5.3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" />
@@ -286,29 +124,75 @@
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-xs);
-    white-space: pre-wrap;
-    overflow-wrap: anywhere;
-    cursor: text;
     transition: border-color var(--duration-fast) var(--ease-out),
                 box-shadow var(--duration-fast) var(--ease-out);
   }
 
-  .editor:focus {
-    outline: none;
+  .editor:focus-within {
     border-color: var(--color-accent);
     box-shadow: 0 0 0 3px var(--color-accent-subtle);
   }
 
-  .editor[data-empty='true']::before {
-    content: attr(data-placeholder);
-    position: absolute;
-    top: var(--space-3);
-    left: var(--space-4);
-    color: var(--color-text-tertiary);
-    pointer-events: none;
+  .editor :global(.milkdown) {
+    min-height: 48px;
   }
 
-  .editor :global(img) {
+  .editor :global(.ProseMirror) {
+    outline: none;
+    min-height: 48px;
+    overflow-wrap: anywhere;
+  }
+
+  .editor :global(.ProseMirror p) {
+    margin: 0 0 0.5em;
+  }
+
+  .editor :global(.ProseMirror h1),
+  .editor :global(.ProseMirror h2),
+  .editor :global(.ProseMirror h3) {
+    margin: 0.6em 0 0.3em;
+    line-height: 1.3;
+  }
+
+  .editor :global(.ProseMirror h1) { font-size: 1.4em; }
+  .editor :global(.ProseMirror h2) { font-size: 1.25em; }
+  .editor :global(.ProseMirror h3) { font-size: 1.1em; }
+
+  .editor :global(.ProseMirror ul),
+  .editor :global(.ProseMirror ol) {
+    margin: 0 0 0.5em;
+    padding-left: 1.5em;
+  }
+
+  .editor :global(.ProseMirror blockquote) {
+    margin: 0 0 0.5em;
+    padding-left: 0.8em;
+    border-left: 3px solid var(--color-border);
+    color: var(--color-text-secondary);
+  }
+
+  .editor :global(.ProseMirror code) {
+    font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+    font-size: 0.9em;
+    background: var(--color-bg);
+    padding: 0.1em 0.3em;
+    border-radius: var(--radius-sm);
+  }
+
+  .editor :global(.ProseMirror pre) {
+    margin: 0 0 0.5em;
+    padding: var(--space-3);
+    background: var(--color-bg);
+    border-radius: var(--radius-md);
+    overflow-x: auto;
+  }
+
+  .editor :global(.ProseMirror pre code) {
+    padding: 0;
+    background: none;
+  }
+
+  .editor :global(.ProseMirror img) {
     display: inline-block;
     max-width: 100%;
     max-height: 200px;
@@ -374,7 +258,6 @@
 
   .save-btn:disabled {
     opacity: 0.5;
-    cursor: not-allowed;
   }
 
   .spinner {

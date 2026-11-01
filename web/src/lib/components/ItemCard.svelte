@@ -3,6 +3,7 @@
   import { fileUrl } from '../api/client'
   import { relativeTime } from '../time'
   import { formatFileSize } from '../format'
+  import { markdownToPlainText, renderMarkdown } from '../markdown'
 
   interface Props {
     item: Item
@@ -16,21 +17,19 @@
   let { item, onclick, onkeep, ondrop, onrestore, ondelete }: Props = $props()
 
   const typeMeta: Record<string, { icon: string; label: string }> = {
-    text: { icon: 'T', label: 'Text' },
     link: { icon: '🔗', label: 'Link' },
     image: { icon: '📷', label: 'Image' },
     file: { icon: '📎', label: 'File' },
     note: { icon: '📝', label: 'Note' },
   }
 
-  const meta = $derived(typeMeta[item.type] ?? typeMeta.text)
+  const meta = $derived(typeMeta[item.type] ?? typeMeta.note)
   const timeAgo = $derived(relativeTime(item.capturedAt))
-  const preview = $derived(item.title || item.body.slice(0, 160))
-  const hasMore = $derived(!item.title && item.body.length > 160)
+  const plainBody = $derived(item.type === 'note' ? markdownToPlainText(item.body) : item.body)
+  const preview = $derived(item.title || plainBody.slice(0, 160))
+  const hasMore = $derived(!item.title && plainBody.length > 160)
   const thumbnail = $derived(item.thumbnailPath ? fileUrl(item.thumbnailPath) : null)
-  const noteImages = $derived(item.images ?? [])
-  const visibleNoteImages = $derived(noteImages.slice(0, 4))
-  const hiddenNoteImageCount = $derived(Math.max(0, noteImages.length - 4))
+  const bodyHtml = $derived(item.type === 'note' ? renderMarkdown(item.body) : '')
 
   function handleKeep(e: MouseEvent) {
     e.stopPropagation()
@@ -73,31 +72,12 @@
         {/if}
       </div>
     </div>
-  {:else if item.type === 'note'}
-    {#if item.body}
-      <p class="body">{preview}{hasMore ? '…' : ''}</p>
-    {/if}
-    {#if noteImages.length > 0}
-      <div class="note-images">
-        {#each visibleNoteImages as image (image.id)}
-          {#if image.thumbnailPath}
-            <img class="note-thumb" src={fileUrl(image.thumbnailPath)} alt={image.fileName || ''} />
-          {:else}
-            <div class="note-thumb image-placeholder">📷</div>
-          {/if}
-        {/each}
-        {#if hiddenNoteImageCount > 0}
-          <span class="note-more">+{hiddenNoteImageCount}</span>
-        {/if}
-      </div>
-    {/if}
+  {:else if item.type === 'note' && bodyHtml}
+    <div class="body markdown">{@html bodyHtml}</div>
   {:else}
     <p class="body">{preview}{hasMore ? '…' : ''}</p>
   {/if}
   <div class="card-footer">
-    {#if item.sourceApp}
-      <span class="source">{item.sourceApp}</span>
-    {/if}
     <div class="spacer"></div>
     {#if item.state === 'dropped'}
       <div class="actions">
@@ -210,32 +190,6 @@
     color: var(--color-text-tertiary);
   }
 
-  .note-images {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    margin-top: var(--space-2);
-  }
-
-  .note-thumb {
-    width: 64px;
-    height: 64px;
-    object-fit: cover;
-    border-radius: var(--radius-sm);
-    background: var(--color-bg);
-  }
-
-  .note-thumb.image-placeholder {
-    height: 64px;
-    margin-bottom: 0;
-    font-size: var(--text-lg);
-  }
-
-  .note-more {
-    font-size: var(--text-sm);
-    color: var(--color-text-tertiary);
-  }
-
   .card-header {
     display: flex;
     align-items: center;
@@ -271,6 +225,33 @@
     overflow: hidden;
   }
 
+  .body.markdown {
+    display: block;
+    -webkit-line-clamp: unset;
+    -webkit-box-orient: unset;
+    max-height: 4em;
+    overflow: hidden;
+  }
+
+  .body.markdown :global(p) { margin: 0; }
+
+  .body.markdown :global(h1),
+  .body.markdown :global(h2),
+  .body.markdown :global(h3) {
+    margin: 0;
+    font-size: 1em;
+    font-weight: var(--weight-semibold);
+  }
+
+  .body.markdown :global(code) {
+    font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+    font-size: 0.9em;
+  }
+
+  .body.markdown :global(img) {
+    display: none;
+  }
+
   .card-footer {
     display: flex;
     align-items: center;
@@ -279,14 +260,6 @@
 
   .spacer {
     flex: 1;
-  }
-
-  .source {
-    font-size: var(--text-xs);
-    color: var(--color-text-secondary);
-    background: var(--color-bg);
-    padding: var(--space-1) var(--space-2);
-    border-radius: var(--radius-sm);
   }
 
   .actions {

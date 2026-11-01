@@ -3,6 +3,7 @@
   import { fileUrl } from '../api/client'
   import { formatDate } from '../time'
   import { formatFileSize } from '../format'
+  import { renderMarkdown } from '../markdown'
 
   interface Props {
     item: Item
@@ -16,7 +17,6 @@
   let { item, onback, onkeep, ondrop, onrestore, ondelete }: Props = $props()
 
   const typeMeta: Record<string, string> = {
-    text: 'Text',
     link: 'Link',
     image: 'Image',
     file: 'File',
@@ -38,18 +38,7 @@
   </div>
 
   {#if item.type === 'note'}
-    <div class="note">
-      {#each item.blocks ?? [] as block}
-        {#if block.type === 'text'}
-          <p class="body">{block.text}</p>
-        {:else if block.image}
-          <img class="note-image" src={fileUrl(block.image.thumbnailPath || block.image.filePath)} alt={block.image.fileName || ''} />
-        {/if}
-      {/each}
-      {#if !item.blocks?.length}
-        <p class="body">{item.body}</p>
-      {/if}
-    </div>
+    <div class="markdown">{@html renderMarkdown(item.body)}</div>
   {:else if item.type === 'image' && fullImage}
     <img class="full-image" src={fullImage} alt="" />
   {:else if item.type === 'file'}
@@ -84,16 +73,6 @@
 
   <div class="meta">
     <span class="meta-item">{formatDate(item.capturedAt)}</span>
-    {#if item.sourceApp}
-      <span class="meta-sep">·</span>
-      <span class="meta-item">{item.sourceApp}</span>
-    {/if}
-    {#if item.sourceUrl}
-      <span class="meta-sep">·</span>
-      <a class="meta-item link" href={item.sourceUrl} target="_blank" rel="noopener noreferrer">
-        {item.sourceUrl}
-      </a>
-    {/if}
   </div>
 
   <div class="actions">
@@ -190,22 +169,79 @@
     word-break: break-word;
   }
 
-  .note {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-3);
+  .markdown {
     margin-bottom: var(--space-6);
+    max-width: 68ch;
+    font-size: var(--text-base);
+    line-height: 1.7;
+    color: var(--color-text);
+    overflow-wrap: anywhere;
   }
 
-  .note .body {
-    margin: 0;
+  .markdown :global(h1),
+  .markdown :global(h2),
+  .markdown :global(h3) {
+    margin: 1.2em 0 0.5em;
+    line-height: 1.3;
   }
 
-  .note-image {
-    width: 100%;
+  .markdown :global(h1) { font-size: 1.5em; }
+  .markdown :global(h2) { font-size: 1.3em; }
+  .markdown :global(h3) { font-size: 1.15em; }
+
+  .markdown :global(p) { margin: 0 0 0.8em; }
+
+  .markdown :global(ul),
+  .markdown :global(ol) {
+    margin: 0 0 0.8em;
+    padding-left: 1.5em;
+  }
+
+  .markdown :global(li) { margin: 0.2em 0; }
+
+  .markdown :global(blockquote) {
+    margin: 0 0 0.8em;
+    padding-left: 0.9em;
+    border-left: 3px solid var(--color-border);
+    color: var(--color-text-secondary);
+  }
+
+  .markdown :global(code) {
+    font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+    font-size: 0.9em;
+    background: var(--color-bg);
+    padding: 0.1em 0.3em;
+    border-radius: var(--radius-sm);
+  }
+
+  .markdown :global(pre) {
+    margin: 0 0 0.8em;
+    padding: var(--space-3);
+    background: var(--color-bg);
+    border-radius: var(--radius-md);
+    overflow-x: auto;
+  }
+
+  .markdown :global(pre code) {
+    padding: 0;
+    background: none;
+  }
+
+  .markdown :global(a) {
+    color: var(--color-accent);
+    text-decoration: none;
+  }
+
+  .markdown :global(a:hover) {
+    text-decoration: underline;
+  }
+
+  .markdown :global(img) {
+    max-width: 100%;
     max-height: 60vh;
     object-fit: contain;
     border-radius: var(--radius-md);
+    margin: 0.5em 0;
   }
 
   .full-image {
@@ -300,23 +336,6 @@
 
   .meta-item {
     color: var(--color-text-secondary);
-  }
-
-  .meta-item.link {
-    color: var(--color-accent);
-    text-decoration: none;
-    max-width: 300px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .meta-item.link:hover {
-    text-decoration: underline;
-  }
-
-  .meta-sep {
-    color: var(--color-text-tertiary);
   }
 
   .actions {

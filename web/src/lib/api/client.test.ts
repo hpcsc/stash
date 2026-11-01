@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { setToken, setUnauthorizedHandler, signIn, signOut, listItems, captureText, captureLink, captureNote, restoreItem, deleteItem, emptyTrash, fileUrl } from './client'
+import { setToken, setUnauthorizedHandler, signIn, signOut, listItems, captureLink, captureNote, restoreItem, deleteItem, emptyTrash, fileUrl } from './client'
 
 function jsonResponse(body: object, status = 200): Response {
   return new Response(JSON.stringify(body), { status })
@@ -76,16 +76,15 @@ describe('client', () => {
     expect(url).toContain('state=inbox')
   })
 
-  it('captureText posts the body and returns the item id', async () => {
+  it('captureNote posts the markdown and returns the item', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
-      jsonResponse({ successful: true, messages: [], data: { id: 'item-1' } }),
+      jsonResponse({ successful: true, messages: [], data: { id: 'item-1', type: 'note', body: 'remember this', state: 'inbox', capturedAt: '2026-01-01T00:00:00Z' } }),
     )
     vi.stubGlobal('fetch', fetchMock)
 
-    const captured = await captureText('remember this')
+    const item = await captureNote('remember this')
 
-    expect(captured.id).toBe('item-1')
-    expect(captured.duplicate).toBe(false)
+    expect(item.id).toBe('item-1')
     const [url, init] = fetchMock.mock.calls[0]
     expect(url).toBe('http://127.0.0.1:3333/items')
     expect(init.method).toBe('POST')
@@ -111,31 +110,25 @@ describe('client', () => {
     expect(JSON.parse(init.body)).toEqual({ body: 'https://example.com', type: 'link' })
   })
 
-  it('captureNote posts the document and images as multipart', async () => {
+  it('captureNote posts markdown and images as multipart', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       jsonResponse({
         successful: true,
         messages: [],
-        data: { id: 'item-1', type: 'note', body: 'before', state: 'inbox', capturedAt: '2026-01-01T00:00:00Z' },
+        data: { id: 'item-1', type: 'note', body: '![](@stash-image-0)', state: 'inbox', capturedAt: '2026-01-01T00:00:00Z' },
       }),
     )
     vi.stubGlobal('fetch', fetchMock)
     const image = new File(['png'], 'photo.png', { type: 'image/png' })
-    const document = {
-      blocks: [
-        { type: 'text' as const, text: 'before' },
-        { type: 'image' as const, index: 0 },
-      ],
-    }
 
-    const item = await captureNote(document, [image])
+    const item = await captureNote('![](@stash-image-0)', [image])
 
     expect(item.type).toBe('note')
     const [url, init] = fetchMock.mock.calls[0]
     expect(url).toBe('http://127.0.0.1:3333/items')
     expect(init.body).toBeInstanceOf(FormData)
     const form = init.body as FormData
-    expect(form.get('document')).toBe(JSON.stringify(document))
+    expect(form.get('markdown')).toBe('![](@stash-image-0)')
     expect(form.get('images')).toBeInstanceOf(File)
   })
 

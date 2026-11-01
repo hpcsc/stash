@@ -1,9 +1,9 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { listItems, captureText, captureLink, captureAttachment, captureNote, keepItem, dropItem, type Item } from '../api/client'
+  import { listItems, captureLink, captureAttachment, captureNote, keepItem, dropItem, type Item } from '../api/client'
   import { connect, onMessage } from '../api/ws'
   import { token } from '../auth/session'
-  import type { NoteUpload } from '../note'
+  import type { NoteUpload } from '../editor'
   import CaptureForm from './CaptureForm.svelte'
   import ItemCard from './ItemCard.svelte'
   import ItemDetail from './ItemDetail.svelte'
@@ -48,15 +48,6 @@
           i.id === data.id ? { ...i, thumbnailPath: data.thumbnailPath } : i,
         )
       }
-      if (msg.type === 'image-thumbnail-generated') {
-        const data = msg.data as { id: string; imageId: string; thumbnailPath: string }
-        items = items.map((i) =>
-          i.id === data.id ? withImageThumbnail(i, data.imageId, data.thumbnailPath) : i,
-        )
-        if (selected?.id === data.id) {
-          selected = withImageThumbnail(selected, data.imageId, data.thumbnailPath)
-        }
-      }
     })
 
     return () => {
@@ -87,47 +78,25 @@
     error = null
     warning = null
     try {
-      if (upload.images.length > 0) {
-        const item = await captureNote(upload.document, upload.images)
-        items = [item, ...items]
-        return
-      }
+      const markdown = upload.markdown.trim()
+      if (!markdown && upload.images.length === 0) return
 
-      const body = upload.text.trim()
-      if (!body) return
-
-      if (urlRe.test(body)) {
-        const captured = await captureLink(body)
+      if (upload.images.length === 0 && urlRe.test(markdown)) {
+        const captured = await captureLink(markdown)
         items = [
-          { id: captured.id, type: 'link', body, state: 'inbox', capturedAt: new Date().toISOString() },
+          { id: captured.id, type: 'link', body: markdown, state: 'inbox', capturedAt: new Date().toISOString() },
           ...items,
         ]
         if (captured.duplicate) warning = duplicateNotice(captured.duplicateState)
       } else {
-        const captured = await captureText(body)
-        items = [
-          { id: captured.id, type: 'text', body, state: 'inbox', capturedAt: new Date().toISOString() },
-          ...items,
-        ]
-        if (captured.duplicate) warning = duplicateNotice(captured.duplicateState)
+        const item = await captureNote(upload.markdown, upload.images)
+        items = [item, ...items]
       }
     } catch (e) {
       error = e instanceof Error ? e.message : 'Failed to save'
     } finally {
       saving = false
     }
-  }
-
-  function withImageThumbnail(item: Item, imageId: string, thumbnailPath: string): Item {
-    const images = item.images?.map((image) =>
-      image.id === imageId ? { ...image, thumbnailPath } : image,
-    )
-    const blocks = item.blocks?.map((block) =>
-      block.image?.id === imageId
-        ? { ...block, image: { ...block.image, thumbnailPath } }
-        : block,
-    )
-    return { ...item, images, blocks }
   }
 
   async function saveAttachment(file: File) {
