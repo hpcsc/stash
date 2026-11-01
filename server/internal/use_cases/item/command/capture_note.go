@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/hpcsc/stash/internal/use_cases/item/note"
 )
 
 const (
@@ -14,6 +13,6 @@ const (
 
 type CaptureNote struct {
 	ItemID     uuid.UUID
-	Blocks     []note.Block
+	Markdown   string
 	CapturedAt time.Time
 }

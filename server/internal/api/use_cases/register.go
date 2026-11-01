@@ -127,7 +127,6 @@ func subscribeToPushEvents(ctx context.Context, pool *pgxpool.Pool, reg *registr
 	eventTypes := []string{
 		event.LinkMetadataFetched{}.EventType(),
 		event.ThumbnailGenerated{}.EventType(),
-		event.ImageThumbnailGenerated{}.EventType(),
 	}
 	events, err := sub.SubscribeToAll(ctx, after, eventTypes)
 	if err != nil {
@@ -157,15 +156,6 @@ func subscribeToPushEvents(ctx context.Context, pool *pgxpool.Pool, reg *registr
 				Type: "thumbnail-generated",
 				Data: map[string]string{
 					"id":            payload.ItemID.String(),
-					"thumbnailPath": payload.ThumbnailRef,
-				},
-			})
-		case *event.ImageThumbnailGenerated:
-			hub.Broadcast(context.Background(), user, websocket.Message{
-				Type: "image-thumbnail-generated",
-				Data: map[string]string{
-					"id":            payload.ItemID.String(),
-					"imageId":       payload.ImageID.String(),
 					"thumbnailPath": payload.ThumbnailRef,
 				},
 			})

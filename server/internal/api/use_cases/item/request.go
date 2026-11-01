@@ -3,24 +3,12 @@ package item
 import "github.com/google/uuid"
 
 type CaptureRequest struct {
-	Body      string `json:"body" validate:"required"`
-	Type      string `json:"type"`
-	SourceApp string `json:"sourceApp"`
-	SourceURL string `json:"sourceUrl"`
+	Body string `json:"body" validate:"required"`
+	Type string `json:"type"`
 }
 
 type KeepRequest struct {
 	Tags []string `json:"tags"`
-}
-
-type NoteDocument struct {
-	Blocks []NoteDocumentBlock `json:"blocks"`
-}
-
-type NoteDocumentBlock struct {
-	Type  string `json:"type"`
-	Text  string `json:"text,omitempty"`
-	Index *int   `json:"index,omitempty"`
 }
 
 func parseTagIDs(raw []string) []uuid.UUID {

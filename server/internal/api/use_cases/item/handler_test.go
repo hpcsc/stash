@@ -37,18 +37,17 @@ var testUser = domain.UserID("test-user")
 
 func TestHandler(t *testing.T) {
 	t.Run("capture", func(t *testing.T) {
-		t.Run("dispatches a capture text command and returns the item ID", func(t *testing.T) {
-			handler := fake.NewHandler[itemCommand.CaptureText]()
+		t.Run("dispatches a capture note command and returns the item ID", func(t *testing.T) {
+			handler := fake.NewHandler[itemCommand.CaptureNote]()
 			bus := command.NewBus()
-			bus.Register[itemCommand.CaptureText](handler)
+			bus.Register[itemCommand.CaptureNote](handler)
 			router := newRouter(bus, fakeReader{})
 
-			w := send(router, "POST", "/items", `{"body": "hello", "sourceApp": "chrome"}`)
+			w := send(router, "POST", "/items", `{"body": "hello"}`)
 
 			require.Equal(t, http.StatusOK, w.Code)
 			payload := handler.TriggeredWithCommand().Payload
-			require.Equal(t, "hello", payload.Body)
-			require.Equal(t, "chrome", payload.SourceApp)
+			require.Equal(t, "hello", payload.Markdown)
 			require.False(t, payload.CapturedAt.IsZero())
 			body := commonTest.UnmarshalJson[response.Response](t, w.Body.Bytes())
 			require.Equal(t, payload.ItemID.String(), body.Data.(map[string]any)["id"])
@@ -85,28 +84,13 @@ func TestHandler(t *testing.T) {
 			require.Equal(t, "kept", data["duplicateState"])
 		})
 
-		t.Run("marks captured text as a duplicate when its body is already saved", func(t *testing.T) {
-			handler := fake.NewHandler[itemCommand.CaptureText]()
+		t.Run("does not mark a new link as a duplicate", func(t *testing.T) {
+			handler := fake.NewHandler[itemCommand.CaptureLink]()
 			bus := command.NewBus()
-			bus.Register[itemCommand.CaptureText](handler)
-			router := newRouter(bus, fakeReader{existing: &items.Item{ID: "existing", State: "inbox"}})
-
-			w := send(router, "POST", "/items", `{"body": "remember this"}`)
-
-			require.Equal(t, http.StatusOK, w.Code)
-			body := commonTest.UnmarshalJson[response.Response](t, w.Body.Bytes())
-			data := body.Data.(map[string]any)
-			require.Equal(t, true, data["duplicate"])
-			require.Equal(t, "inbox", data["duplicateState"])
-		})
-
-		t.Run("does not mark a new capture as a duplicate", func(t *testing.T) {
-			handler := fake.NewHandler[itemCommand.CaptureText]()
-			bus := command.NewBus()
-			bus.Register[itemCommand.CaptureText](handler)
+			bus.Register[itemCommand.CaptureLink](handler)
 			router := newRouter(bus, fakeReader{})
 
-			w := send(router, "POST", "/items", `{"body": "brand new"}`)
+			w := send(router, "POST", "/items", `{"body": "https://brand-new.example.com", "type": "link"}`)
 
 			require.Equal(t, http.StatusOK, w.Code)
 			body := commonTest.UnmarshalJson[response.Response](t, w.Body.Bytes())
@@ -116,7 +100,7 @@ func TestHandler(t *testing.T) {
 
 		t.Run("rejects a body without text", func(t *testing.T) {
 			bus := command.NewBus()
-			bus.Register[itemCommand.CaptureText](fake.NewHandler[itemCommand.CaptureText]())
+			bus.Register[itemCommand.CaptureNote](fake.NewHandler[itemCommand.CaptureNote]())
 			router := newRouter(bus, fakeReader{})
 
 			w := send(router, "POST", "/items", `{}`)
@@ -174,97 +158,64 @@ func TestHandler(t *testing.T) {
 			require.Contains(t, w.Body.String(), "videos are not accepted")
 		})
 
-		t.Run("dispatches a capture note command with text and images in order", func(t *testing.T) {
+		t.Run("dispatches a capture note command with markdown and images", func(t *testing.T) {
 			handler := fake.NewHandler[itemCommand.CaptureNote]()
 			bus := command.NewBus()
 			bus.Register[itemCommand.CaptureNote](handler)
 			router := newRouter(bus, fakeReader{})
 
 			body, contentType := noteMultipartBody(t,
-				`{"blocks":[{"type":"text","text":"before"},{"type":"image","index":0},{"type":"text","text":"after"}]}`,
+				"before\n\n![](@stash-image-0)\n\nafter",
 				imagePart{filename: "photo.png", contentType: "image/png", data: []byte("png-bytes")},
 			)
 			w := sendMultipart(router, body, contentType)
 
 			require.Equal(t, http.StatusOK, w.Code)
 			payload := handler.TriggeredWithCommand().Payload
-			require.Len(t, payload.Blocks, 3)
-			require.Equal(t, "before", payload.Blocks[0].Text)
-			require.True(t, strings.HasPrefix(payload.Blocks[1].Image.FileRef, "user/test-user/images/"))
-			require.True(t, strings.HasSuffix(payload.Blocks[1].Image.FileRef, ".png"))
-			require.Equal(t, "photo.png", payload.Blocks[1].Image.FileName)
-			require.Equal(t, "image/png", payload.Blocks[1].Image.MimeType)
-			require.Equal(t, int64(len("png-bytes")), payload.Blocks[1].Image.FileSize)
-			require.Equal(t, "after", payload.Blocks[2].Text)
+			require.Contains(t, payload.Markdown, "before")
+			require.Contains(t, payload.Markdown, "after")
+			require.Contains(t, payload.Markdown, "user/test-user/images/")
+			require.Contains(t, payload.Markdown, ".png")
+			require.NotContains(t, payload.Markdown, "@stash-image-0")
 
 			responseBody := commonTest.UnmarshalJson[response.Response](t, w.Body.Bytes())
 			data := responseBody.Data.(map[string]any)
 			require.Equal(t, payload.ItemID.String(), data["id"])
 			require.Equal(t, "note", data["type"])
-			require.Equal(t, "before\nafter", data["body"])
-			require.Len(t, data["images"], 1)
-			require.Len(t, data["blocks"], 3)
+			require.Equal(t, payload.Markdown, data["body"])
 		})
 
-		t.Run("captures a note with images only", func(t *testing.T) {
+		t.Run("captures a note with only an image", func(t *testing.T) {
 			handler := fake.NewHandler[itemCommand.CaptureNote]()
 			bus := command.NewBus()
 			bus.Register[itemCommand.CaptureNote](handler)
 			router := newRouter(bus, fakeReader{})
 
 			body, contentType := noteMultipartBody(t,
-				`{"blocks":[{"type":"image","index":0}]}`,
+				"![](@stash-image-0)",
 				imagePart{filename: "photo.png", contentType: "image/png", data: []byte("png-bytes")},
 			)
 			w := sendMultipart(router, body, contentType)
 
 			require.Equal(t, http.StatusOK, w.Code)
-			require.Len(t, handler.TriggeredWithCommand().Payload.Blocks, 1)
+			require.Contains(t, handler.TriggeredWithCommand().Payload.Markdown, "user/test-user/images/")
 		})
 
-		t.Run("rejects a note without a document", func(t *testing.T) {
+		t.Run("rejects a note with no markdown and no images", func(t *testing.T) {
 			router := newRouter(command.NewBus(), fakeReader{})
 
-			body, contentType := noteMultipartBody(t, "",
-				imagePart{filename: "photo.png", contentType: "image/png", data: []byte("png-bytes")},
-			)
+			body, contentType := noteMultipartBody(t, "")
 			w := sendMultipart(router, body, contentType)
 
 			require.Equal(t, http.StatusBadRequest, w.Code)
-			require.Contains(t, w.Body.String(), "missing note document")
-		})
-
-		t.Run("rejects an image that the note does not reference", func(t *testing.T) {
-			router := newRouter(command.NewBus(), fakeReader{})
-
-			body, contentType := noteMultipartBody(t,
-				`{"blocks":[{"type":"text","text":"hello"}]}`,
-				imagePart{filename: "photo.png", contentType: "image/png", data: []byte("png-bytes")},
-			)
-			w := sendMultipart(router, body, contentType)
-
-			require.Equal(t, http.StatusBadRequest, w.Code)
-			require.Contains(t, w.Body.String(), "referenced exactly once")
-		})
-
-		t.Run("rejects an image referenced twice", func(t *testing.T) {
-			router := newRouter(command.NewBus(), fakeReader{})
-
-			body, contentType := noteMultipartBody(t,
-				`{"blocks":[{"type":"image","index":0},{"type":"image","index":0}]}`,
-				imagePart{filename: "photo.png", contentType: "image/png", data: []byte("png-bytes")},
-			)
-			w := sendMultipart(router, body, contentType)
-
-			require.Equal(t, http.StatusBadRequest, w.Code)
-			require.Contains(t, w.Body.String(), "referenced more than once")
+			require.Contains(t, w.Body.String(), "note must have text or an image")
 		})
 
 		t.Run("rejects a non-image note upload", func(t *testing.T) {
 			router := newRouter(command.NewBus(), fakeReader{})
 
 			body, contentType := noteMultipartBody(t,
-				`{"blocks":[{"type":"image","index":0}]}`,
+				"![](@stash-image-0)",
 				imagePart{filename: "report.pdf", contentType: "application/pdf", data: []byte("pdf-bytes")},
 			)
 			w := sendMultipart(router, body, contentType)
@@ -531,14 +482,12 @@ type imagePart struct {
 	data        []byte
 }
 
-func noteMultipartBody(t *testing.T, document string, images ...imagePart) (*bytes.Buffer, string) {
+func noteMultipartBody(t *testing.T, markdown string, images ...imagePart) (*bytes.Buffer, string) {
 	t.Helper()
 
 	var body bytes.Buffer
 	writer := multipart.NewWriter(&body)
-	if document != "" {
-		require.NoError(t, writer.WriteField("document", document))
-	}
+	require.NoError(t, writer.WriteField("markdown", markdown))
 	for _, image := range images {
 		part, err := writer.CreatePart(textproto.MIMEHeader{
 			"Content-Disposition": []string{fmt.Sprintf(`form-data; name="images"; filename=%q`, image.filename)},

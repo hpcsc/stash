@@ -12,7 +12,6 @@ import (
 	"github.com/hpcsc/stash/internal/use_cases/item/capture_image"
 	"github.com/hpcsc/stash/internal/use_cases/item/capture_link"
 	"github.com/hpcsc/stash/internal/use_cases/item/capture_note"
-	"github.com/hpcsc/stash/internal/use_cases/item/capture_text"
 	"github.com/hpcsc/stash/internal/use_cases/item/delete_item"
 	"github.com/hpcsc/stash/internal/use_cases/item/drop"
 	"github.com/hpcsc/stash/internal/use_cases/item/keep"
@@ -40,7 +39,6 @@ func RegisterHandlers(bus *command.Bus, stream event.Stream) {
 	sign_in.Register(bus, identities)
 	sign_out.Register(bus, identities)
 
-	capture_text.Register(bus, items)
 	capture_link.Register(bus, items)
 	capture_image.Register(bus, items)
 	capture_file.Register(bus, items)

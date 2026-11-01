@@ -16,7 +16,6 @@ import (
 	"github.com/hpcsc/stash/internal/domain/projection"
 	itemEvent "github.com/hpcsc/stash/internal/use_cases/item/event"
 	"github.com/hpcsc/stash/internal/use_cases/item/items"
-	"github.com/hpcsc/stash/internal/use_cases/item/note"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/require"
 )
@@ -24,13 +23,13 @@ import (
 var testUser = domain.UserID("test-user")
 
 func TestProjection(t *testing.T) {
-	t.Run("projects a captured text item", func(t *testing.T) {
+	t.Run("projects a captured note", func(t *testing.T) {
 		pool := test.NewDBPool(t)
 		clearState(t, pool)
 		checkpointStore := store.NewPostgres(pool)
 		id := uuid.New()
 		sub := subscription.NewFake().WithEventChannel(closedChannel(
-			textCapturedEvent(1, 1, id, "remember this", "chrome", time.Date(2026, 10, 24, 12, 0, 0, 0, time.UTC)),
+			noteCapturedEvent(1, 1, id, "## title\n\nremember this", time.Date(2026, 10, 24, 12, 0, 0, 0, time.UTC)),
 		))
 
 		err := projection.NewProjector(items.NewProjection(), pool, checkpointStore, sub, test.DiscardLogger()).Start(context.Background())
@@ -39,9 +38,8 @@ func TestProjection(t *testing.T) {
 		item, err := items.NewQuery(pool).For(testUser).ByID(context.Background(), id.String())
 		require.NoError(t, err)
 		require.NotNil(t, item)
-		require.Equal(t, "text", item.Type)
-		require.Equal(t, "remember this", item.Body)
-		require.Equal(t, "chrome", item.SourceApp)
+		require.Equal(t, "note", item.Type)
+		require.Equal(t, "## title\n\nremember this", item.Body)
 	})
 
 	t.Run("projects a captured file with its metadata", func(t *testing.T) {
@@ -66,36 +64,6 @@ func TestProjection(t *testing.T) {
 		require.Equal(t, "application/pdf", item.MimeType)
 	})
 
-	t.Run("projects a note with its blocks and images", func(t *testing.T) {
-		pool := test.NewDBPool(t)
-		clearState(t, pool)
-		checkpointStore := store.NewPostgres(pool)
-		id := uuid.New()
-		imageID := uuid.New()
-		capturedAt := time.Date(2026, 10, 24, 12, 0, 0, 0, time.UTC)
-		sub := subscription.NewFake().WithEventChannel(closedChannel(
-			noteCapturedEvent(1, 1, id, imageID, capturedAt),
-			imageThumbnailGeneratedEvent(1, 2, id, imageID),
-		))
-
-		err := projection.NewProjector(items.NewProjection(), pool, checkpointStore, sub, test.DiscardLogger()).Start(context.Background())
-		require.ErrorIs(t, err, event.ErrSubscriptionEnded)
-
-		item, err := items.NewQuery(pool).For(testUser).ByID(context.Background(), id.String())
-		require.NoError(t, err)
-		require.NotNil(t, item)
-		require.Equal(t, "note", item.Type)
-		require.Equal(t, "before\nafter", item.Body)
-		require.Len(t, item.Images, 1)
-		require.Equal(t, imageID.String(), item.Images[0].ID)
-		require.Equal(t, "images/photo.png", item.Images[0].FilePath)
-		require.Equal(t, "thumbnails/photo.png", item.Images[0].ThumbnailPath)
-		require.Len(t, item.Blocks, 3)
-		require.Equal(t, "before", item.Blocks[0].Text)
-		require.Equal(t, imageID.String(), item.Blocks[1].Image.ID)
-		require.Equal(t, "after", item.Blocks[2].Text)
-	})
-
 	t.Run("restores a dropped item to the inbox", func(t *testing.T) {
 		pool := test.NewDBPool(t)
 		clearState(t, pool)
@@ -103,7 +71,7 @@ func TestProjection(t *testing.T) {
 		id := uuid.New()
 		capturedAt := time.Date(2026, 10, 24, 12, 0, 0, 0, time.UTC)
 		sub := subscription.NewFake().WithEventChannel(closedChannel(
-			textCapturedEvent(3, 1, id, "restore me", "", capturedAt),
+			noteCapturedEvent(3, 1, id, "restore me", capturedAt),
 			itemDroppedEvent(3, 2, 2, id),
 			itemRestoredEvent(3, 3, 3, id, "inbox"),
 		))
@@ -124,7 +92,7 @@ func TestProjection(t *testing.T) {
 		id := uuid.New()
 		capturedAt := time.Date(2026, 10, 24, 12, 0, 0, 0, time.UTC)
 		sub := subscription.NewFake().WithEventChannel(closedChannel(
-			textCapturedEvent(4, 1, id, "restore me", "", capturedAt),
+			noteCapturedEvent(4, 1, id, "restore me", capturedAt),
 			itemKeptEvent(4, 2, 2, id),
 			itemDroppedEvent(4, 3, 3, id),
 			itemRestoredEvent(4, 4, 4, id, "library"),
@@ -146,7 +114,7 @@ func TestProjection(t *testing.T) {
 		id := uuid.New()
 		capturedAt := time.Date(2026, 10, 24, 12, 0, 0, 0, time.UTC)
 		sub := subscription.NewFake().WithEventChannel(closedChannel(
-			textCapturedEvent(5, 1, id, "delete me", "", capturedAt),
+			noteCapturedEvent(5, 1, id, "delete me", capturedAt),
 			itemDroppedEvent(5, 2, 2, id),
 			itemDeletedEvent(5, 3, 3, id),
 		))
@@ -164,8 +132,8 @@ func TestProjection(t *testing.T) {
 		clearState(t, pool)
 		checkpointStore := store.NewPostgres(pool)
 		sub := subscription.NewFake().WithEventChannel(closedChannel(
-			textCapturedEvent(2, 1, uuid.New(), "older", "", time.Date(2026, 10, 24, 12, 0, 0, 0, time.UTC)),
-			textCapturedEvent(2, 2, uuid.New(), "newer", "", time.Date(2026, 10, 24, 13, 0, 0, 0, time.UTC)),
+			noteCapturedEvent(2, 1, uuid.New(), "older", time.Date(2026, 10, 24, 12, 0, 0, 0, time.UTC)),
+			noteCapturedEvent(2, 2, uuid.New(), "newer", time.Date(2026, 10, 24, 13, 0, 0, 0, time.UTC)),
 		))
 
 		err := projection.NewProjector(items.NewProjection(), pool, checkpointStore, sub, test.DiscardLogger()).Start(context.Background())
@@ -184,19 +152,19 @@ func TestProjection(t *testing.T) {
 		checkpointStore := store.NewPostgres(pool)
 		id := uuid.New()
 		sub := subscription.NewFake().WithEventChannel(closedChannel(
-			textCapturedEvent(6, 1, id, "remember this", "", time.Date(2026, 10, 24, 12, 0, 0, 0, time.UTC)),
+			noteCapturedEvent(6, 1, id, "remember this", time.Date(2026, 10, 24, 12, 0, 0, 0, time.UTC)),
 		))
 
 		err := projection.NewProjector(items.NewProjection(), pool, checkpointStore, sub, test.DiscardLogger()).Start(context.Background())
 		require.ErrorIs(t, err, event.ErrSubscriptionEnded)
 
-		existing, err := items.NewQuery(pool).For(testUser).Existing(context.Background(), "text", "remember this")
+		existing, err := items.NewQuery(pool).For(testUser).Existing(context.Background(), "note", "remember this")
 		require.NoError(t, err)
 		require.NotNil(t, existing)
 		require.Equal(t, id.String(), existing.ID)
 		require.Equal(t, "inbox", existing.State)
 
-		missing, err := items.NewQuery(pool).For(testUser).Existing(context.Background(), "text", "something else")
+		missing, err := items.NewQuery(pool).For(testUser).Existing(context.Background(), "note", "something else")
 		require.NoError(t, err)
 		require.Nil(t, missing)
 	})
@@ -208,8 +176,8 @@ func TestProjection(t *testing.T) {
 		aliceID, bobID := uuid.New(), uuid.New()
 		capturedAt := time.Date(2026, 10, 24, 12, 0, 0, 0, time.UTC)
 		sub := subscription.NewFake().WithEventChannel(closedChannel(
-			userTextCapturedEvent("alice", 7, 1, aliceID, "shared", "", capturedAt),
-			userTextCapturedEvent("bob", 7, 2, bobID, "shared", "", capturedAt),
+			userNoteCapturedEvent("alice", 7, 1, aliceID, "shared", capturedAt),
+			userNoteCapturedEvent("bob", 7, 2, bobID, "shared", capturedAt),
 		))
 
 		err := projection.NewProjector(items.NewProjection(), pool, checkpointStore, sub, test.DiscardLogger()).Start(context.Background())
@@ -231,30 +199,21 @@ func TestProjection(t *testing.T) {
 		aliceSeesBob, err := alice.ByID(context.Background(), bobID.String())
 		require.NoError(t, err)
 		require.Nil(t, aliceSeesBob)
-
-		aliceExisting, err := alice.Existing(context.Background(), "text", "shared")
-		require.NoError(t, err)
-		require.Equal(t, aliceID.String(), aliceExisting.ID)
-
-		bobExisting, err := bob.Existing(context.Background(), "text", "shared")
-		require.NoError(t, err)
-		require.Equal(t, bobID.String(), bobExisting.ID)
 	})
 }
 
-func textCapturedEvent(txID, sequence uint64, id uuid.UUID, body, sourceApp string, capturedAt time.Time) domain.Event {
-	return userTextCapturedEvent(testUser, txID, sequence, id, body, sourceApp, capturedAt)
+func noteCapturedEvent(txID, sequence uint64, id uuid.UUID, markdown string, capturedAt time.Time) domain.Event {
+	return userNoteCapturedEvent(testUser, txID, sequence, id, markdown, capturedAt)
 }
 
-func userTextCapturedEvent(user domain.UserID, txID, sequence uint64, id uuid.UUID, body, sourceApp string, capturedAt time.Time) domain.Event {
+func userNoteCapturedEvent(user domain.UserID, txID, sequence uint64, id uuid.UUID, markdown string, capturedAt time.Time) domain.Event {
 	return domain.Event{
 		StreamID: domain.UserStream(user, "item-"+id.String()),
 		Version:  1,
 		Position: domain.Position{TransactionID: txID, Sequence: sequence},
-		Payload: &itemEvent.TextCaptured{
+		Payload: &itemEvent.NoteCaptured{
 			ItemID:     id,
-			Body:       body,
-			SourceApp:  sourceApp,
+			Markdown:   markdown,
 			CapturedAt: capturedAt,
 		},
 	}
@@ -272,42 +231,6 @@ func fileCapturedEvent(txID, sequence uint64, id uuid.UUID, capturedAt time.Time
 			FileSize:   1024,
 			MimeType:   "application/pdf",
 			CapturedAt: capturedAt,
-		},
-	}
-}
-
-func noteCapturedEvent(txID, sequence uint64, id, imageID uuid.UUID, capturedAt time.Time) domain.Event {
-	return domain.Event{
-		StreamID: domain.UserStream(testUser, "item-"+id.String()),
-		Version:  1,
-		Position: domain.Position{TransactionID: txID, Sequence: sequence},
-		Payload: &itemEvent.NoteCaptured{
-			ItemID: id,
-			Blocks: []note.Block{
-				{Type: note.TypeText, Text: "before"},
-				{Type: note.TypeImage, Image: &note.Image{
-					ID:       imageID,
-					FileRef:  "images/photo.png",
-					FileName: "photo.png",
-					FileSize: 1024,
-					MimeType: "image/png",
-				}},
-				{Type: note.TypeText, Text: "after"},
-			},
-			CapturedAt: capturedAt,
-		},
-	}
-}
-
-func imageThumbnailGeneratedEvent(txID, sequence uint64, id, imageID uuid.UUID) domain.Event {
-	return domain.Event{
-		StreamID: domain.UserStream(testUser, "item-"+id.String()),
-		Version:  2,
-		Position: domain.Position{TransactionID: txID, Sequence: sequence},
-		Payload: &itemEvent.ImageThumbnailGenerated{
-			ItemID:       id,
-			ImageID:      imageID,
-			ThumbnailRef: "thumbnails/photo.png",
 		},
 	}
 }

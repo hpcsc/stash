@@ -22,9 +22,9 @@ func TestRepository(t *testing.T) {
 
 			alice := repo.For("alice")
 			var aliceItem item.Item
-			require.NoError(t, aliceItem.CaptureText(itemCommand.CaptureText{
+			require.NoError(t, aliceItem.CaptureNote(itemCommand.CaptureNote{
 				ItemID:     id,
-				Body:       "hello",
+				Markdown:   "hello",
 				CapturedAt: time.Now(),
 			}))
 			require.NoError(t, alice.Save(context.Background(), &aliceItem, uuid.New()))
