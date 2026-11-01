@@ -42,7 +42,7 @@
 
 ### Phase 4 — publish + deploy
 4. Publish `api`, `catchup`, and `web` to GHCR on push to `main`/tags.
-   - `.github/workflows/deploy.yml`.
+   - `.github/workflows/ci.yml`.
 5. A cloud compose (published images, external Postgres, S3 env) and its env template.
    - `server/docker-compose.cloud.yml`, `server/.env.cloud.example`.
 

@@ -6,8 +6,9 @@ workflow builds and pushes the backend images, then deploys.
 
 ```
 push to main
-  └─► Deploy (this workflow)
-        ├─► publish   (build + push api/catchup to GHCR)
+  └─► CI (this workflow)
+        ├─► test      (shellcheck, unit, integration, vulnerabilities)
+        ├─► publish   (needs test; build + push api/catchup to GHCR)
         └─► deploy    (needs publish)
               ├─► terraform apply  (GCP VM + Neon project + R2 bucket)
               └─► SSH to the VM → docker compose up  (pulls api/catchup, builds web)
@@ -91,12 +92,14 @@ as `TF_VAR_*`.
 
 ## Deploy
 
-Push to `main`, or run the workflow manually from the Actions tab. The `Deploy` workflow:
+Push to `main`, or run the workflow manually from the Actions tab. The `CI` workflow:
 
-1. Builds the `api` and `catchup` images and pushes them to GHCR.
-2. `terraform apply` — provisions (or updates) the VM, the Neon project, and the R2 bucket.
-3. Writes `server/.env.cloud` on the VM from the Terraform outputs and the app secrets.
-4. Clones (or pulls) the repo on the VM and runs `docker compose up` — pulls the published
+1. Runs the shellcheck, unit, integration, and vulnerability checks. Nothing is published or
+   deployed unless they pass.
+2. Builds the `api` and `catchup` images and pushes them to GHCR.
+3. `terraform apply` — provisions (or updates) the VM, the Neon project, and the R2 bucket.
+4. Writes `server/.env.cloud` on the VM from the Terraform outputs and the app secrets.
+5. Clones (or pulls) the repo on the VM and runs `docker compose up` — pulls the published
    `api`/`catchup` images, builds the web app, runs the migrations, and starts everything.
 
 A `v*` tag pushes images but skips the deploy. The first deploy waits for the VM's first-boot

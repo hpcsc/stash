@@ -6,7 +6,7 @@ managed Postgres, so nothing survives on the VM's disk and the API and consumer 
 (or scale) without losing anything.
 
 Two images — `ghcr.io/hpcsc/stash-api` and `ghcr.io/hpcsc/stash-catchup` — are published to
-GitHub Container Registry on every push to `main` (see `.github/workflows/deploy.yml`, the
+GitHub Container Registry on every push to `main` (see `.github/workflows/ci.yml`, the
 `publish` job).
 The web app is built at deploy time because it bakes the Google client ID in.
 
@@ -126,7 +126,7 @@ task cloud:down
 
 ## Publishing images
 
-Images are published automatically by the `publish` job of the `Deploy` workflow. To push them
+Images are published automatically by the `publish` job of the `CI` workflow. To push them
 by hand:
 
 ```sh
