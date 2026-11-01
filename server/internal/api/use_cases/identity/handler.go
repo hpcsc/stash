@@ -66,7 +66,13 @@ func (h *handler) signIn(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if !h.dispatch(w, req, identityCommand.SignIn{Subject: subject, Provider: body.Provider}) {
+	user := domain.UserID(subject)
+	if !user.Valid() {
+		_ = h.renderer.JSON(w, http.StatusUnauthorized, response.Fail("sign-in failed"))
+		return
+	}
+
+	if !h.dispatch(w, req, user, identityCommand.SignIn{Subject: subject, Provider: body.Provider}) {
 		return
 	}
 
@@ -80,8 +86,8 @@ func (h *handler) signIn(w http.ResponseWriter, req *http.Request) {
 }
 
 func (h *handler) signOut(w http.ResponseWriter, req *http.Request) {
-	subject := middleware.SubjectFromContext(req.Context())
-	if !h.dispatch(w, req, identityCommand.SignOut{Subject: subject}) {
+	user := middleware.UserFromContext(req.Context())
+	if !h.dispatch(w, req, user, identityCommand.SignOut{Subject: user.String()}) {
 		return
 	}
 	_ = h.renderer.JSON(w, http.StatusOK, response.Succeed())
@@ -101,8 +107,8 @@ func (h *handler) decode(w http.ResponseWriter, req *http.Request, body any) boo
 	return true
 }
 
-func (h *handler) dispatch[P any](w http.ResponseWriter, req *http.Request, payload P) bool {
-	err := h.bus.Dispatch(req.Context(), domain.NewCommand(payload))
+func (h *handler) dispatch[P any](w http.ResponseWriter, req *http.Request, actor domain.UserID, payload P) bool {
+	err := h.bus.Dispatch(req.Context(), domain.NewCommand(actor, payload))
 	if errors.Is(err, event.ErrConcurrencyConflict) {
 		_ = h.renderer.JSON(w, http.StatusConflict, response.Fail(fmt.Sprintf("%v, retry the request", err)))
 		return false

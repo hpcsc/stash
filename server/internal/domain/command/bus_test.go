@@ -21,7 +21,7 @@ func TestBus(t *testing.T) {
 			b := command.NewBus()
 			handler := fake.NewHandler[fake.Payload]()
 			b.Register[fake.Payload](handler)
-			cmd := domain.NewCommand(fake.Payload{Value: "value"})
+			cmd := domain.NewCommand("test-user", fake.Payload{Value: "value"})
 
 			err := b.Dispatch(context.Background(), cmd)
 
@@ -32,7 +32,7 @@ func TestBus(t *testing.T) {
 		t.Run("returns an error when no handler has the payload type", func(t *testing.T) {
 			b := command.NewBus()
 
-			err := b.Dispatch(context.Background(), domain.NewCommand(fake.Payload{}))
+			err := b.Dispatch(context.Background(), domain.NewCommand("test-user", fake.Payload{}))
 
 			require.ErrorContains(t, err, "no command handler registered for command fake.Payload")
 		})
@@ -41,7 +41,7 @@ func TestBus(t *testing.T) {
 			b := command.NewBus()
 			b.Register[fake.Payload](fake.NewHandler[fake.Payload]().WithError(errors.New("some error")))
 
-			err := b.Dispatch(context.Background(), domain.NewCommand(fake.Payload{}))
+			err := b.Dispatch(context.Background(), domain.NewCommand("test-user", fake.Payload{}))
 
 			require.ErrorContains(t, err, "some error")
 		})
@@ -52,7 +52,7 @@ func TestBus(t *testing.T) {
 			handler := fake.NewHandler[fake.Payload]().WithErrors(conflict, nil)
 			b.Register[fake.Payload](handler)
 
-			err := b.Dispatch(context.Background(), domain.NewCommand(fake.Payload{}))
+			err := b.Dispatch(context.Background(), domain.NewCommand("test-user", fake.Payload{}))
 
 			require.NoError(t, err)
 			require.Equal(t, 2, handler.Calls())
@@ -64,7 +64,7 @@ func TestBus(t *testing.T) {
 			handler := fake.NewHandler[fake.Payload]().WithError(conflict)
 			b.Register[fake.Payload](handler)
 
-			err := b.Dispatch(context.Background(), domain.NewCommand(fake.Payload{}))
+			err := b.Dispatch(context.Background(), domain.NewCommand("test-user", fake.Payload{}))
 
 			require.ErrorIs(t, err, event.ErrConcurrencyConflict)
 			require.Equal(t, 3, handler.Calls())
@@ -77,7 +77,7 @@ func TestBus(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			cancel()
 
-			err := b.Dispatch(ctx, domain.NewCommand(fake.Payload{}))
+			err := b.Dispatch(ctx, domain.NewCommand("test-user", fake.Payload{}))
 
 			require.ErrorIs(t, err, context.Canceled)
 			require.Equal(t, 0, handler.Calls())

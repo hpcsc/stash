@@ -17,6 +17,7 @@ import (
 	apiTest "github.com/hpcsc/stash/internal/api/test"
 	"github.com/hpcsc/stash/internal/api/use_cases/identity"
 	commonTest "github.com/hpcsc/stash/internal/common/test"
+	"github.com/hpcsc/stash/internal/domain"
 	"github.com/hpcsc/stash/internal/domain/command"
 	"github.com/hpcsc/stash/internal/domain/command/fake"
 	identityCommand "github.com/hpcsc/stash/internal/use_cases/identity/command"
@@ -112,7 +113,7 @@ func send(router http.Handler, method, path, body string) *httptest.ResponseReco
 func sendWithSubject(router http.Handler, method, path, subject, body string) *httptest.ResponseRecorder {
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest(method, path, strings.NewReader(body))
-	req = req.WithContext(middleware.WithSubject(req.Context(), subject))
+	req = req.WithContext(middleware.WithUser(req.Context(), domain.UserID(subject)))
 	router.ServeHTTP(w, req)
 	return w
 }
