@@ -200,11 +200,55 @@ func TestProjection(t *testing.T) {
 		require.NoError(t, err)
 		require.Nil(t, missing)
 	})
+
+	t.Run("keeps two users' items separate", func(t *testing.T) {
+		pool := test.NewDBPool(t)
+		clearState(t, pool)
+		checkpointStore := store.NewPostgres(pool)
+		aliceID, bobID := uuid.New(), uuid.New()
+		capturedAt := time.Date(2026, 10, 24, 12, 0, 0, 0, time.UTC)
+		sub := subscription.NewFake().WithEventChannel(closedChannel(
+			userTextCapturedEvent("alice", 7, 1, aliceID, "shared", "", capturedAt),
+			userTextCapturedEvent("bob", 7, 2, bobID, "shared", "", capturedAt),
+		))
+
+		err := projection.NewProjector(items.NewProjection(), pool, checkpointStore, sub, test.DiscardLogger()).Start(context.Background())
+		require.ErrorIs(t, err, event.ErrSubscriptionEnded)
+
+		alice := items.NewQuery(pool).For("alice")
+		bob := items.NewQuery(pool).For("bob")
+
+		aliceAll, err := alice.List(context.Background(), "")
+		require.NoError(t, err)
+		require.Len(t, aliceAll, 1)
+		require.Equal(t, aliceID.String(), aliceAll[0].ID)
+
+		bobAll, err := bob.List(context.Background(), "")
+		require.NoError(t, err)
+		require.Len(t, bobAll, 1)
+		require.Equal(t, bobID.String(), bobAll[0].ID)
+
+		aliceSeesBob, err := alice.ByID(context.Background(), bobID.String())
+		require.NoError(t, err)
+		require.Nil(t, aliceSeesBob)
+
+		aliceExisting, err := alice.Existing(context.Background(), "text", "shared")
+		require.NoError(t, err)
+		require.Equal(t, aliceID.String(), aliceExisting.ID)
+
+		bobExisting, err := bob.Existing(context.Background(), "text", "shared")
+		require.NoError(t, err)
+		require.Equal(t, bobID.String(), bobExisting.ID)
+	})
 }
 
 func textCapturedEvent(txID, sequence uint64, id uuid.UUID, body, sourceApp string, capturedAt time.Time) domain.Event {
+	return userTextCapturedEvent(testUser, txID, sequence, id, body, sourceApp, capturedAt)
+}
+
+func userTextCapturedEvent(user domain.UserID, txID, sequence uint64, id uuid.UUID, body, sourceApp string, capturedAt time.Time) domain.Event {
 	return domain.Event{
-		StreamID: domain.UserStream(testUser, "item-"+id.String()),
+		StreamID: domain.UserStream(user, "item-"+id.String()),
 		Version:  1,
 		Position: domain.Position{TransactionID: txID, Sequence: sequence},
 		Payload: &itemEvent.TextCaptured{

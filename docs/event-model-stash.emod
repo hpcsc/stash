@@ -1,11 +1,15 @@
 emod = 1
 
+// Every stream that holds user data is prefixed with the user ID — user/<id>/item-<uuid>,
+// user/<id>/tag-<uuid>, user/<id>/trash — so the user is the stream, not a payload field.
+// The Account aggregate keeps its identity-<subject> shape and is never projected or broadcast.
+
 model "Stash" {
   description = "A self-hosted capture inbox: save text, links, images, and files, then keep them into tagged libraries or drop them into a recoverable trash"
 }
 
 actor "User" {
-  description = "The single owner, capturing from web, Android, or a browser extension"
+  description = "Each user owns their own stash, capturing from web, Android, or a browser extension"
 }
 
 context "Identity" {

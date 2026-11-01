@@ -39,34 +39,41 @@ the actively-maintained fork of `nhooyr.io/websocket`. Prefer it over
 
 ### Hub
 
-The hub tracks connected clients and broadcasts messages:
+The hub groups connected clients by user and broadcasts only to the user an
+event belongs to:
 
 ```go
 type Hub struct {
     mu      sync.RWMutex
-    clients map[*websocket.Conn]struct{}
+    clients map[domain.UserID]map[*websocket.Conn]struct{}
 }
 
-func (h *Hub) Register(conn *websocket.Conn) {
+func (h *Hub) Register(user domain.UserID, conn *websocket.Conn) {
     h.mu.Lock()
-    h.clients[conn] = struct{}{}
+    if h.clients[user] == nil {
+        h.clients[user] = make(map[*websocket.Conn]struct{})
+    }
+    h.clients[user][conn] = struct{}{}
     h.mu.Unlock()
 }
 
-func (h *Hub) Unregister(conn *websocket.Conn) {
+func (h *Hub) Unregister(user domain.UserID, conn *websocket.Conn) {
     h.mu.Lock()
-    delete(h.clients, conn)
+    delete(h.clients[user], conn)
     h.mu.Unlock()
 }
 
-func (h *Hub) Broadcast(ctx context.Context, msg []byte) {
+func (h *Hub) Broadcast(ctx context.Context, user domain.UserID, msg []byte) {
     h.mu.RLock()
     defer h.mu.RUnlock()
-    for conn := range h.clients {
+    for conn := range h.clients[user] {
         conn.Write(ctx, websocket.MessageText, msg)
     }
 }
 ```
+
+The push subscription derives the user from the event stream (`domain.UserOf`),
+so one user's link or thumbnail update never reaches another user's tab.
 
 The hub is meant for single-instance, low-connection-count deployments. For
 production at scale, see "Scaling in production" below.
@@ -83,6 +90,11 @@ func (h *Hub) ServeHTTP(w http.ResponseWriter, r *http.Request) {
         http.Error(w, "unauthorized", http.StatusUnauthorized)
         return
     }
+    user := domain.UserID(subject)
+    if !user.Valid() {
+        http.Error(w, "unauthorized", http.StatusUnauthorized)
+        return
+    }
 
     conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{
         InsecureSkipVerify: true,
@@ -92,8 +104,8 @@ func (h *Hub) ServeHTTP(w http.ResponseWriter, r *http.Request) {
     }
     defer conn.Close(websocket.StatusNormalClosure, "")
 
-    h.Register(conn)
-    defer h.Unregister(conn)
+    h.Register(user, conn)
+    defer h.Unregister(user, conn)
 
     // Read loop — keeps the connection alive, handles close
     for {
@@ -332,8 +344,8 @@ history. For production, prefer one of:
   require the first message from the client to be an auth message. Close the
   connection if it doesn't arrive within 5 seconds.
 
-Stash uses the query-param approach because it's single-user and self-hosted —
-the risk is negligible.
+Stash uses the query-param approach because it is self-hosted and the token
+scopes both files and realtime updates to one user — the risk is negligible.
 
 ### Keep messages small
 

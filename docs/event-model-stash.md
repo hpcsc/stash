@@ -10,9 +10,27 @@ Model: `event-model-stash.emod`
 
 | Actor | Type | Description |
 |---|---|---|
-| User | Human | The single owner, capturing from web, Android, or a browser extension |
+| User | Human | Each user owns their own stash, capturing from web, Android, or a browser extension |
 | Google | External system | OpenID Connect identity provider |
 | Target page | External system | The page a captured link points at; source of title/description (fetched, no callback) |
+
+## Stream layout and isolation
+
+Every stream that holds user data is prefixed with the user ID:
+
+| Stream | Shape |
+|---|---|
+| Item | `user/<id>/item-<uuid>` |
+| Tag | `user/<id>/tag-<uuid>` |
+| Trash | `user/<id>/trash` |
+| Account | `identity-<subject>` (unchanged) |
+
+The user lives in the stream ID, not in any event payload, so the event payloads and the
+`events` table are untouched. A command handler can only open the stream of the user who
+sent the command; reactions, projections, and the realtime broadcaster read the user back
+from the stream ID with `domain.UserOf`. Tag uniqueness is enforced by a `(user_id, name)`
+index, so two users can each have a tag with the same name, and the duplicate-capture
+warning compares a user's capture only with their own earlier captures.
 
 ## Business Processes
 

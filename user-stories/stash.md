@@ -100,16 +100,16 @@ without running a server at home.
 who signs in cannot see, change, or delete it.
 
 **Acceptance Criteria:**
-- [ ] Signing in with a second Google account shows a separate, empty stash.
-- [ ] My Inbox, Library, Trash, search results, and tag list show only my own data.
-- [ ] Opening, keeping, dropping, restoring, or deleting someone else's item fails as if it
+- [x] Signing in with a second Google account shows a separate, empty stash.
+- [x] My Inbox, Library, Trash, search results, and tag list show only my own data.
+- [x] Opening, keeping, dropping, restoring, or deleting someone else's item fails as if it
   did not exist.
-- [ ] Downloading someone else's file fails, even with its full URL.
-- [ ] Two users can each have a tag with the same name, and renaming mine never touches
+- [x] Downloading someone else's file fails, even with its full URL.
+- [x] Two users can each have a tag with the same name, and renaming mine never touches
   theirs.
-- [ ] The duplicate warning compares my captures only with my own earlier captures.
-- [ ] Realtime updates reach only the user whose item changed.
-- [ ] The stored history attributes each change to the user who made it, without changing the
+- [x] The duplicate warning compares my captures only with my own earlier captures.
+- [x] Realtime updates reach only the user whose item changed.
+- [x] The stored history attributes each change to the user who made it, without changing the
   event payloads.
 
 **Depends on:** US-003, US-004, US-005, US-006, US-007, US-008, US-009
