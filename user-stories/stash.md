@@ -119,12 +119,12 @@ who signs in cannot see, change, or delete it.
 emphasis, lists, and links to what I save.
 
 **Acceptance Criteria:**
-- [ ] Typing markdown such as `## heading`, `**bold**`, `*italic*`, `` `code` ``, `- item`,
+- [x] Typing markdown such as `## heading`, `**bold**`, `*italic*`, `` `code` ``, `- item`,
   `> quote`, and `[label](url)` shows the formatted form the moment the syntax is complete.
-- [ ] A note reopens showing the formatted form, not the raw markdown characters.
-- [ ] Search still finds text inside a formatted note.
-- [ ] Text saved without any markdown looks exactly as I typed it.
-- [ ] Dragging an image into the editor still shows it inline, as it does today.
+- [x] A note reopens showing the formatted form, not the raw markdown characters.
+- [x] Search still finds text inside a formatted note.
+- [x] Text saved without any markdown looks exactly as I typed it.
+- [x] Dragging an image into the editor still shows it inline, as it does today.
 
 **Context:** Text and notes become one kind of item — a note is markdown, and a plain text
 capture is a note with no formatting. Saving selected text from the browser extension produces
@@ -139,8 +139,8 @@ the same kind of item. The duplicate warning for text captures goes away; it sta
 reference a picture without downloading it first.
 
 **Acceptance Criteria:**
-- [ ] Pasting an image URL into the editor shows the image inline.
-- [ ] A note with a remote image reopens with the image still in place.
-- [ ] A remote image that fails to load does not break the rest of the note.
+- [x] Pasting an image URL into the editor shows the image inline.
+- [x] A note with a remote image reopens with the image still in place.
+- [x] A remote image that fails to load does not break the rest of the note.
 
 **Depends on:** US-019
