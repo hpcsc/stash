@@ -86,3 +86,17 @@ variable "r2_bucket_name" {
   type        = string
   default     = "stash"
 }
+
+# --- Cloudflare Tunnel (custom domain) ---
+
+variable "domain" {
+  description = "Root domain (an existing Cloudflare zone) to serve the app from. Empty keeps the ephemeral *.trycloudflare.com quick tunnel."
+  type        = string
+  default     = ""
+}
+
+variable "app_subdomain" {
+  description = "Subdomain label for the app. The public hostname is <app_subdomain>.<domain>."
+  type        = string
+  default     = "stash"
+}

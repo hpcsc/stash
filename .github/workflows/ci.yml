@@ -102,6 +102,8 @@ jobs:
       TF_VAR_neon_api_key: ${{ secrets.NEON_API_KEY }}
       TF_VAR_cloudflare_account_id: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
       TF_VAR_cloudflare_api_token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      TF_VAR_domain: ${{ vars.DOMAIN }}
+      TF_VAR_app_subdomain: ${{ vars.APP_SUBDOMAIN }}
 
     steps:
       - uses: actions/checkout@v4
@@ -130,6 +132,7 @@ jobs:
           db_password=$(terraform output -raw db_password)
           r2_endpoint=$(terraform output -raw r2_endpoint)
           r2_bucket=$(terraform output -raw r2_bucket)
+          app_hostname=$(terraform output -raw app_hostname)
 
           {
             echo "ip=$ip"
@@ -139,11 +142,13 @@ jobs:
             echo "db_password=$db_password"
             echo "r2_endpoint=$r2_endpoint"
             echo "r2_bucket=$r2_bucket"
+            echo "app_hostname=$app_hostname"
           } >> "$GITHUB_OUTPUT"
 
           mkdir -p ~/.ssh && chmod 700 ~/.ssh
           terraform output -raw ssh_private_key > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
+          terraform output -raw tunnel_token > /tmp/tunnel-token
           {
             echo "Host stash-vm"
             echo "  HostName $ip"
@@ -181,7 +186,7 @@ jobs:
             sleep 5
           done
 
-          scp /tmp/env.cloud /tmp/ghcr-token stash-vm:/tmp/
+          scp /tmp/env.cloud /tmp/ghcr-token /tmp/tunnel-token stash-vm:/tmp/
           ssh stash-vm 'bash -s' <<'SCRIPT'
             set -euo pipefail
 
@@ -211,22 +216,33 @@ jobs:
 
             sudo docker compose --env-file server/.env.cloud -f server/docker-compose.cloud.yml up -d --pull always
 
-            # Start cloudflared if it is not already running.
-            if ! systemctl is-active --quiet cloudflared-stash 2>/dev/null; then
+            # cloudflared: use the named tunnel when a token is present, else the quick tunnel.
+            if [ -s /tmp/tunnel-token ]; then
+              sudo bash -c 'umask 077; printf "TUNNEL_TOKEN=%s\n" "$(cat /tmp/tunnel-token)" > /etc/cloudflared/tunnel.env'
+              sudo sh -c 'printf "%s" "W1VuaXRdCkRlc2NyaXB0aW9uPUNsb3VkZmxhcmUgVHVubmVsIGZvciBTdGFzaApBZnRlcj1uZXR3b3JrLW9ubGluZS50YXJnZXQKV2FudHM9bmV0d29yay1vbmxpbmUudGFyZ2V0CgpbU2VydmljZV0KVHlwZT1ub3RpZnkKRW52aXJvbm1lbnRGaWxlPS9ldGMvY2xvdWRmbGFyZWQvdHVubmVsLmVudgpFeGVjU3RhcnQ9L3Vzci9sb2NhbC9iaW4vY2xvdWRmbGFyZWQgdHVubmVsIHJ1biAtLXRva2VuICR7VFVOTkVMX1RPS0VOfSAtLW5vLWF1dG91cGRhdGUKUmVzdGFydD1vbi1mYWlsdXJlClJlc3RhcnRTZWM9NQoKW0luc3RhbGxdCldhbnRlZEJ5PW11bHRpLXVzZXIudGFyZ2V0Cg==" | base64 -d > /etc/systemd/system/cloudflared-stash.service'
+            else
               sudo sh -c 'printf "%s" "W1VuaXRdCkRlc2NyaXB0aW9uPUNsb3VkZmxhcmUgVHVubmVsIGZvciBTdGFzaApBZnRlcj1uZXR3b3JrLW9ubGluZS50YXJnZXQKV2FudHM9bmV0d29yay1vbmxpbmUudGFyZ2V0CgpbU2VydmljZV0KVHlwZT1ub3RpZnkKRXhlY1N0YXJ0PS91c3IvbG9jYWwvYmluL2Nsb3VkZmxhcmVkIHR1bm5lbCAtLXVybCBodHRwOi8vbG9jYWxob3N0OjMzMzMgLS1uby1hdXRvdXBkYXRlClJlc3RhcnQ9b24tZmFpbHVyZQpSZXN0YXJ0U2VjPTUKCltJbnN0YWxsXQpXYW50ZWRCeT1tdWx0aS11c2VyLnRhcmdldAo=" | base64 -d > /etc/systemd/system/cloudflared-stash.service'
-              sudo systemctl daemon-reload
-              sudo systemctl enable --now cloudflared-stash
             fi
+            sudo rm -f /tmp/tunnel-token
+            sudo systemctl daemon-reload
+            sudo systemctl enable cloudflared-stash
+            sudo systemctl restart cloudflared-stash
 
-            # Print the tunnel URL so the deploy log shows it.
-            echo "Tunnel URL (waiting up to 15s)..."
-            for _ in $(seq 1 15); do
-              url="$(journalctl -u cloudflared-stash --no-pager -o cat -n 50 2>/dev/null \
-                | grep -oE 'https://[a-z0-9-]+\.trycloudflare\.com' | tail -1 || true)"
-              if [ -n "$url" ]; then
-                echo "  ▶ $url"
-                break
-              fi
-              sleep 1
-            done
+            # Quick tunnel only: print the ephemeral URL from the journal.
+            if [ ! -s /etc/cloudflared/tunnel.env ]; then
+              echo "Tunnel URL (waiting up to 15s)..."
+              for _ in $(seq 1 15); do
+                url="$(journalctl -u cloudflared-stash --no-pager -o cat -n 50 2>/dev/null \
+                  | grep -oE 'https://[a-z0-9-]+\.trycloudflare\.com' | tail -1 || true)"
+                if [ -n "$url" ]; then
+                  echo "  ▶ $url"
+                  break
+                fi
+                sleep 1
+              done
+            fi
           SCRIPT
+
+          if [ -n "${{ steps.tf.outputs.app_hostname }}" ]; then
+            echo "App: https://${{ steps.tf.outputs.app_hostname }}"
+          fi

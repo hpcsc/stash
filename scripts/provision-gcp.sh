@@ -217,12 +217,18 @@ setup_cloudflare() {
   echo "     R2 read/write scope). Copy the token."
   echo "  4. R2 → Manage R2 API Tokens → Create API Token (the S3-compatible"
   echo "     credentials). Copy the Access Key ID and Secret Access Key."
+  echo "  5. Optionally, a custom domain (an existing Cloudflare zone) to serve the"
+  echo "     app at — e.g. example.com. Leave blank to keep the free"
+  echo "     *.trycloudflare.com quick tunnel."
   echo
 
   ask "    Cloudflare account ID" CLOUDFLARE_ACCOUNT_ID
   ask_secret "    R2 API token" CLOUDFLARE_API_TOKEN
   ask_secret "    R2 S3 access key ID" R2_ACCESS_KEY_ID
   ask_secret "    R2 S3 secret access key" R2_SECRET_ACCESS_KEY
+  ask "    Domain (blank for quick tunnel)" DOMAIN
+  ask "    Subdomain [stash]" APP_SUBDOMAIN
+  APP_SUBDOMAIN="${APP_SUBDOMAIN:-stash}"
 }
 
 # ---- HCP Terraform ----
@@ -296,7 +302,12 @@ setup_oauth() {
   echo "    http://localhost:8080"
   echo "    http://127.0.0.1:8080"
   echo
-  echo "  (After the first deploy you'll also add https://<your-vm-ip>.)"
+  if [[ -n "${DOMAIN:-}" ]]; then
+    echo "  And your custom domain:"
+    echo "    https://$APP_SUBDOMAIN.$DOMAIN"
+  else
+    echo "  (After the first deploy, add the *.trycloudflare.com URL printed in the log.)"
+  fi
   echo "  If you don't have a client yet, see scripts/google-auth-setup.sh."
   echo
 
@@ -323,6 +334,12 @@ push_to_github() {
   set_gh_var   CLOUDFLARE_ACCOUNT_ID "$CLOUDFLARE_ACCOUNT_ID"
   set_gh_secret R2_ACCESS_KEY_ID "$R2_ACCESS_KEY_ID"
   set_gh_secret R2_SECRET_ACCESS_KEY "$R2_SECRET_ACCESS_KEY"
+
+  # Custom domain is optional; leave DOMAIN unset to keep the quick tunnel.
+  if [[ -n "$DOMAIN" ]]; then
+    set_gh_var DOMAIN "$DOMAIN"
+  fi
+  set_gh_var APP_SUBDOMAIN "$APP_SUBDOMAIN"
 
   set_gh_secret TF_TOKEN_APP_TERRAFORM_IO "$TF_TOKEN_APP_TERRAFORM_IO"
 
@@ -358,7 +375,12 @@ print_summary() {
   echo
   echo "Manual steps still needed:"
   echo "  • Review terraform/backend.tf — confirm the organisation name is correct."
-  echo "  • After the first deploy: add the VM IP to the OAuth client's origins."
+  if [[ -n "${DOMAIN:-}" ]]; then
+    echo "  • Add https://$APP_SUBDOMAIN.$DOMAIN to the OAuth client's origins."
+  else
+    echo "  • After the first deploy: add the *.trycloudflare.com URL to the OAuth"
+    echo "    client's origins."
+  fi
   echo "  • The first terraform apply (in CI or locally) provisions the real resources."
   echo "    Run it locally first: cd terraform && terraform init && terraform plan"
   echo

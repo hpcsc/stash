@@ -39,3 +39,14 @@ output "r2_bucket" {
   description = "R2 bucket name."
   value       = cloudflare_r2_bucket.files.name
 }
+
+output "app_hostname" {
+  description = "Public hostname the app is served from. Empty when using the ephemeral quick tunnel."
+  value       = local.app_hostname
+}
+
+output "tunnel_token" {
+  description = "Token for cloudflared to run the named tunnel. Empty when using the ephemeral quick tunnel."
+  value       = local.use_named_tunnel ? data.cloudflare_zero_trust_tunnel_cloudflared_token.app[0].token : ""
+  sensitive   = true
+}
