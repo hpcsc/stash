@@ -18,18 +18,20 @@ paths, roughly in order:
 | Need | Cheapest option | Cost |
 | --- | --- | --- |
 | Run everything at home | Your own machine + Tailscale | $0 |
-| Run everything in the cloud | One free/cheap VM (Oracle Always Free, Hetzner) | $0–4/mo |
+| Run everything in the cloud | One free/cheap VM (Google Cloud Always Free `e2-micro`, Hetzner) | $0–4/mo |
 | Managed Postgres | Neon or Supabase free tier | $0 |
 | S3-compatible files | Cloudflare R2 free tier (no egress fees), Backblaze B2 | $0 |
 
 ### Option A — one free VM, everything on it
 
 The **self-hosted** compose (`server/docker-compose.production.yml`) runs Postgres and stores
-files on the VM's own disk, so there are no per-service bills. On Oracle Cloud's Always Free
-tier this costs nothing (a card is required at signup). Any cheap VPS works the same way.
+files on the VM's own disk, so there are no per-service bills. On Google Cloud's Always Free
+tier the VM itself costs nothing — the external IPv4 address is billed at about $3.65/month.
+Any cheap VPS works the same way.
 
-1. Launch an **Always Free** VM (an ARM Ampere or AMD Micro shape) with Ubuntu, and open ports
-   8080 and 3333.
+1. Launch an **Always Free** `e2-micro` VM (in `us-west1`, `us-central1`, or `us-east1`) with
+   Ubuntu, and open ports 8080 and 3333. It has 1 GB of RAM, so add a swap file if you build
+   anything on it.
 2. Install Docker and the Compose plugin:
    ```sh
    curl -fsSL https://get.docker.com | sh

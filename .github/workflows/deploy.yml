@@ -1,7 +1,7 @@
 # Builds the backend images, pushes them to GHCR, then provisions the cloud stack
-# with Terraform and deploys to the VM over SSH. The backend images are fully
-# env-configured; the web image is built on the VM because it bakes the Google
-# client ID in as a build arg.
+# (a free-tier GCP VM, Neon Postgres, R2 bucket) with Terraform and deploys to the
+# VM over SSH. The backend images are fully env-configured; the web image is built
+# on the VM because it bakes the Google client ID in as a build arg.
 name: Deploy
 
 on:
@@ -72,11 +72,8 @@ jobs:
       cancel-in-progress: false
     env:
       TF_TOKEN_app_terraform_io: ${{ secrets.TF_TOKEN_APP_TERRAFORM_IO }}
-      TF_VAR_oci_tenancy_ocid: ${{ secrets.OCI_TENANCY_OCID }}
-      TF_VAR_oci_user_ocid: ${{ secrets.OCI_USER_OCID }}
-      TF_VAR_oci_fingerprint: ${{ secrets.OCI_FINGERPRINT }}
-      TF_VAR_oci_private_key: ${{ secrets.OCI_PRIVATE_KEY }}
-      TF_VAR_oci_compartment_ocid: ${{ secrets.OCI_COMPARTMENT_OCID }}
+      TF_VAR_gcp_project_id: ${{ vars.GCP_PROJECT_ID }}
+      GOOGLE_CREDENTIALS: ${{ secrets.GCP_SA_KEY }}
       TF_VAR_neon_org_id: ${{ vars.NEON_ORG_ID }}
       TF_VAR_cloudflare_account_id: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
       NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
@@ -92,24 +89,26 @@ jobs:
 
       - name: Terraform init
         working-directory: terraform
-        run: terraform init
+        run: terraform init -input=false
 
       - name: Terraform apply
         working-directory: terraform
-        run: terraform apply -auto-approve
+        run: terraform apply -auto-approve -input=false
 
       - name: Read outputs
         id: tf
         working-directory: terraform
         run: |
-          echo "ip=$(terraform output -raw instance_public_ip)" >> "$GITHUB_OUTPUT"
-          echo "db_host=$(terraform output -raw db_host)" >> "$GITHUB_OUTPUT"
-          echo "db_name=$(terraform output -raw db_name)" >> "$GITHUB_OUTPUT"
-          echo "db_user=$(terraform output -raw db_user)" >> "$GITHUB_OUTPUT"
-          echo "db_password=$(terraform output -raw db_password)" >> "$GITHUB_OUTPUT"
-          echo "r2_endpoint=$(terraform output -raw r2_endpoint)" >> "$GITHUB_OUTPUT"
-          echo "r2_bucket=$(terraform output -raw r2_bucket)" >> "$GITHUB_OUTPUT"
-          echo "ssh_key=$(terraform output -raw ssh_private_key)" >> "$GITHUB_OUTPUT"
+          {
+            echo "ip=$(terraform output -raw instance_public_ip)"
+            echo "db_host=$(terraform output -raw db_host)"
+            echo "db_name=$(terraform output -raw db_name)"
+            echo "db_user=$(terraform output -raw db_user)"
+            echo "db_password=$(terraform output -raw db_password)"
+            echo "r2_endpoint=$(terraform output -raw r2_endpoint)"
+            echo "r2_bucket=$(terraform output -raw r2_bucket)"
+            echo "ssh_key=$(terraform output -raw ssh_private_key)"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Prepare SSH and env
         run: |
@@ -148,6 +147,18 @@ jobs:
           scp /tmp/env.cloud /tmp/ghcr-token stash-vm:/tmp/
           ssh stash-vm 'bash -s' <<'SCRIPT'
             set -euo pipefail
+
+            # The startup script installs Docker on first boot. Wait for its marker
+            # so the first deploy does not race the install.
+            for _ in $(seq 1 120); do
+              if [ -f /var/lib/stash-vm-ready ]; then break; fi
+              sleep 5
+            done
+            if [ ! -f /var/lib/stash-vm-ready ]; then
+              echo "VM bootstrap did not finish; check the serial console or /var/log/syslog" >&2
+              exit 1
+            fi
+
             if [ ! -d "$HOME/stash" ]; then
               git clone https://github.com/${{ github.repository }}.git "$HOME/stash"
             fi

@@ -4,56 +4,40 @@ variable "project_name" {
   default     = "stash"
 }
 
-# --- Oracle Cloud Infrastructure ---
+# --- Google Cloud ---
 
-variable "oci_tenancy_ocid" {
-  description = "OCI tenancy OCID."
+variable "gcp_project_id" {
+  description = "Google Cloud project ID."
   type        = string
 }
 
-variable "oci_user_ocid" {
-  description = "OCI user OCID."
+variable "gcp_region" {
+  description = "Region for the VM and its network. The Always Free e2-micro is only free in us-west1, us-central1, and us-east1."
   type        = string
+  default     = "us-central1"
+
+  validation {
+    condition     = contains(["us-west1", "us-central1", "us-east1"], var.gcp_region)
+    error_message = "The Always Free e2-micro is only free in us-west1, us-central1, and us-east1."
+  }
 }
 
-variable "oci_fingerprint" {
-  description = "Fingerprint of the OCI API key."
+variable "gcp_zone" {
+  description = "Zone for the VM, in the region above."
   type        = string
+  default     = "us-central1-a"
 }
 
-variable "oci_private_key" {
-  description = "PEM content of the OCI API private key."
+variable "instance_type" {
+  description = "Machine type. e2-micro is the Always Free one."
   type        = string
-  sensitive   = true
+  default     = "e2-micro"
 }
 
-variable "oci_region" {
-  description = "OCI region (e.g. ap-sydney-1, us-ashburn-1)."
-  type        = string
-  default     = "ap-sydney-1"
-}
-
-variable "oci_compartment_ocid" {
-  description = "OCI compartment to provision into (the root compartment OCID works)."
-  type        = string
-}
-
-variable "instance_shape" {
-  description = "OCI shape. Always Free: VM.Standard.E2.1.Micro (AMD) or VM.Standard.A1.Flex (ARM)."
-  type        = string
-  default     = "VM.Standard.E2.1.Micro"
-}
-
-variable "instance_ocpus" {
-  description = "OCPUs for a flex shape."
+variable "boot_disk_size_gb" {
+  description = "Boot disk size in GB. The free tier covers 30 GB of standard persistent disk."
   type        = number
-  default     = 1
-}
-
-variable "instance_memory_in_gbs" {
-  description = "Memory (GB) for a flex shape. A1.Flex minimum is 6."
-  type        = number
-  default     = 6
+  default     = 30
 }
 
 # --- Neon ---

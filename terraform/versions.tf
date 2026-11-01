@@ -2,9 +2,9 @@ terraform {
   required_version = ">= 1.14"
 
   required_providers {
-    oci = {
-      source  = "oracle/oci"
-      version = "~> 6.0"
+    google = {
+      source  = "hashicorp/google"
+      version = "~> 8.0"
     }
     neon = {
       source  = "kislerdm/neon"

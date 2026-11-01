@@ -1,6 +1,6 @@
 output "instance_public_ip" {
   description = "Public IP of the VM that runs the containers."
-  value       = oci_core_instance.vm.public_ip
+  value       = google_compute_address.vm.address
 }
 
 output "ssh_private_key" {

@@ -1,9 +1,8 @@
-provider "oci" {
-  tenancy_ocid = var.oci_tenancy_ocid
-  user_ocid    = var.oci_user_ocid
-  fingerprint  = var.oci_fingerprint
-  private_key  = var.oci_private_key
-  region       = var.oci_region
+provider "google" {
+  # Reads GOOGLE_CREDENTIALS (service account key JSON) from the environment.
+  project = var.gcp_project_id
+  region  = var.gcp_region
+  zone    = var.gcp_zone
 }
 
 provider "neon" {
