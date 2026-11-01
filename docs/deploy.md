@@ -118,6 +118,10 @@ tunnel, set the `DOMAIN` repository variable to an existing Cloudflare zone (and
 and the DNS `CNAME` record, and the deploy writes the tunnel token to the VM. The app becomes
 `https://stash.<domain>`.
 
+Leave `APP_SUBDOMAIN` empty to use the apex domain itself (`https://<domain>`). Cloudflare
+flattens the apex `CNAME` (it is a proxied record), so a root domain works the same as a
+subdomain — just don't have other records already living at the apex.
+
 The domain must already be a zone in Cloudflare with its nameservers pointed at Cloudflare —
 that registrar-level step cannot be scripted. Leave `DOMAIN` unset to keep the quick tunnel.
 

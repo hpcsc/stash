@@ -17,6 +17,7 @@ r2_bucket_name         = "stash"
 
 # Custom domain (optional). Set `domain` to an existing Cloudflare zone to serve
 # the app at <app_subdomain>.<domain> through a named tunnel instead of the
-# ephemeral *.trycloudflare.com quick tunnel.
+# ephemeral *.trycloudflare.com quick tunnel. Leave `app_subdomain` empty to use
+# the apex domain itself (e.g. domain = "stash.link", app_subdomain = "").
 domain         = "example.com"
 app_subdomain  = "stash"

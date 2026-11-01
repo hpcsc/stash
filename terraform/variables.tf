@@ -96,7 +96,7 @@ variable "domain" {
 }
 
 variable "app_subdomain" {
-  description = "Subdomain label for the app. The public hostname is <app_subdomain>.<domain>."
+  description = "Subdomain label for the app. The public hostname is <app_subdomain>.<domain>. Leave empty to use the apex domain itself."
   type        = string
   default     = "stash"
 }

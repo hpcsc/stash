@@ -2,7 +2,7 @@
 # hostname (e.g. stash.example.com) instead of the ephemeral *.trycloudflare.com
 # quick tunnel. Everything is skipped when `domain` is empty.
 locals {
-  app_hostname     = var.domain != "" ? "${var.app_subdomain}.${var.domain}" : ""
+  app_hostname     = var.domain != "" ? (var.app_subdomain != "" ? "${var.app_subdomain}.${var.domain}" : var.domain) : ""
   use_named_tunnel = local.app_hostname != ""
 }
 

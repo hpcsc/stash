@@ -227,7 +227,7 @@ setup_cloudflare() {
   ask_secret "    R2 S3 access key ID" R2_ACCESS_KEY_ID
   ask_secret "    R2 S3 secret access key" R2_SECRET_ACCESS_KEY
   ask "    Domain (blank for quick tunnel)" DOMAIN
-  ask "    Subdomain [stash]" APP_SUBDOMAIN
+  ask "    Subdomain (blank = use apex) [stash]" APP_SUBDOMAIN
   APP_SUBDOMAIN="${APP_SUBDOMAIN:-stash}"
 }
 
