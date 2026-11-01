@@ -14,9 +14,9 @@ push to main
               └─► SSH to the VM → docker compose up  (pulls api/catchup, builds web)
 ```
 
-The VM is an `e2-micro` in `us-central1`, which the Google Cloud free tier covers: the machine,
-a 30 GB standard disk, and 1 GB of egress per month. The **external IPv4 address is not part
-of the free tier** — it costs about $3.65/month.
+The VM is an `e2-micro` in `us-central1`, which the Google Cloud free tier covers: the machine
+and a 30 GB standard disk. A Cloudflare Tunnel provides TLS and avoids a static external IP
+charge; the VM gets a free ephemeral IP for outbound traffic.
 
 ## One-time setup
 
@@ -98,9 +98,11 @@ curl -X POST \
 
 ### 5. Google OAuth
 
-Add the VM's public origin to the web OAuth client's **authorised JavaScript origins**
-(`https://<vm-ip-or-domain>`). You'll know the IP after the first deploy; `terraform output
-instance_public_ip` prints it.
+Add the Cloudflare Tunnel origin to the web OAuth client's **authorised JavaScript origins**.
+The tunnel URL appears in the deploy log (e.g. `https://stash-xxx.trycloudflare.com`).
+If you switch to a custom domain later, add that origin too.
+
+The script prompts for the OAuth client ID itself.
 
 ### 6. GitHub secrets and variables
 
@@ -141,7 +143,12 @@ Push to `main`, or run the workflow manually from the Actions tab. The `CI` work
 A `v*` tag pushes images but skips the deploy. The first deploy waits for the VM's first-boot
 script to install Docker and add a swap file.
 
-Reach the app at `http://<vm-ip>:8080`.
+Reach the app at the tunnel URL printed in the deploy log (a `*.trycloudflare.com` hostname).
+Add that origin to your Google OAuth client's authorised JavaScript origins before signing in.
+
+The tunnel is a free Cloudflare Tunnel running as a systemd service on the VM. It forwards
+port 8080 to the Cloudflare edge with automatic TLS, so the app has HTTPS with no certificate
+setup and no static external IP.
 
 ## Caveats
 
@@ -154,12 +161,12 @@ Reach the app at `http://<vm-ip>:8080`.
   web image on it is slow (minutes, not seconds). Terraform adds a 2 GB swap file so the build
   is not killed. If that is too slow, publish the web image to GHCR as well and have the cloud
   compose pull it.
-- **The external IP is billed.** The address is static so it survives restarts and keeps the
-  OAuth origin valid; at $0.005/hour it is about $3.65/month. Going IPv6-only or reaching the
-  VM through a Cloudflare Tunnel would remove the charge.
+- **The external IP is free.** The VM gets an ephemeral IP for outbound traffic (the tunnel
+  needs it to connect to Cloudflare). Terraform no longer provisions a static IP.
 - **State lives in HCP Terraform.** If you'd rather not use it, remove `terraform/backend.tf`
   and store the state elsewhere (e.g. a GCS bucket), otherwise deploys are not idempotent.
 - **The repo is cloned publicly on the VM.** If the repository is private, the clone step
   needs a deploy key instead.
-- **No TLS on the VM.** The compose file serves plain HTTP on `:8080`; put a TLS terminator in
-  front of it before pointing Google sign-in at it.
+- **TLS is provided by Cloudflare Tunnel.** The compose file serves plain HTTP on `:8080`;
+  `cloudflared` adds TLS between the browser and the Cloudflare edge. No certificate
+  management needed.

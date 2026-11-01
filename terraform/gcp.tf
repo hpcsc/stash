@@ -23,24 +23,6 @@ resource "google_compute_firewall" "ssh" {
   target_tags   = ["${var.project_name}-vm"]
 }
 
-resource "google_compute_firewall" "app" {
-  name    = "${var.project_name}-app"
-  network = google_compute_network.vpc.id
-
-  allow {
-    protocol = "tcp"
-    ports    = ["8080", "3333"]
-  }
-
-  source_ranges = ["0.0.0.0/0"]
-  target_tags   = ["${var.project_name}-vm"]
-}
-
-resource "google_compute_address" "vm" {
-  name   = "${var.project_name}-ip"
-  region = var.gcp_region
-}
-
 data "google_compute_image" "ubuntu" {
   family  = "ubuntu-2204-lts"
   project = "ubuntu-os-cloud"
@@ -52,10 +34,6 @@ resource "tls_private_key" "ssh" {
 }
 
 locals {
-  # The free-tier VM has 1 GB of RAM and a quarter of a core. Adding swap is what
-  # lets the deploy build the web image on it instead of being OOM-killed. The
-  # marker file at the end tells the deploy when the VM is ready, so it does not
-  # race the first-boot install.
   startup_script = <<-EOT
     #!/bin/bash
     set -euo pipefail
@@ -77,6 +55,11 @@ locals {
 
     if id ubuntu >/dev/null 2>&1; then
       usermod -aG docker ubuntu
+    fi
+
+    if ! command -v cloudflared >/dev/null 2>&1; then
+      curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o /usr/local/bin/cloudflared
+      chmod +x /usr/local/bin/cloudflared
     fi
 
     touch /var/lib/stash-vm-ready
@@ -101,9 +84,7 @@ resource "google_compute_instance" "vm" {
     network    = google_compute_network.vpc.id
     subnetwork = google_compute_subnetwork.subnet.id
 
-    access_config {
-      nat_ip = google_compute_address.vm.address
-    }
+    access_config {}
   }
 
   metadata = {

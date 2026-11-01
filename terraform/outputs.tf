@@ -1,6 +1,6 @@
 output "instance_public_ip" {
-  description = "Public IP of the VM that runs the containers."
-  value       = google_compute_address.vm.address
+  description = "Ephemeral public IP of the VM (for SSH only; the app is served through Cloudflare Tunnel)."
+  value       = google_compute_instance.vm.network_interface[0].access_config[0].nat_ip
 }
 
 output "ssh_private_key" {

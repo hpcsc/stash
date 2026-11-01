@@ -173,6 +173,14 @@ jobs:
 
       - name: Deploy to VM
         run: |
+          # Wait for SSH to be ready — the VM sometimes isn't reachable immediately.
+          for _ in $(seq 1 12); do
+            if ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null stash-vm echo ok 2>/dev/null; then
+              break
+            fi
+            sleep 5
+          done
+
           scp /tmp/env.cloud /tmp/ghcr-token stash-vm:/tmp/
           ssh stash-vm 'bash -s' <<'SCRIPT'
             set -euo pipefail
@@ -192,11 +200,33 @@ jobs:
               git clone https://github.com/${{ github.repository }}.git "$HOME/stash"
             fi
             cd "$HOME/stash"
-            git pull --ff-only
+            # The VM has no local work to keep; reset to the remote so a rewritten
+            # (rebased/amended) history does not block the deploy.
+            git fetch origin
+            git reset --hard origin/main
             cp /tmp/env.cloud server/.env.cloud
 
-            docker login ghcr.io -u "${{ github.actor }}" --password-stdin < /tmp/ghcr-token
+            sudo docker login ghcr.io -u "${{ github.actor }}" --password-stdin < /tmp/ghcr-token
             rm -f /tmp/ghcr-token /tmp/env.cloud
 
-            docker compose --env-file server/.env.cloud -f server/docker-compose.cloud.yml up -d --build --pull always
+            sudo docker compose --env-file server/.env.cloud -f server/docker-compose.cloud.yml up -d --build --pull always
+
+            # Start cloudflared if it is not already running.
+            if ! systemctl is-active --quiet cloudflared-stash 2>/dev/null; then
+              sudo sh -c 'printf "%s" "W1VuaXRdCkRlc2NyaXB0aW9uPUNsb3VkZmxhcmUgVHVubmVsIGZvciBTdGFzaApBZnRlcj1uZXR3b3JrLW9ubGluZS50YXJnZXQKV2FudHM9bmV0d29yay1vbmxpbmUudGFyZ2V0CgpbU2VydmljZV0KVHlwZT1ub3RpZnkKRXhlY1N0YXJ0PS91c3IvbG9jYWwvYmluL2Nsb3VkZmxhcmVkIHR1bm5lbCAtLXVybCBodHRwOi8vbG9jYWxob3N0OjgwODAgLS1uby1hdXRvdXBkYXRlClJlc3RhcnQ9b24tZmFpbHVyZQpSZXN0YXJ0U2VjPTUKCltJbnN0YWxsXQpXYW50ZWRCeT1tdWx0aS11c2VyLnRhcmdldAo=" | base64 -d > /etc/systemd/system/cloudflared-stash.service'
+              sudo systemctl daemon-reload
+              sudo systemctl enable --now cloudflared-stash
+            fi
+
+            # Print the tunnel URL so the deploy log shows it.
+            echo "Tunnel URL (waiting up to 15s)..."
+            for _ in $(seq 1 15); do
+              url="$(journalctl -u cloudflared-stash --no-pager -o cat -n 50 2>/dev/null \
+                | grep -oE 'https://[a-z0-9-]+\.trycloudflare\.com' | tail -1 || true)"
+              if [ -n "$url" ]; then
+                echo "  ▶ $url"
+                break
+              fi
+              sleep 1
+            done
           SCRIPT
