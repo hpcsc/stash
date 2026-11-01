@@ -11,16 +11,15 @@ it later.
 
 **Depends on:** US-002
 
-### US-009: Warn on duplicate captures
+### US-009: Warn on duplicate links
 
-**Description:** As a user, I want to be warned when I capture text or a link I've already
+**Description:** As a user, I want to be warned when I capture a link I've already
 saved so that I don't unknowingly keep copies.
 
 **Acceptance Criteria:**
-- [x] Capturing text I've already saved still creates the item but shows a notice that it
+- [x] Capturing a link I've already saved still creates the item but shows a notice that it
   looks like a duplicate.
-- [x] Capturing a link I've already saved still creates the item but shows the same notice.
-- [x] Capturing something new shows no such notice.
+- [x] Capturing a link I haven't saved shows no such notice.
 
 **Depends on:** US-003
 
@@ -113,3 +112,35 @@ who signs in cannot see, change, or delete it.
   event payloads.
 
 **Depends on:** US-003, US-004, US-005, US-006, US-007, US-008, US-009
+
+### US-019: Write notes in markdown
+
+**Description:** As a user, I want to write my notes in markdown so that I can add headings,
+emphasis, lists, and links to what I save.
+
+**Acceptance Criteria:**
+- [ ] Typing markdown such as `## heading`, `**bold**`, `*italic*`, `` `code` ``, `- item`,
+  `> quote`, and `[label](url)` shows the formatted form the moment the syntax is complete.
+- [ ] A note reopens showing the formatted form, not the raw markdown characters.
+- [ ] Search still finds text inside a formatted note.
+- [ ] Text saved without any markdown looks exactly as I typed it.
+- [ ] Dragging an image into the editor still shows it inline, as it does today.
+
+**Context:** Text and notes become one kind of item — a note is markdown, and a plain text
+capture is a note with no formatting. Saving selected text from the browser extension produces
+the same kind of item. The duplicate warning for text captures goes away; it stays for links
+(US-009). Images I add from my computer remain private to me.
+
+**Depends on:** US-002
+
+### US-020: Add an image to a note from its URL
+
+**Description:** As a user, I want to put an image into a note from its URL so that I can
+reference a picture without downloading it first.
+
+**Acceptance Criteria:**
+- [ ] Pasting an image URL into the editor shows the image inline.
+- [ ] A note with a remote image reopens with the image still in place.
+- [ ] A remote image that fails to load does not break the rest of the note.
+
+**Depends on:** US-019

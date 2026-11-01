@@ -365,7 +365,7 @@
     <text x="135" y="294" text-anchor="middle" class="sub">captures while offline</text>
   </g>
 
-  <g class="sm-part" data-name="ItemCaptured" data-stories="US-002 US-003 US-004" data-chips="US-002" data-chip-pos="tr">
+  <g class="sm-part" data-name="ItemCaptured" data-stories="US-002 US-003 US-004 US-019" data-chips="US-002 US-019" data-chip-pos="tr">
     <rect x="380" y="176" width="200" height="36" rx="18" class="event sm-anchor"/>
     <text x="480" y="198" text-anchor="middle" class="event-t">ItemCaptured</text>
   </g>
@@ -412,7 +412,7 @@
     <text x="1070" y="82" text-anchor="middle" class="name">Files (Disk / S3)</text>
     <text x="1070" y="98" text-anchor="middle" class="sub">image &amp; file bytes · thumbnail</text>
   </g>
-  <g class="sm-part" data-name="items" data-stories="US-002 US-005 US-006 US-008" data-chips="US-008" data-chip-pos="tr">
+  <g class="sm-part" data-name="items" data-stories="US-002 US-005 US-006 US-008 US-019" data-chips="US-008 US-019" data-chip-pos="tr">
     <rect x="960" y="240" width="220" height="50" rx="8" class="store sm-anchor"/>
     <text x="1070" y="262" text-anchor="middle" class="name">items</text>
     <text x="1070" y="278" text-anchor="middle" class="sub">Inbox · Library · Trash · search</text>
@@ -439,6 +439,10 @@
   <g class="sm-part" data-name="Cloud deploy" data-stories="US-017" data-chips="US-017" data-chip-pos="tr">
     <rect x="570" y="764" width="230" height="44" rx="8" class="store sm-anchor"/>
     <text x="685" y="790" text-anchor="middle" class="name">Cloud deploy</text>
+  </g>
+  <g class="sm-part" data-name="Remote image in a note" data-stories="US-020" data-chips="US-020" data-chip-pos="tr">
+    <rect x="840" y="764" width="230" height="44" rx="8" class="store sm-anchor"/>
+    <text x="955" y="790" text-anchor="middle" class="name">Remote image in a note</text>
   </g>
 
   <!-- ===== labels ===== -->
@@ -488,7 +492,7 @@ const STORIES = [
   { id: "APP-004", title: "Drop items and recover from the Trash", value: "I drop items and recover them from the Trash.", deps: ["US-006"] },
   { id: "US-007", title: "Organize with tags", value: "My Library stays findable as it grows.", deps: ["US-005"] },
   { id: "US-008", title: "Search text and links", value: "I find something I kept without browsing.", deps: ["US-003", "US-005"] },
-  { id: "US-009", title: "Warn on duplicate captures", value: "I don't unknowingly keep copies.", deps: ["US-003"] },
+  { id: "US-009", title: "Warn on duplicate links", value: "I don't unknowingly keep a link I already saved.", deps: ["US-003"] },
   { id: "US-010", title: "Capture from the Android share sheet", value: "Any app can send text, links, images, or files to my Inbox.", deps: ["US-003", "US-004"] },
   { id: "US-011", title: "Capture offline and sync later", value: "A dead spot never loses a capture.", deps: ["US-010"] },
   { id: "US-012", title: "Capture from the Chrome extension", value: "I capture text, the page, or an image while browsing.", deps: ["US-003", "US-004"] },
@@ -497,6 +501,8 @@ const STORIES = [
   { id: "US-015", title: "Recover gracefully from failures", value: "I'm never left staring at nothing.", deps: ["US-005", "US-006"] },
   { id: "US-016", title: "Deploy self-hosted with docker compose", value: "I run Stash on my own machine and keep control of my data.", deps: ["US-015"] },
   { id: "US-017", title: "Deploy to a cloud provider", value: "I use Stash without running a server at home.", deps: ["US-016"] },
+  { id: "US-019", title: "Write notes in markdown", value: "I add headings, emphasis, lists, and links to what I save.", deps: ["US-002"] },
+  { id: "US-020", title: "Add an image from its URL", value: "I reference a picture without downloading it first.", deps: ["US-019"] },
 ];
 
 (function () {
