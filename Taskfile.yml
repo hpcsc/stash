@@ -13,6 +13,9 @@ includes:
   catchup:
     taskfile: server/Taskfile.catchup.yml
     dir: server
+  event-browser:
+    taskfile: server/Taskfile.event-browser.yml
+    dir: server
   web:
     taskfile: web/Taskfile.yml
     dir: web

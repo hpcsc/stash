@@ -1,0 +1,29 @@
+version: '3'
+
+tasks:
+  build:
+    desc: build the event browser CLI and embed the UI
+    cmds:
+      - task: assets
+      - mkdir -p ./bin
+      - go build -o ./bin/eventbrowser ./cmd/event_browser
+
+  assets:
+    desc: copy the built event browser UI into the embed directory
+    deps: [':web:event-browser:build']
+    cmds:
+      - rm -rf internal/event_browser/assets/*
+      - cp -R ../web/dist-event-browser/. internal/event_browser/assets/
+      - touch internal/event_browser/assets/.gitkeep
+
+  run:
+    desc: run the event browser against the local API
+    dotenv: [.env.local]
+    cmds:
+      - task: build
+      - ./bin/eventbrowser --url {{default "http://127.0.0.1:3333" .STASH_EVENT_BROWSER_URL}} --token "$DEBUG_EVENTS_TOKEN" {{.CLI_ARGS}}
+
+  test:
+    desc: test the event browser CLI
+    cmds:
+      - go test -tags=unit ./internal/event_browser/

@@ -1,3 +1,8 @@
 .env.local
 .env.production
 .env.cloud
+bin
+
+# the event browser build copies the UI here before it embeds it
+internal/event_browser/assets/*
+!internal/event_browser/assets/.gitkeep
