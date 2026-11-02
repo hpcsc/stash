@@ -213,6 +213,7 @@ jobs:
 
             # cloudflared: use the named tunnel when a token is present, else the quick tunnel.
             if [ -s /tmp/tunnel-token ]; then
+              sudo install -d -m 0755 /etc/cloudflared
               sudo bash -c 'umask 077; printf "TUNNEL_TOKEN=%s\n" "$(cat /tmp/tunnel-token)" > /etc/cloudflared/tunnel.env'
               sudo sh -c 'printf "%s" "W1VuaXRdCkRlc2NyaXB0aW9uPUNsb3VkZmxhcmUgVHVubmVsIGZvciBTdGFzaApBZnRlcj1uZXR3b3JrLW9ubGluZS50YXJnZXQKV2FudHM9bmV0d29yay1vbmxpbmUudGFyZ2V0CgpbU2VydmljZV0KVHlwZT1ub3RpZnkKRW52aXJvbm1lbnRGaWxlPS9ldGMvY2xvdWRmbGFyZWQvdHVubmVsLmVudgpFeGVjU3RhcnQ9L3Vzci9sb2NhbC9iaW4vY2xvdWRmbGFyZWQgdHVubmVsIHJ1biAtLXRva2VuICR7VFVOTkVMX1RPS0VOfSAtLW5vLWF1dG91cGRhdGUKUmVzdGFydD1vbi1mYWlsdXJlClJlc3RhcnRTZWM9NQoKW0luc3RhbGxdCldhbnRlZEJ5PW11bHRpLXVzZXIudGFyZ2V0Cg==" | base64 -d > /etc/systemd/system/cloudflared-stash.service'
             else
