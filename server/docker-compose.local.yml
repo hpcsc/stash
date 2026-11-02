@@ -23,6 +23,7 @@ services:
       <<: *x-db-config
       SESSION_SECRET: ${SESSION_SECRET}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      DEBUG_EVENTS_TOKEN: ${DEBUG_EVENTS_TOKEN}
 
   catchup:
     depends_on:

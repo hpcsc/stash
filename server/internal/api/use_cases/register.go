@@ -13,6 +13,7 @@ import (
 	"github.com/hpcsc/stash/internal/api/middleware"
 	"github.com/hpcsc/stash/internal/api/route"
 	"github.com/hpcsc/stash/internal/api/session"
+	apiEvents "github.com/hpcsc/stash/internal/api/use_cases/events"
 	apiIdentity "github.com/hpcsc/stash/internal/api/use_cases/identity"
 	apiItem "github.com/hpcsc/stash/internal/api/use_cases/item"
 	"github.com/hpcsc/stash/internal/api/use_cases/root"
@@ -37,6 +38,9 @@ func Register(router chi.Router, cfg *api.Config, pool *pgxpool.Pool, logger *sl
 	}
 	if cfg.GoogleClientID == "" {
 		return nil, errors.New("GOOGLE_CLIENT_ID must be set")
+	}
+	if cfg.DebugEventsToken != "" && len(cfg.DebugEventsToken) < 32 {
+		return nil, errors.New("DEBUG_EVENTS_TOKEN must be at least 32 characters")
 	}
 
 	issuer := session.New([]byte(cfg.SessionSecret), session.DefaultTTL)
@@ -71,7 +75,7 @@ func Register(router chi.Router, cfg *api.Config, pool *pgxpool.Pool, logger *sl
 	}
 
 	var publicRoutes, protectedRoutes []*route.Route
-	for _, r := range allRoutes(pool, issuer, verifiers, reg, wsHub, store) {
+	for _, r := range allRoutes(pool, issuer, verifiers, reg, wsHub, store, cfg.DebugEventsToken, logger) {
 		if r.IsPublic() {
 			publicRoutes = append(publicRoutes, r)
 		} else if r.IsProtected() {
@@ -98,7 +102,7 @@ func Register(router chi.Router, cfg *api.Config, pool *pgxpool.Pool, logger *sl
 	return cleanup, nil
 }
 
-func allRoutes(pool *pgxpool.Pool, issuer *session.Issuer, verifiers map[string]apiIdentity.IDTokenVerifier, reg *registry.OfEvents, wsHub *websocket.Hub, store storage.Storage) []*route.Route {
+func allRoutes(pool *pgxpool.Pool, issuer *session.Issuer, verifiers map[string]apiIdentity.IDTokenVerifier, reg *registry.OfEvents, wsHub *websocket.Hub, store storage.Storage, debugToken string, logger *slog.Logger) []*route.Route {
 	bus := command.NewBus()
 	coreUseCases.RegisterHandlers(bus, stream.NewPostgres(pool, reg))
 
@@ -108,6 +112,7 @@ func allRoutes(pool *pgxpool.Pool, issuer *session.Issuer, verifiers map[string]
 		apiItem.NewHandler(bus, items.NewQuery(pool), store, issuer),
 		apiTag.NewHandler(bus, tags.NewQuery(pool)),
 		websocket.NewHandler(wsHub, issuer, slog.Default()),
+		apiEvents.NewHandler(apiEvents.NewQuery(pool), reg, issuer, debugToken, logger),
 	}
 
 	var routes []*route.Route

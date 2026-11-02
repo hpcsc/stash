@@ -48,6 +48,7 @@ services:
       DB_HOST_PORT: 5432
       SESSION_SECRET: ${SESSION_SECRET}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      DEBUG_EVENTS_TOKEN: ${DEBUG_EVENTS_TOKEN}
       STORAGE_DIR: /data
     volumes:
       - files:/data
