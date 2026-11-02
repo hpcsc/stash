@@ -27,6 +27,8 @@ feature lives in [docs/event-model-stash.md](docs/event-model-stash.md), with th
   validates that token and carries the subject.
 - `server/cmd/catchup` — projections and reactions. No consumers yet; the items projection arrives
   with the next story.
+- `server/cmd/event_browser` — a local read-only event browser for debugging the store. See
+  [docs/event-browser.md](docs/event-browser.md).
 - `server/internal/domain` — the event store, the aggregate/command/event base, projections,
   reactions, checkpoints, and subscriptions. See
   [docs/event-subscription.md](docs/event-subscription.md).
@@ -100,6 +102,18 @@ curl -s http://127.0.0.1:3333/items -H "Authorization: Bearer $TOKEN" | jq
 curl -s http://127.0.0.1:3333/items/<item-id> -H "Authorization: Bearer $TOKEN" | jq
 ```
 
+## Debug the event store
+
+A local, read-only browser for the event store. It runs on your machine and reads the store
+through the API with a deployment token, so it never ships in the web app:
+
+```sh
+task event-browser:build
+./server/bin/eventbrowser --url http://127.0.0.1:3333 --token "$DEBUG_EVENTS_TOKEN"
+```
+
+See [docs/event-browser.md](docs/event-browser.md).
+
 ## Test
 
 ```sh
@@ -116,6 +130,7 @@ Unit tests carry the `unit` build tag; integration tests carry the `integration`
 | --- | --- |
 | `server/cmd/api` | The HTTP API. |
 | `server/cmd/catchup` | The projections and reactions. |
+| `server/cmd/event_browser` | The local event browser CLI. |
 | `server/internal/domain` | Events, aggregates, commands, and their bus. |
 | `server/internal/domain/event/stream` | The write path: append to a stream, read a stream. |
 | `server/internal/domain/event/subscription` | The read loop and the listener. |
