@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:event-browser": "vite --config vite.event-browser.config.ts",
     "build": "vite build",
+    "build:event-browser": "vite build --config vite.event-browser.config.ts",
     "preview": "vite preview",
     "check": "svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json",
     "test": "vitest run"

@@ -53,7 +53,7 @@
   --space-16: 4rem;
 
   /* Layout */
-  --content-width: 64rem;
+  --content-width: clamp(64rem, 88vw, 84rem);
 
   /* Radii */
   --radius-sm: 6px;

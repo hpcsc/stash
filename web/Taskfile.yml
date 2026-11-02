@@ -11,6 +11,16 @@ tasks:
     cmds:
       - npm run build
 
+  event-browser:build:
+    desc: build only the event browser page
+    cmds:
+      - npm run build:event-browser
+
+  event-browser:dev:
+    desc: run the event browser page against a local event browser CLI on 7777
+    cmds:
+      - npm run dev:event-browser
+
   check:
     desc: type-check the web app
     cmds:
