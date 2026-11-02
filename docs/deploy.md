@@ -164,6 +164,12 @@ Push to `main`, or run the workflow manually from the Actions tab. The `CI` work
 A `v*` tag pushes images but skips the deploy. The first deploy waits for the VM's first-boot
 script to install Docker and add a swap file.
 
+The event browser sees every user's streams only when you grant it: set the
+`EVENT_BROWSER_USER_IDS` repository variable to a comma-separated list of Google subject ids,
+and the workflow writes it into the env file on the VM. The deploy does not pass
+`DEBUG_EVENTS_TOKEN`, so the shared debug token stays off; see
+[docs/event-browser.md](event-browser.md).
+
 Reach the app at `https://<app_subdomain>.<domain>` when a custom domain is configured, or at
 the `*.trycloudflare.com` URL printed in the deploy log otherwise. Add that origin to your
 Google OAuth client's authorised JavaScript origins before signing in.

@@ -161,6 +161,7 @@ jobs:
           DB_SSLMODE=require
           SESSION_SECRET=${{ secrets.SESSION_SECRET }}
           GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+          EVENT_BROWSER_USER_IDS=${{ vars.EVENT_BROWSER_USER_IDS }}
           S3_BUCKET=$r2_bucket
           S3_REGION=auto
           S3_ENDPOINT=$r2_endpoint
