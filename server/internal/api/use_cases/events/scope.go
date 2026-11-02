@@ -31,14 +31,14 @@ func UserScope(user domain.UserID) Scope {
 	return Scope{user: user}
 }
 
-func resolveScope(r *http.Request, issuer *session.Issuer, adminToken string) (Scope, bool) {
-	if adminToken != "" {
+func resolveScope(r *http.Request, issuer *session.Issuer, debugToken string, eventBrowserUsers map[string]struct{}) (Scope, bool) {
+	if debugToken != "" {
 		for _, candidate := range []string{
 			r.Header.Get("X-Debug-Token"),
 			bearer(r),
 		} {
-			if candidate != "" && equalSecret(candidate, adminToken) {
-				return Scope{all: true}, true
+			if candidate != "" && equalSecret(candidate, debugToken) {
+				return AllScope(), true
 			}
 		}
 	}
@@ -48,7 +48,20 @@ func resolveScope(r *http.Request, issuer *session.Issuer, adminToken string) (S
 	if err != nil || !user.Valid() {
 		return Scope{}, false
 	}
-	return Scope{user: user}, true
+	if _, ok := eventBrowserUsers[subject]; ok {
+		return AllScope(), true
+	}
+	return UserScope(user), true
+}
+
+func userIDSet(ids []string) map[string]struct{} {
+	set := make(map[string]struct{}, len(ids))
+	for _, id := range ids {
+		if id = strings.TrimSpace(id); id != "" {
+			set[id] = struct{}{}
+		}
+	}
+	return set
 }
 
 func equalSecret(given, expected string) bool {

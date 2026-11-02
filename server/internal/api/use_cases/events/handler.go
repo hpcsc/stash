@@ -24,13 +24,14 @@ type ReaderSource interface {
 	Scoped(scope Scope) Reader
 }
 
-func NewHandler(source ReaderSource, reg *registry.OfEvents, issuer *session.Issuer, adminToken string, logger *slog.Logger) route.Routable {
+func NewHandler(source ReaderSource, reg *registry.OfEvents, issuer *session.Issuer, debugToken string, eventBrowserUserIDs []string, logger *slog.Logger) route.Routable {
 	return &handler{
 		renderer:   render.New(),
 		source:     source,
 		registry:   reg,
 		issuer:     issuer,
-		adminToken: adminToken,
+		debugToken: debugToken,
+		eventBrowserUsers: userIDSet(eventBrowserUserIDs),
 		logger:     logger,
 	}
 }
@@ -40,7 +41,8 @@ type handler struct {
 	source     ReaderSource
 	registry   *registry.OfEvents
 	issuer     *session.Issuer
-	adminToken string
+	debugToken string
+	eventBrowserUsers map[string]struct{}
 	logger     *slog.Logger
 }
 
@@ -57,13 +59,13 @@ func (h *handler) Routes() []*route.Route {
 
 func (h *handler) requireScope(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		scope, ok := resolveScope(r, h.issuer, h.adminToken)
+		scope, ok := resolveScope(r, h.issuer, h.debugToken, h.eventBrowserUsers)
 		if !ok {
 			writeUnauthorized(w)
 			return
 		}
 		if scope.IsAll() {
-			h.logger.Info("served debug request with admin scope", "path", r.URL.Path)
+			h.logger.Info("served request with all-stream scope", "path", r.URL.Path)
 		}
 		next(w, r.WithContext(WithScope(r.Context(), scope)))
 	}
@@ -196,13 +198,13 @@ func (h *handler) checkpoints(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handler) tail(w http.ResponseWriter, r *http.Request) {
-	scope, ok := resolveScope(r, h.issuer, h.adminToken)
+	scope, ok := resolveScope(r, h.issuer, h.debugToken, h.eventBrowserUsers)
 	if !ok {
 		writeUnauthorized(w)
 		return
 	}
 	if scope.IsAll() {
-		h.logger.Info("served debug stream with admin scope", "path", r.URL.Path)
+		h.logger.Info("served request with all-stream scope", "path", r.URL.Path)
 	}
 
 	flusher, ok := w.(http.Flusher)

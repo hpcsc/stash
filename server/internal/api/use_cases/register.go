@@ -75,7 +75,7 @@ func Register(router chi.Router, cfg *api.Config, pool *pgxpool.Pool, logger *sl
 	}
 
 	var publicRoutes, protectedRoutes []*route.Route
-	for _, r := range allRoutes(pool, issuer, verifiers, reg, wsHub, store, cfg.DebugEventsToken, logger) {
+	for _, r := range allRoutes(pool, issuer, verifiers, reg, wsHub, store, cfg.DebugEventsToken, cfg.EventBrowserUserIDs, logger) {
 		if r.IsPublic() {
 			publicRoutes = append(publicRoutes, r)
 		} else if r.IsProtected() {
@@ -102,7 +102,7 @@ func Register(router chi.Router, cfg *api.Config, pool *pgxpool.Pool, logger *sl
 	return cleanup, nil
 }
 
-func allRoutes(pool *pgxpool.Pool, issuer *session.Issuer, verifiers map[string]apiIdentity.IDTokenVerifier, reg *registry.OfEvents, wsHub *websocket.Hub, store storage.Storage, debugToken string, logger *slog.Logger) []*route.Route {
+func allRoutes(pool *pgxpool.Pool, issuer *session.Issuer, verifiers map[string]apiIdentity.IDTokenVerifier, reg *registry.OfEvents, wsHub *websocket.Hub, store storage.Storage, debugToken string, eventBrowserUserIDs []string, logger *slog.Logger) []*route.Route {
 	bus := command.NewBus()
 	coreUseCases.RegisterHandlers(bus, stream.NewPostgres(pool, reg))
 
@@ -112,7 +112,7 @@ func allRoutes(pool *pgxpool.Pool, issuer *session.Issuer, verifiers map[string]
 		apiItem.NewHandler(bus, items.NewQuery(pool), store, issuer),
 		apiTag.NewHandler(bus, tags.NewQuery(pool)),
 		websocket.NewHandler(wsHub, issuer, slog.Default()),
-		apiEvents.NewHandler(apiEvents.NewQuery(pool), reg, issuer, debugToken, logger),
+		apiEvents.NewHandler(apiEvents.NewQuery(pool), reg, issuer, debugToken, eventBrowserUserIDs, logger),
 	}
 
 	var routes []*route.Route
