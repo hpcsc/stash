@@ -222,7 +222,10 @@ jobs:
             sudo rm -f /tmp/tunnel-token
             sudo systemctl daemon-reload
             sudo systemctl enable cloudflared-stash
-            sudo systemctl restart cloudflared-stash
+            if ! sudo systemctl restart cloudflared-stash; then
+              sudo journalctl -u cloudflared-stash -n 50 --no-pager || true
+              exit 1
+            fi
 
             # Quick tunnel only: print the ephemeral URL from the journal.
             if [ ! -s /etc/cloudflared/tunnel.env ]; then
