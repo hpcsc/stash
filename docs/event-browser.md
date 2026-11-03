@@ -74,6 +74,9 @@ task event-browser:build
 
 Then open <http://127.0.0.1:7777> and sign in.
 
+To read production, run `task event-browser:run:production`, which points the CLI at
+`https://stash.saphix.app`. Override the host with `STASH_EVENT_BROWSER_PRODUCTION_URL`.
+
 For local development, run `task event-browser:run`, which loads `server/.env.local`.
 
 | Flag | Default | Meaning |

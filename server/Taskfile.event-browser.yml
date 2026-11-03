@@ -23,6 +23,12 @@ tasks:
       - task: build
       - ./bin/eventbrowser --url {{default "http://127.0.0.1:3333" .STASH_EVENT_BROWSER_URL}} {{.CLI_ARGS}}
 
+  run:production:
+    desc: run the event browser against the production API
+    cmds:
+      - task: build
+      - ./bin/eventbrowser --url {{default "https://stash.saphix.app" .STASH_EVENT_BROWSER_PRODUCTION_URL}} {{.CLI_ARGS}}
+
   test:
     desc: test the event browser CLI
     cmds:
