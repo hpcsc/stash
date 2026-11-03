@@ -32,7 +32,7 @@ func TestConfig(t *testing.T) {
 		t.Run("rejects a missing token", func(t *testing.T) {
 			err := event_browser.Config{Backend: "https://stash.example.com", Addr: "127.0.0.1:7777"}.Validate()
 
-			require.ErrorContains(t, err, "debug token is required")
+			require.ErrorContains(t, err, "session token is required")
 		})
 	})
 }

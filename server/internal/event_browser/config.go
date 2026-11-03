@@ -9,7 +9,7 @@ import (
 
 const (
 	DefaultAddr  = "127.0.0.1:7777"
-	TokenEnvName = "STASH_DEBUG_TOKEN"
+	TokenEnvName = "STASH_SESSION_TOKEN"
 )
 
 type Config struct {
@@ -35,7 +35,7 @@ func (c Config) Validate() error {
 	}
 
 	if c.Token == "" {
-		return fmt.Errorf("the debug token is required: pass --token or set %s", TokenEnvName)
+		return fmt.Errorf("the session token is required: pass --token or set %s", TokenEnvName)
 	}
 
 	if c.Addr == "" {

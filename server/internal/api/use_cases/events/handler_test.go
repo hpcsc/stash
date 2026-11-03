@@ -21,49 +21,16 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const debugToken = "0123456789abcdef0123456789abcdef"
-
 var testUser = domain.UserID("test-user")
 
 func TestHandler(t *testing.T) {
 	t.Run("scope", func(t *testing.T) {
-		t.Run("returns Unauthorized without a token", func(t *testing.T) {
+		t.Run("returns Unauthorized without a session token", func(t *testing.T) {
 			router := newRouter(t, &fakeSource{reader: &fakeReader{}})
 
 			w := send(router, "GET", "/events", "")
 
 			require.Equal(t, http.StatusUnauthorized, w.Code)
-		})
-
-		t.Run("returns Ok with all scope for a matching debug token in the X-Debug-Token header", func(t *testing.T) {
-			source := &fakeSource{reader: &fakeReader{types: []string{"stash.something-happened"}}}
-			router := newRouter(t, source)
-
-			w := sendWithHeaders(router, "GET", "/events/types", map[string]string{"X-Debug-Token": debugToken})
-
-			require.Equal(t, http.StatusOK, w.Code)
-			require.Len(t, source.scopes, 1)
-			require.True(t, source.scopes[0].IsAll())
-		})
-
-		t.Run("returns Ok with all scope for a matching debug token in the Authorization header", func(t *testing.T) {
-			source := &fakeSource{reader: &fakeReader{types: []string{"stash.something-happened"}}}
-			router := newRouter(t, source)
-
-			w := sendWithHeaders(router, "GET", "/events/types", map[string]string{"Authorization": "Bearer " + debugToken})
-
-			require.Equal(t, http.StatusOK, w.Code)
-			require.True(t, source.scopes[0].IsAll())
-		})
-
-		t.Run("ignores an debug token in the query", func(t *testing.T) {
-			source := &fakeSource{reader: &fakeReader{}}
-			router := newRouter(t, source)
-
-			w := send(router, "GET", "/events/types?debugToken="+debugToken, "")
-
-			require.Equal(t, http.StatusUnauthorized, w.Code)
-			require.Empty(t, source.scopes)
 		})
 
 		t.Run("returns Ok with the user scope for a valid session token", func(t *testing.T) {
@@ -94,20 +61,6 @@ func TestHandler(t *testing.T) {
 			router := newRouterWithEventBrowserUsers(t, source, []string{"another-user"})
 
 			w := sendWithHeaders(router, "GET", "/events/types", map[string]string{"Authorization": "Bearer " + sessionToken(t)})
-
-			require.Equal(t, http.StatusOK, w.Code)
-			require.False(t, source.scopes[0].IsAll())
-			require.Equal(t, testUser, source.scopes[0].User())
-		})
-
-		t.Run("falls through to the session when the debug token does not match", func(t *testing.T) {
-			source := &fakeSource{reader: &fakeReader{types: []string{"stash.something-happened"}}}
-			router := newRouter(t, source)
-
-			w := sendWithHeaders(router, "GET", "/events/types", map[string]string{
-				"X-Debug-Token": "wrong-token",
-				"Authorization": "Bearer " + sessionToken(t),
-			})
 
 			require.Equal(t, http.StatusOK, w.Code)
 			require.False(t, source.scopes[0].IsAll())
@@ -338,7 +291,7 @@ func newRouterWithEventBrowserUsers(t *testing.T, source events.ReaderSource, ev
 	issuer := session.New([]byte("test-secret"), time.Hour)
 	reg := registry.New()
 	reg.Register[fake.SomethingHappened]()
-	return apiTest.NewRouterWithRoutable(events.NewHandler(source, reg, issuer, debugToken, eventBrowserUserIDs, commonTest.DiscardLogger()))
+	return apiTest.NewRouterWithRoutable(events.NewHandler(source, reg, issuer, eventBrowserUserIDs, commonTest.DiscardLogger()))
 }
 
 func sessionToken(t *testing.T) string {

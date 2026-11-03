@@ -166,8 +166,7 @@ script to install Docker and add a swap file.
 
 The event browser sees every user's streams only when you grant it: set the
 `EVENT_BROWSER_USER_IDS` repository variable to a comma-separated list of Google subject ids,
-and the workflow writes it into the env file on the VM. The deploy does not pass
-`DEBUG_EVENTS_TOKEN`, so the shared debug token stays off; see
+and the workflow writes it into the env file on the VM. See
 [docs/event-browser.md](event-browser.md).
 
 Reach the app at `https://<app_subdomain>.<domain>` when a custom domain is configured, or at

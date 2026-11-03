@@ -21,7 +21,7 @@ tasks:
     dotenv: [.env.local]
     cmds:
       - task: build
-      - ./bin/eventbrowser --url {{default "http://127.0.0.1:3333" .STASH_EVENT_BROWSER_URL}} --token "$DEBUG_EVENTS_TOKEN" {{.CLI_ARGS}}
+      - ./bin/eventbrowser --url {{default "http://127.0.0.1:3333" .STASH_EVENT_BROWSER_URL}} {{.CLI_ARGS}}
 
   test:
     desc: test the event browser CLI

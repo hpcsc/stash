@@ -24,26 +24,24 @@ type ReaderSource interface {
 	Scoped(scope Scope) Reader
 }
 
-func NewHandler(source ReaderSource, reg *registry.OfEvents, issuer *session.Issuer, debugToken string, eventBrowserUserIDs []string, logger *slog.Logger) route.Routable {
+func NewHandler(source ReaderSource, reg *registry.OfEvents, issuer *session.Issuer, eventBrowserUserIDs []string, logger *slog.Logger) route.Routable {
 	return &handler{
-		renderer:   render.New(),
-		source:     source,
-		registry:   reg,
-		issuer:     issuer,
-		debugToken: debugToken,
+		renderer:          render.New(),
+		source:            source,
+		registry:          reg,
+		issuer:            issuer,
 		eventBrowserUsers: userIDSet(eventBrowserUserIDs),
-		logger:     logger,
+		logger:            logger,
 	}
 }
 
 type handler struct {
-	renderer   *render.Render
-	source     ReaderSource
-	registry   *registry.OfEvents
-	issuer     *session.Issuer
-	debugToken string
+	renderer          *render.Render
+	source            ReaderSource
+	registry          *registry.OfEvents
+	issuer            *session.Issuer
 	eventBrowserUsers map[string]struct{}
-	logger     *slog.Logger
+	logger            *slog.Logger
 }
 
 func (h *handler) Routes() []*route.Route {
@@ -59,7 +57,7 @@ func (h *handler) Routes() []*route.Route {
 
 func (h *handler) requireScope(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		scope, ok := resolveScope(r, h.issuer, h.debugToken, h.eventBrowserUsers)
+		scope, ok := resolveScope(r, h.issuer, h.eventBrowserUsers)
 		if !ok {
 			writeUnauthorized(w)
 			return
@@ -198,7 +196,7 @@ func (h *handler) checkpoints(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handler) tail(w http.ResponseWriter, r *http.Request) {
-	scope, ok := resolveScope(r, h.issuer, h.debugToken, h.eventBrowserUsers)
+	scope, ok := resolveScope(r, h.issuer, h.eventBrowserUsers)
 	if !ok {
 		writeUnauthorized(w)
 		return
@@ -365,5 +363,5 @@ func parseTime(r *http.Request, name string) (*time.Time, error) {
 func writeUnauthorized(w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusUnauthorized)
-	_ = json.NewEncoder(w).Encode(response.Fail("sign in or present a valid debug token"))
+	_ = json.NewEncoder(w).Encode(response.Fail("sign in to use the event browser"))
 }

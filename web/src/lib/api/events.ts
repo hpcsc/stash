@@ -52,7 +52,7 @@ interface Envelope {
 async function getJson(path: string): Promise<Envelope> {
   const res = await fetch(`/api${path}`)
   if (res.status === 401) {
-    throw new Error('The event browser token was rejected. Restart it with a valid token.')
+    throw new Error('Your session was rejected. Sign in again and restart the event browser with a new session token.')
   }
 
   const envelope = (await res.json()) as Envelope

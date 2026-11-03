@@ -26,10 +26,6 @@ func main() {
 		os.Exit(2)
 	}
 
-	if cfg.Token == "" {
-		cfg.Token = os.Getenv(event_browser.TokenEnvName)
-	}
-
 	server, err := event_browser.New(cfg, logger)
 	if err != nil {
 		logger.Error(err.Error())
@@ -63,7 +59,7 @@ func parseFlags(args []string) (event_browser.Config, error) {
 
 	flags := flag.NewFlagSet("eventbrowser", flag.ContinueOnError)
 	flags.StringVar(&cfg.Backend, "url", "", "base URL of the Stash API, for example https://stash.example.com")
-	flags.StringVar(&cfg.Token, "token", "", "debug token; defaults to $"+event_browser.TokenEnvName)
+	flags.StringVar(&cfg.Token, "token", "", "session token; defaults to $"+event_browser.TokenEnvName)
 	flags.StringVar(&cfg.Addr, "addr", event_browser.DefaultAddr, "address for the local UI")
 
 	flags.Usage = func() {
@@ -81,6 +77,10 @@ func parseFlags(args []string) (event_browser.Config, error) {
 
 	if flags.NArg() > 0 {
 		return cfg, fmt.Errorf("unexpected argument %q", flags.Arg(0))
+	}
+
+	if cfg.Token == "" {
+		cfg.Token = os.Getenv(event_browser.TokenEnvName)
 	}
 
 	return cfg, cfg.Validate()

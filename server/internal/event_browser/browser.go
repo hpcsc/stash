@@ -77,7 +77,6 @@ func newProxy(target *url.URL, token string, logger *slog.Logger) *httputil.Reve
 
 			// the token stays in this process, so the browser never sees it
 			r.Out.Header.Set("Authorization", "Bearer "+token)
-			r.Out.Header.Del("X-Debug-Token")
 			r.SetXForwarded()
 		},
 		FlushInterval: -1,

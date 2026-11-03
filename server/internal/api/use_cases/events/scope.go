@@ -2,7 +2,6 @@ package events
 
 import (
 	"context"
-	"crypto/subtle"
 	"net/http"
 	"strings"
 
@@ -31,18 +30,7 @@ func UserScope(user domain.UserID) Scope {
 	return Scope{user: user}
 }
 
-func resolveScope(r *http.Request, issuer *session.Issuer, debugToken string, eventBrowserUsers map[string]struct{}) (Scope, bool) {
-	if debugToken != "" {
-		for _, candidate := range []string{
-			r.Header.Get("X-Debug-Token"),
-			bearer(r),
-		} {
-			if candidate != "" && equalSecret(candidate, debugToken) {
-				return AllScope(), true
-			}
-		}
-	}
-
+func resolveScope(r *http.Request, issuer *session.Issuer, eventBrowserUsers map[string]struct{}) (Scope, bool) {
 	subject, err := issuer.Verify(sessionToken(r))
 	user := domain.UserID(subject)
 	if err != nil || !user.Valid() {
@@ -62,13 +50,6 @@ func userIDSet(ids []string) map[string]struct{} {
 		}
 	}
 	return set
-}
-
-func equalSecret(given, expected string) bool {
-	if len(given) != len(expected) {
-		return false
-	}
-	return subtle.ConstantTimeCompare([]byte(given), []byte(expected)) == 1
 }
 
 func sessionToken(r *http.Request) string {
