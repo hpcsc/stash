@@ -26,7 +26,12 @@ func New(cfg Config, logger *slog.Logger) (*Server, error) {
 		return nil, err
 	}
 
-	handler, err := NewHandler(cfg.Backend, cfg.Token, ui, logger)
+	session, err := NewSession(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	handler, err := NewHandler(cfg.Backend, session, ui, logger)
 	if err != nil {
 		return nil, err
 	}

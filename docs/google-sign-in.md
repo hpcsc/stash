@@ -30,6 +30,8 @@ script prints the checklist and the run commands with the values filled in:
    - Authorised JavaScript origins — pin the dev-server port so it is stable:
      - `http://localhost:8080`
      - `http://127.0.0.1:8080`
+     - `http://127.0.0.1:7777` (the local event browser, see
+       [event-browser.md](event-browser.md))
 
    **Android**
 
@@ -96,7 +98,7 @@ On a physical device, replace `10.0.2.2` with the machine's LAN (or Tailscale) I
 | --- | --- |
 | "Google sign-in is not configured" | The Google client ID was not passed to the app. |
 | `401 sign-in failed` from the API | The ID token's `aud` does not match `GOOGLE_CLIENT_ID`. Use the same web client ID for the web `clientId`, the Android `serverClientId`, and the API. |
-| Web popup blocked / "origin not allowed" | The dev origin is not in the web client's authorised JavaScript origins. |
+| Web popup blocked / "origin not allowed" | The origin is not in the web client's authorised JavaScript origins (`http://127.0.0.1:8080` for the web app, `http://127.0.0.1:7777` for the event browser). |
 | Android sign-in error | SHA-1 mismatch with the Android client, or the emulator has no Play services. |
 | "Failed to fetch" from the web app | CORS — the web origin is not in `ALLOWED_ORIGINS` (default `http://localhost:8080`, `http://127.0.0.1:8080`). |
 

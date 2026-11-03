@@ -16,6 +16,12 @@
   import ErrorBanner from './ErrorBanner.svelte'
   import EmptyState from './EmptyState.svelte'
 
+  interface Props {
+    onsignout?: () => void
+  }
+
+  let { onsignout }: Props = $props()
+
   type View = 'events' | 'streams' | 'checkpoints'
 
   interface StreamNode {
@@ -261,7 +267,12 @@
       </svg>
       <span>Event browser</span>
     </div>
-    <span class="read-only">Read-only</span>
+    <div class="header-actions">
+      <span class="read-only">Read-only</span>
+      {#if onsignout}
+        <button type="button" class="ghost-btn" onclick={onsignout}>Sign out</button>
+      {/if}
+    </div>
   </header>
 
   <div class="events">
@@ -522,6 +533,12 @@
     background: var(--color-surface);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
   }
 
   .events {

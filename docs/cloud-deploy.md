@@ -93,7 +93,8 @@ Fill in `server/.env.cloud` with the database and bucket values above, plus:
 - `SESSION_SECRET` — a long random string (e.g. `openssl rand -hex 32`).
 - `GOOGLE_CLIENT_ID` — the Google OAuth **web** client ID (see
   [docs/google-sign-in.md](google-sign-in.md)). Add the public origin of the web app to its
-  **authorised JavaScript origins**.
+  **authorised JavaScript origins**, and `http://127.0.0.1:7777` if you use the event
+  browser CLI on your machine.
 - `EVENT_BROWSER_USER_IDS` — optional. Comma-separated Google subject ids that may read every
   stream in the event browser (see [docs/event-browser.md](event-browser.md)). With the CI
   deploy, set it as the repository variable of the same name instead of editing this file.

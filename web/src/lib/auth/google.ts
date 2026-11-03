@@ -1,8 +1,7 @@
-import { googleClientId } from '../config'
-
 type CredentialCallback = (idToken: string) => void
 
 let callback: CredentialCallback | null = null
+let clientId = ''
 let loading: Promise<void> | null = null
 
 function loadScript(): Promise<void> {
@@ -23,10 +22,11 @@ function loadScript(): Promise<void> {
   return loading
 }
 
-export function init(onCredential: CredentialCallback): void {
-  if (!googleClientId) {
-    throw new Error('Google sign-in is not configured (set VITE_GOOGLE_CLIENT_ID)')
+export function init(id: string, onCredential: CredentialCallback): void {
+  if (!id) {
+    throw new Error('Google sign-in is not configured')
   }
+  clientId = id
   callback = onCredential
 }
 
@@ -36,7 +36,7 @@ export async function start(): Promise<boolean> {
   if (!window.google?.accounts) return false
 
   window.google.accounts.id.initialize({
-    client_id: googleClientId,
+    client_id: clientId,
     callback: (response) => {
       callback?.(response.credential)
     },

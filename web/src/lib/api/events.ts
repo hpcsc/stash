@@ -49,10 +49,17 @@ interface Envelope {
   data?: unknown
 }
 
+let onUnauthorized: (() => void) | null = null
+
+export function setUnauthorizedHandler(handler: (() => void) | null): void {
+  onUnauthorized = handler
+}
+
 async function getJson(path: string): Promise<Envelope> {
   const res = await fetch(`/api${path}`)
   if (res.status === 401) {
-    throw new Error('Your session was rejected. Sign in again and restart the event browser with a new session token.')
+    onUnauthorized?.()
+    throw new Error('Your session was rejected. Sign in again.')
   }
 
   const envelope = (await res.json()) as Envelope

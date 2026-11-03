@@ -105,11 +105,12 @@ curl -s http://127.0.0.1:3333/items/<item-id> -H "Authorization: Bearer $TOKEN" 
 ## Debug the event store
 
 A local, read-only browser for the event store. It runs on your machine and reads the store
-through the API with your session token, so it never ships in the web app:
+through the API with a session you create by signing in from the page, so it never ships in
+the web app:
 
 ```sh
 task event-browser:build
-STASH_SESSION_TOKEN=<your token> ./server/bin/eventbrowser --url http://127.0.0.1:3333
+./server/bin/eventbrowser --url http://127.0.0.1:3333
 ```
 
 See [docs/event-browser.md](docs/event-browser.md).

@@ -59,14 +59,14 @@ func parseFlags(args []string) (event_browser.Config, error) {
 
 	flags := flag.NewFlagSet("eventbrowser", flag.ContinueOnError)
 	flags.StringVar(&cfg.Backend, "url", "", "base URL of the Stash API, for example https://stash.example.com")
-	flags.StringVar(&cfg.Token, "token", "", "session token; defaults to $"+event_browser.TokenEnvName)
+	flags.StringVar(&cfg.Token, "token", "", "session token to use without signing in; defaults to $"+event_browser.TokenEnvName)
 	flags.StringVar(&cfg.Addr, "addr", event_browser.DefaultAddr, "address for the local UI")
 
 	flags.Usage = func() {
 		out := flags.Output()
 		fmt.Fprintf(out, "Open the Stash event browser in a local web server.\n\n")
 		fmt.Fprintf(out, "Usage:\n  eventbrowser --url <backend> [--token <token>] [--addr <address>]\n\n")
-		fmt.Fprintf(out, "The token is sent to the backend from this process, so the browser never sees it.\n\n")
+		fmt.Fprintf(out, "Without --token, the page asks you to sign in with Google. The session token stays in this process, so the browser never sees it.\n\n")
 		fmt.Fprintf(out, "Flags:\n")
 		flags.PrintDefaults()
 	}

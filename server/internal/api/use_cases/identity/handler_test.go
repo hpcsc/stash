@@ -27,6 +27,19 @@ import (
 func TestHandler(t *testing.T) {
 	issuer := session.New([]byte("test-secret"), time.Hour)
 
+	t.Run("config", func(t *testing.T) {
+		t.Run("returns the Google client id", func(t *testing.T) {
+			bus := command.NewBus()
+			router := newRouter(bus, issuer, fakeVerifier{subject: subject})
+
+			w := send(router, "GET", "/auth/config", "")
+
+			require.Equal(t, http.StatusOK, w.Code)
+			body := commonTest.UnmarshalJson[response.Response](t, w.Body.Bytes())
+			require.Equal(t, "client-id", body.Data.(map[string]any)["googleClientId"])
+		})
+	})
+
 	t.Run("sign in", func(t *testing.T) {
 		t.Run("dispatches a sign-in command and returns a session token", func(t *testing.T) {
 			handler := fake.NewHandler[identityCommand.SignIn]()
@@ -103,7 +116,7 @@ func (v fakeVerifier) Verify(context.Context, string) (string, error) {
 }
 
 func newRouter(bus *command.Bus, issuer *session.Issuer, verifier identity.IDTokenVerifier) http.Handler {
-	return apiTest.NewRouterWithRoutable(identity.NewHandler(bus, map[string]identity.IDTokenVerifier{"google": verifier}, issuer))
+	return apiTest.NewRouterWithRoutable(identity.NewHandler(bus, map[string]identity.IDTokenVerifier{"google": verifier}, issuer, "client-id"))
 }
 
 func send(router http.Handler, method, path, body string) *httptest.ResponseRecorder {

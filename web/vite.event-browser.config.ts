@@ -15,6 +15,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': 'http://127.0.0.1:7777',
+      '/session': 'http://127.0.0.1:7777',
     },
   },
 })

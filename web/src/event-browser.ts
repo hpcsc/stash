@@ -1,8 +1,8 @@
 import { mount } from 'svelte'
 import './app.css'
-import EventBrowser from './lib/components/EventBrowser.svelte'
+import EventBrowserApp from './lib/components/EventBrowserApp.svelte'
 
-const app = mount(EventBrowser, {
+const app = mount(EventBrowserApp, {
   target: document.getElementById('app')!,
 })
 

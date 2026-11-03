@@ -25,27 +25,36 @@ type IDTokenVerifier interface {
 
 var _ route.Routable = (*handler)(nil)
 
-func NewHandler(bus *command.Bus, verifiers map[string]IDTokenVerifier, issuer *session.Issuer) route.Routable {
+func NewHandler(bus *command.Bus, verifiers map[string]IDTokenVerifier, issuer *session.Issuer, googleClientID string) route.Routable {
 	return &handler{
-		renderer:  render.New(),
-		bus:       bus,
-		verifiers: verifiers,
-		issuer:    issuer,
+		renderer:       render.New(),
+		bus:            bus,
+		verifiers:      verifiers,
+		issuer:         issuer,
+		googleClientID: googleClientID,
 	}
 }
 
 type handler struct {
-	renderer  *render.Render
-	bus       *command.Bus
-	verifiers map[string]IDTokenVerifier
-	issuer    *session.Issuer
+	renderer       *render.Render
+	bus            *command.Bus
+	verifiers      map[string]IDTokenVerifier
+	issuer         *session.Issuer
+	googleClientID string
 }
 
 func (h *handler) Routes() []*route.Route {
 	return []*route.Route{
+		route.Public("GET", "/auth/config", h.config),
 		route.Public("POST", "/auth/signin", h.signIn),
 		route.Protected("POST", "/auth/signout", h.signOut),
 	}
+}
+
+func (h *handler) config(w http.ResponseWriter, _ *http.Request) {
+	_ = h.renderer.JSON(w, http.StatusOK, response.SucceedWithData(map[string]string{
+		"googleClientId": h.googleClientID,
+	}))
 }
 
 func (h *handler) signIn(w http.ResponseWriter, req *http.Request) {

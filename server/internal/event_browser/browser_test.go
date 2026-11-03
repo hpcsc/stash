@@ -3,6 +3,7 @@
 package event_browser_test
 
 import (
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -10,6 +11,7 @@ import (
 	"testing"
 	"testing/fstest"
 
+	"github.com/hpcsc/stash/internal/api/response"
 	"github.com/hpcsc/stash/internal/common/test"
 	"github.com/hpcsc/stash/internal/event_browser"
 	"github.com/stretchr/testify/require"
@@ -35,6 +37,54 @@ func TestHandler(t *testing.T) {
 
 			require.Equal(t, http.StatusOK, w.Code)
 			require.Equal(t, "Bearer secret-token", received)
+		})
+
+		t.Run("uses the token that sign-in stored", func(t *testing.T) {
+			var received string
+			backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				received = r.Header.Get("Authorization")
+				w.WriteHeader(http.StatusOK)
+			}))
+			defer backend.Close()
+
+			session := &fakeSession{token: "from-sign-in"}
+			handler := newHandlerWithSession(t, backend.URL, session)
+
+			handler.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("GET", "/api/events", nil))
+
+			require.Equal(t, "Bearer from-sign-in", received)
+		})
+
+		t.Run("clears the session when the backend rejects it", func(t *testing.T) {
+			backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusUnauthorized)
+			}))
+			defer backend.Close()
+
+			session := &fakeSession{token: "expired"}
+			handler := newHandlerWithSession(t, backend.URL, session)
+
+			w := httptest.NewRecorder()
+			handler.ServeHTTP(w, httptest.NewRequest("GET", "/api/events", nil))
+
+			require.Equal(t, http.StatusUnauthorized, w.Code)
+			require.True(t, session.cleared)
+			require.Empty(t, session.token)
+		})
+
+		t.Run("keeps a token from the command line when the backend rejects it", func(t *testing.T) {
+			backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusUnauthorized)
+			}))
+			defer backend.Close()
+
+			session := &fakeSession{token: "from-command-line", fixed: true}
+			handler := newHandlerWithSession(t, backend.URL, session)
+
+			handler.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("GET", "/api/events", nil))
+
+			require.False(t, session.cleared)
+			require.Equal(t, "from-command-line", session.token)
 		})
 
 		t.Run("forwards the query string and the path to the backend", func(t *testing.T) {
@@ -106,6 +156,173 @@ func TestHandler(t *testing.T) {
 		})
 	})
 
+	t.Run("session", func(t *testing.T) {
+		t.Run("returns the signed-out state and the client id", func(t *testing.T) {
+			backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				require.Equal(t, "/api/auth/config", r.URL.Path)
+				writeEnvelope(t, w, response.SucceedWithData(map[string]string{"googleClientId": "the-client-id"}))
+			}))
+			defer backend.Close()
+
+			handler := newHandlerWithSession(t, backend.URL, &fakeSession{})
+			w := httptest.NewRecorder()
+
+			handler.ServeHTTP(w, httptest.NewRequest("GET", "/session", nil))
+
+			require.Equal(t, http.StatusOK, w.Code)
+			data := readData(t, w)
+			require.Equal(t, false, data["signedIn"])
+			require.Equal(t, "the-client-id", data["googleClientId"])
+			require.Equal(t, true, data["canSignOut"])
+		})
+
+		t.Run("returns the signed-in state", func(t *testing.T) {
+			backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				writeEnvelope(t, w, response.SucceedWithData(map[string]string{"googleClientId": "the-client-id"}))
+			}))
+			defer backend.Close()
+
+			handler := newHandlerWithSession(t, backend.URL, &fakeSession{token: "stored"})
+			w := httptest.NewRecorder()
+
+			handler.ServeHTTP(w, httptest.NewRequest("GET", "/session", nil))
+
+			require.Equal(t, true, readData(t, w)["signedIn"])
+		})
+
+		t.Run("hides sign-out when the token comes from the command line", func(t *testing.T) {
+			backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				writeEnvelope(t, w, response.SucceedWithData(map[string]string{"googleClientId": "the-client-id"}))
+			}))
+			defer backend.Close()
+
+			handler := newHandlerWithSession(t, backend.URL, &fakeSession{token: "fixed", fixed: true})
+			w := httptest.NewRecorder()
+
+			handler.ServeHTTP(w, httptest.NewRequest("GET", "/session", nil))
+
+			require.Equal(t, false, readData(t, w)["canSignOut"])
+		})
+
+		t.Run("exchanges an ID token and stores the session token", func(t *testing.T) {
+			var receivedBody map[string]string
+			backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				switch {
+				case r.Method == http.MethodGet && r.URL.Path == "/api/auth/config":
+					writeEnvelope(t, w, response.SucceedWithData(map[string]string{"googleClientId": "the-client-id"}))
+				case r.Method == http.MethodPost && r.URL.Path == "/api/auth/signin":
+					require.NoError(t, json.NewDecoder(r.Body).Decode(&receivedBody))
+					writeEnvelope(t, w, response.SucceedWithData(map[string]string{"token": "new-session"}))
+				default:
+					w.WriteHeader(http.StatusNotFound)
+				}
+			}))
+			defer backend.Close()
+
+			session := &fakeSession{}
+			handler := newHandlerWithSession(t, backend.URL, session)
+			w := httptest.NewRecorder()
+
+			handler.ServeHTTP(w, httptest.NewRequest("POST", "/session", strings.NewReader(`{"idToken":"google-id-token"}`)))
+
+			require.Equal(t, http.StatusOK, w.Code)
+			require.Equal(t, map[string]string{"provider": "google", "idToken": "google-id-token"}, receivedBody)
+			require.Equal(t, "new-session", session.token)
+			data := readData(t, w)
+			require.Equal(t, true, data["signedIn"])
+			require.Equal(t, "the-client-id", data["googleClientId"])
+		})
+
+		t.Run("relays a rejected ID token", func(t *testing.T) {
+			backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				writeEnvelopeStatus(t, w, http.StatusUnauthorized, response.Fail("sign-in failed"))
+			}))
+			defer backend.Close()
+
+			session := &fakeSession{}
+			handler := newHandlerWithSession(t, backend.URL, session)
+			w := httptest.NewRecorder()
+
+			handler.ServeHTTP(w, httptest.NewRequest("POST", "/session", strings.NewReader(`{"idToken":"bad"}`)))
+
+			require.Equal(t, http.StatusUnauthorized, w.Code)
+			require.Empty(t, session.token)
+		})
+
+		t.Run("rejects a request without an ID token", func(t *testing.T) {
+			backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusInternalServerError)
+			}))
+			defer backend.Close()
+
+			handler := newHandlerWithSession(t, backend.URL, &fakeSession{})
+			w := httptest.NewRecorder()
+
+			handler.ServeHTTP(w, httptest.NewRequest("POST", "/session", strings.NewReader(`{}`)))
+
+			require.Equal(t, http.StatusBadRequest, w.Code)
+		})
+
+		t.Run("signs out of the backend before clearing the session", func(t *testing.T) {
+			var receivedPath, receivedAuth string
+			backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				receivedPath = r.URL.Path
+				receivedAuth = r.Header.Get("Authorization")
+				writeEnvelope(t, w, response.Succeed())
+			}))
+			defer backend.Close()
+
+			session := &fakeSession{token: "stored"}
+			handler := newHandlerWithSession(t, backend.URL, session)
+			w := httptest.NewRecorder()
+
+			handler.ServeHTTP(w, httptest.NewRequest("DELETE", "/session", nil))
+
+			require.Equal(t, http.StatusOK, w.Code)
+			require.Equal(t, "/api/auth/signout", receivedPath)
+			require.Equal(t, "Bearer stored", receivedAuth)
+			require.True(t, session.cleared)
+			require.Empty(t, session.token)
+		})
+
+		t.Run("clears the session when the backend sign-out fails", func(t *testing.T) {
+			session := &fakeSession{token: "stored"}
+			handler := newHandlerWithSession(t, "http://127.0.0.1:1", session)
+			w := httptest.NewRecorder()
+
+			handler.ServeHTTP(w, httptest.NewRequest("DELETE", "/session", nil))
+
+			require.Equal(t, http.StatusOK, w.Code)
+			require.True(t, session.cleared)
+		})
+
+		t.Run("does not sign out the backend for a token from the command line", func(t *testing.T) {
+			backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				t.Error("the CLI must not call the backend for a fixed token")
+			}))
+			defer backend.Close()
+
+			session := &fakeSession{token: "from-command-line", fixed: true}
+			handler := newHandlerWithSession(t, backend.URL, session)
+			w := httptest.NewRecorder()
+
+			handler.ServeHTTP(w, httptest.NewRequest("DELETE", "/session", nil))
+
+			require.Equal(t, http.StatusOK, w.Code)
+			require.False(t, session.cleared)
+			require.Equal(t, "from-command-line", session.token)
+		})
+
+		t.Run("returns bad gateway when the backend does not serve the client id", func(t *testing.T) {
+			handler := newHandlerWithSession(t, "http://127.0.0.1:1", &fakeSession{})
+			w := httptest.NewRecorder()
+
+			handler.ServeHTTP(w, httptest.NewRequest("GET", "/session", nil))
+
+			require.Equal(t, http.StatusBadGateway, w.Code)
+		})
+	})
+
 	t.Run("ui", func(t *testing.T) {
 		t.Run("serves the index page at the root", func(t *testing.T) {
 			handler := newHandler(t, "http://127.0.0.1:1")
@@ -148,9 +365,42 @@ func TestHandler(t *testing.T) {
 	})
 }
 
+type fakeSession struct {
+	token   string
+	fixed   bool
+	cleared bool
+}
+
+func (s *fakeSession) Token() string {
+	return s.token
+}
+
+func (s *fakeSession) Set(token string) error {
+	s.token = token
+	return nil
+}
+
+func (s *fakeSession) Clear() error {
+	if s.fixed {
+		return nil
+	}
+	s.token = ""
+	s.cleared = true
+	return nil
+}
+
+func (s *fakeSession) Fixed() bool {
+	return s.fixed
+}
+
 func newHandler(t *testing.T, backend string) http.Handler {
 	t.Helper()
-	handler, err := event_browser.NewHandler(backend, "secret-token", ui(), test.DiscardLogger())
+	return newHandlerWithSession(t, backend, &fakeSession{token: "secret-token"})
+}
+
+func newHandlerWithSession(t *testing.T, backend string, session event_browser.Session) http.Handler {
+	t.Helper()
+	handler, err := event_browser.NewHandler(backend, session, ui(), test.DiscardLogger())
 	require.NoError(t, err)
 	return handler
 }
@@ -160,4 +410,25 @@ func ui() fstest.MapFS {
 		"index.html":      {Data: []byte(`<!doctype html><html><body><div id="app"></div></body></html>`)},
 		"assets/index.js": {Data: []byte("console.log('event browser')")},
 	}
+}
+
+func writeEnvelope(t *testing.T, w http.ResponseWriter, body *response.Response) {
+	t.Helper()
+	writeEnvelopeStatus(t, w, http.StatusOK, body)
+}
+
+func writeEnvelopeStatus(t *testing.T, w http.ResponseWriter, status int, body *response.Response) {
+	t.Helper()
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	require.NoError(t, json.NewEncoder(w).Encode(body))
+}
+
+func readData(t *testing.T, w *httptest.ResponseRecorder) map[string]any {
+	t.Helper()
+	body := test.UnmarshalJson[response.Response](t, w.Body.Bytes())
+	require.True(t, body.Successful)
+	data, ok := body.Data.(map[string]any)
+	require.True(t, ok)
+	return data
 }

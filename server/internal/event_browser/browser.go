@@ -50,25 +50,29 @@ func indexHTML(ui fs.FS) (string, error) {
 	return "", ErrUINotBuilt
 }
 
-func NewHandler(backend string, token string, ui fs.FS, logger *slog.Logger) (http.Handler, error) {
+func NewHandler(backend string, session Session, ui fs.FS, logger *slog.Logger) (http.Handler, error) {
 	target, err := url.Parse(backend)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse the backend URL: %w", err)
 	}
 
-	proxy := newProxy(target, token, logger)
+	proxy := newProxy(target, session, logger)
+	sessions := newSessionHandler(target, session, logger)
 	serveUI := newUIHandler(ui)
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if strings.HasPrefix(r.URL.Path, "/api/") {
+		switch {
+		case r.URL.Path == "/session":
+			sessions.ServeHTTP(w, r)
+		case strings.HasPrefix(r.URL.Path, "/api/"):
 			proxy.ServeHTTP(w, r)
-			return
+		default:
+			serveUI(w, r)
 		}
-		serveUI(w, r)
 	}), nil
 }
 
-func newProxy(target *url.URL, token string, logger *slog.Logger) *httputil.ReverseProxy {
+func newProxy(target *url.URL, session Session, logger *slog.Logger) *httputil.ReverseProxy {
 	return &httputil.ReverseProxy{
 		Rewrite: func(r *httputil.ProxyRequest) {
 			r.SetURL(target)
@@ -76,8 +80,17 @@ func newProxy(target *url.URL, token string, logger *slog.Logger) *httputil.Reve
 			r.Out.Host = target.Host
 
 			// the token stays in this process, so the browser never sees it
-			r.Out.Header.Set("Authorization", "Bearer "+token)
+			r.Out.Header.Set("Authorization", "Bearer "+session.Token())
 			r.SetXForwarded()
+		},
+		ModifyResponse: func(resp *http.Response) error {
+			if resp.StatusCode != http.StatusUnauthorized || session.Fixed() {
+				return nil
+			}
+			if err := session.Clear(); err != nil {
+				logger.Warn("failed to clear the session", "error", err)
+			}
+			return nil
 		},
 		FlushInterval: -1,
 		ErrorHandler: func(w http.ResponseWriter, r *http.Request, err error) {

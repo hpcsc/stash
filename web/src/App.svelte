@@ -7,6 +7,7 @@
   import Trash from './lib/components/Trash.svelte'
   import { token, signIn, signOut } from './lib/auth/session'
   import { init, start } from './lib/auth/google'
+  import { googleClientId } from './lib/config'
 
   let waiting = $state($token === null)
   let showSignIn = $state(false)
@@ -15,7 +16,7 @@
   onMount(async () => {
     if ($token !== null) return
     try {
-      init(async (idToken) => {
+      init(googleClientId, async (idToken) => {
         try {
           await signIn(idToken)
         } catch {

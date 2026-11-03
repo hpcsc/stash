@@ -13,9 +13,10 @@ const (
 )
 
 type Config struct {
-	Addr    string
-	Backend string
-	Token   string
+	Addr        string
+	Backend     string
+	Token       string
+	SessionFile string
 }
 
 func (c Config) Validate() error {
@@ -32,10 +33,6 @@ func (c Config) Validate() error {
 	}
 	if parsed.Host == "" {
 		return errors.New("the backend URL must include a host")
-	}
-
-	if c.Token == "" {
-		return fmt.Errorf("the session token is required: pass --token or set %s", TokenEnvName)
 	}
 
 	if c.Addr == "" {

@@ -29,12 +29,13 @@ func TestParseFlags(t *testing.T) {
 			require.Equal(t, "from-flag", cfg.Token)
 		})
 
-		t.Run("fails when neither the flag nor the environment has a token", func(t *testing.T) {
+		t.Run("accepts no token so the page can sign in", func(t *testing.T) {
 			t.Setenv(event_browser.TokenEnvName, "")
 
-			_, err := parseFlags([]string{"--url", "https://stash.example.com"})
+			cfg, err := parseFlags([]string{"--url", "https://stash.example.com"})
 
-			require.ErrorContains(t, err, "session token is required")
+			require.NoError(t, err)
+			require.Empty(t, cfg.Token)
 		})
 	})
 }
