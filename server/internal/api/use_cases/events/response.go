@@ -58,3 +58,8 @@ type Checkpoints struct {
 	LastPosition *Position    `json:"lastPosition,omitempty"`
 	Checkpoints  []Checkpoint `json:"checkpoints"`
 }
+
+type ProjectionTable struct {
+	Columns []string   `json:"columns"`
+	Rows    [][]string `json:"rows"`
+}

@@ -200,6 +200,93 @@ func TestQuery(t *testing.T) {
 		})
 	})
 
+	t.Run("countAfter and nextEvent", func(t *testing.T) {
+		t.Run("counts only the subscribed events after a position", func(t *testing.T) {
+			pool := test.NewDBPool(t)
+			first := uniqueType(t)
+			second := uniqueType(t)
+			streamID := "test-count-" + test.NewStringID(t)
+			insertEvent(t, pool, streamID, first, 1, `{}`, nil)
+			insertEvent(t, pool, streamID, second, 2, `{}`, nil)
+			insertEvent(t, pool, streamID, first, 3, `{}`, nil)
+			insertEvent(t, pool, streamID, first, 4, `{}`, nil)
+
+			reader := events.NewQuery(pool).Scoped(events.AllScope())
+			firstEvents, _, err := reader.List(context.Background(), events.ListFilter{Types: []string{first}})
+			require.NoError(t, err)
+			require.Len(t, firstEvents, 3)
+
+			count, err := reader.CountAfter(context.Background(), firstEvents[0].Position, []string{first})
+			require.NoError(t, err)
+			require.Equal(t, uint64(2), count)
+		})
+
+		t.Run("returns the next subscribed event after a position", func(t *testing.T) {
+			pool := test.NewDBPool(t)
+			first := uniqueType(t)
+			second := uniqueType(t)
+			streamID := "test-next-" + test.NewStringID(t)
+			insertEvent(t, pool, streamID, first, 1, `{}`, nil)
+			insertEvent(t, pool, streamID, second, 2, `{}`, nil)
+			insertEvent(t, pool, streamID, first, 3, `{}`, nil)
+
+			reader := events.NewQuery(pool).Scoped(events.AllScope())
+			firstEvents, _, err := reader.List(context.Background(), events.ListFilter{Types: []string{first}})
+			require.NoError(t, err)
+
+			next, err := reader.NextEvent(context.Background(), firstEvents[0].Position, []string{first})
+			require.NoError(t, err)
+			require.NotNil(t, next)
+			require.Equal(t, first, next.Type)
+		})
+	})
+
+	t.Run("projection", func(t *testing.T) {
+		t.Run("returns the items read model for every user", func(t *testing.T) {
+			pool := test.NewDBPool(t)
+			firstID := insertItem(t, pool, "alice-"+test.NewStringID(t), "note", "hello")
+			secondID := insertItem(t, pool, "bob-"+test.NewStringID(t), "note", "world")
+
+			table, err := events.NewQuery(pool).Scoped(events.AllScope()).Projection(context.Background(), "items")
+			require.NoError(t, err)
+			require.Contains(t, table.Columns, "id")
+			ids := make([]string, 0, len(table.Rows))
+			for _, row := range table.Rows {
+				ids = append(ids, row[0])
+			}
+			require.Contains(t, ids, firstID)
+			require.Contains(t, ids, secondID)
+		})
+
+		t.Run("scopes the read model to one user", func(t *testing.T) {
+			pool := test.NewDBPool(t)
+			unique := test.NewStringID(t)
+			alice := "alice-" + unique
+			firstID := insertItem(t, pool, alice, "note", "hello")
+			insertItem(t, pool, "bob-"+unique, "note", "world")
+
+			table, err := events.NewQuery(pool).Scoped(events.UserScope(domain.UserID(alice))).Projection(context.Background(), "items")
+			require.NoError(t, err)
+			require.Len(t, table.Rows, 1)
+			require.Equal(t, firstID, table.Rows[0][0])
+		})
+
+		t.Run("returns empty rows when the read model has none", func(t *testing.T) {
+			pool := test.NewDBPool(t)
+
+			table, err := events.NewQuery(pool).Scoped(events.UserScope(domain.UserID("nobody-"+test.NewStringID(t)))).Projection(context.Background(), "items")
+			require.NoError(t, err)
+			require.NotNil(t, table.Rows)
+			require.Empty(t, table.Rows)
+		})
+
+		t.Run("rejects an unknown projection", func(t *testing.T) {
+			pool := test.NewDBPool(t)
+			_, err := events.NewQuery(pool).Scoped(events.AllScope()).Projection(context.Background(), "nope")
+			require.ErrorIs(t, err, events.ErrUnknownProjection)
+		})
+	})
+
 	t.Run("tail", func(t *testing.T) {
 		t.Run("emits events after the given position", func(t *testing.T) {
 			pool := test.NewDBPool(t)
@@ -257,4 +344,15 @@ func insertEvent(t *testing.T, pool *pgxpool.Pool, streamID, typeName string, ve
 		uuid.NewString(), streamID, version, typeName, data, metadataValue,
 	)
 	require.NoError(t, err)
+}
+
+func insertItem(t *testing.T, pool *pgxpool.Pool, userID, itemType, body string) string {
+	t.Helper()
+	id := uuid.NewString()
+	_, err := pool.Exec(context.Background(),
+		"INSERT INTO items (id, user_id, type, body, captured_at, version) VALUES ($1, $2, $3, $4, NOW(), 1)",
+		id, userID, itemType, body,
+	)
+	require.NoError(t, err)
+	return id
 }

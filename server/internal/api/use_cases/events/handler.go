@@ -54,6 +54,7 @@ func (h *handler) Routes() []*route.Route {
 		route.Public("GET", "/events/types", h.requireScope(h.types)),
 		route.Public("GET", "/events/streams", h.requireScope(h.streams)),
 		route.Public("GET", "/events/checkpoints", h.requireScope(h.checkpoints)),
+		route.Public("GET", "/events/projection", h.requireScope(h.projection)),
 		route.Public("GET", "/events/stream", h.requireScope(h.streamEvents)),
 		route.Public("GET", "/events/tail", h.tail),
 	}
@@ -223,6 +224,31 @@ func (h *handler) checkpoint(ctx context.Context, reader Reader, row CheckpointR
 	}
 	cp.Next = next
 	return cp, nil
+}
+
+func (h *handler) projection(w http.ResponseWriter, r *http.Request) {
+	reader, ok := h.reader(w, r)
+	if !ok {
+		return
+	}
+
+	name := r.URL.Query().Get("name")
+	if name == "" {
+		_ = h.renderer.JSON(w, http.StatusBadRequest, response.Fail("name is required"))
+		return
+	}
+
+	table, err := reader.Projection(r.Context(), name)
+	if errors.Is(err, ErrUnknownProjection) {
+		_ = h.renderer.JSON(w, http.StatusNotFound, response.Fail("unknown projection"))
+		return
+	}
+	if err != nil {
+		_ = h.renderer.JSON(w, http.StatusInternalServerError, response.Fail(err.Error()))
+		return
+	}
+
+	_ = h.renderer.JSON(w, http.StatusOK, response.SucceedWithData(table))
 }
 
 func lagFromHead(position domain.Position, head *domain.Position) uint64 {

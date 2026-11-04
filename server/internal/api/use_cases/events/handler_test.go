@@ -229,6 +229,32 @@ func TestHandler(t *testing.T) {
 		})
 	})
 
+	t.Run("projection", func(t *testing.T) {
+		t.Run("returns the read model rows", func(t *testing.T) {
+			reader := &fakeReader{projection: &events.ProjectionTable{
+				Columns: []string{"id", "user_id", "state"},
+				Rows:    [][]string{{"item-1", "test-user", "kept"}},
+			}}
+			router := newRouter(t, &fakeSource{reader: reader})
+
+			w := send(router, "GET", "/events/projection?name=items", sessionToken(t))
+
+			require.Equal(t, http.StatusOK, w.Code)
+			table := dataOf[events.ProjectionTable](t, w)
+			require.Equal(t, []string{"id", "user_id", "state"}, table.Columns)
+			require.Len(t, table.Rows, 1)
+		})
+
+		t.Run("returns not found for an unknown projection", func(t *testing.T) {
+			reader := &fakeReader{projectionErr: events.ErrUnknownProjection}
+			router := newRouter(t, &fakeSource{reader: reader})
+
+			w := send(router, "GET", "/events/projection?name=nope", sessionToken(t))
+
+			require.Equal(t, http.StatusNotFound, w.Code)
+		})
+	})
+
 	t.Run("tail", func(t *testing.T) {
 		t.Run("writes events as server-sent events", func(t *testing.T) {
 			reader := &fakeReader{tail: []events.StoredEvent{storedEvent(1, 1, "stash.something-happened", `{"ID":"a","Value":"live"}`)}}
@@ -263,21 +289,23 @@ func (f *fakeSource) Scoped(scope events.Scope) events.Reader {
 }
 
 type fakeReader struct {
-	list        []events.StoredEvent
-	next        *domain.Position
-	listErr     error
-	filter      events.ListFilter
-	stream      []events.StoredEvent
-	streamID    string
-	streams     []events.StreamSummary
-	types       []string
-	checkpoints []events.CheckpointRow
-	head        *domain.Position
-	countAfter  uint64
-	countErr    error
-	nextEvent   *events.NextEvent
-	nextErr     error
-	tail        []events.StoredEvent
+	list          []events.StoredEvent
+	next          *domain.Position
+	listErr       error
+	filter        events.ListFilter
+	stream        []events.StoredEvent
+	streamID      string
+	streams       []events.StreamSummary
+	types         []string
+	checkpoints   []events.CheckpointRow
+	head          *domain.Position
+	countAfter    uint64
+	countErr      error
+	nextEvent     *events.NextEvent
+	nextErr       error
+	projection    *events.ProjectionTable
+	projectionErr error
+	tail          []events.StoredEvent
 }
 
 func (f *fakeReader) List(_ context.Context, filter events.ListFilter) ([]events.StoredEvent, *domain.Position, error) {
@@ -311,6 +339,10 @@ func (f *fakeReader) CountAfter(context.Context, domain.Position, []string) (uin
 
 func (f *fakeReader) NextEvent(context.Context, domain.Position, []string) (*events.NextEvent, error) {
 	return f.nextEvent, f.nextErr
+}
+
+func (f *fakeReader) Projection(context.Context, string) (*events.ProjectionTable, error) {
+	return f.projection, f.projectionErr
 }
 
 func (f *fakeReader) Tail(_ context.Context, _ *domain.Position, emit func(events.StoredEvent) error) error {

@@ -4,12 +4,14 @@
     listEvents,
     listTypes,
     listCheckpoints,
+    listProjection,
     listStreams,
     streamEvents,
     openTail,
     type EventRow,
     type Checkpoint,
     type Checkpoints,
+    type ProjectionTable,
     type StreamSummary,
     type Position,
   } from '../api/events'
@@ -56,6 +58,10 @@
   let checkpoints = $state<Checkpoints | null>(null)
   let loadingCheckpoints = $state(false)
 
+  let expandedProjection = $state<string | null>(null)
+  let projectionTable = $state<ProjectionTable | null>(null)
+  let loadingProjection = $state(false)
+
   let error = $state<string | null>(null)
   let selected = $state<EventRow | null>(null)
 
@@ -92,6 +98,7 @@
     error = null
     selected = null
     expandedStream = null
+    expandedProjection = null
     if (next === 'streams') await loadStreams()
     if (next === 'checkpoints') await loadCheckpoints()
   }
@@ -184,6 +191,25 @@
       error = e instanceof Error ? e.message : 'Failed to load checkpoints'
     } finally {
       loadingCheckpoints = false
+    }
+  }
+
+  async function toggleProjection(name: string) {
+    if (expandedProjection === name) {
+      expandedProjection = null
+      projectionTable = null
+      return
+    }
+    expandedProjection = name
+    projectionTable = null
+    loadingProjection = true
+    error = null
+    try {
+      projectionTable = await listProjection(name)
+    } catch (e) {
+      error = e instanceof Error ? e.message : 'Failed to load the projection'
+    } finally {
+      loadingProjection = false
     }
   }
 
@@ -465,6 +491,11 @@
               <span class="cp-position">{cp.position.transactionId}:{cp.position.sequence}</span>
               <span class="cp-lag" class:caught={cp.lag === 0}>{cp.lag === 0 ? 'caught up' : `${cp.lag} behind`}</span>
               <span class="cp-updated">progressed {relativeTime(cp.updatedAt)}</span>
+              {#if cp.kind === 'projection'}
+                <button type="button" class="ghost-btn" onclick={() => toggleProjection(cp.name)}>
+                  {expandedProjection === cp.name ? 'Hide read model' : 'Read model'}
+                </button>
+              {/if}
             </div>
             {#if cp.next}
               <div class="cp-line cp-detail">next <code>{cp.next.type}</code> on <code>{cp.next.streamId}</code></div>
@@ -476,6 +507,34 @@
                   <span class="cp-type">{type}</span>
                 {/each}
               </div>
+            {/if}
+            {#if expandedProjection === cp.name}
+              {#if loadingProjection}
+                <p class="hint">Loading…</p>
+              {:else if projectionTable && projectionTable.rows.length > 0}
+                <div class="projection-table">
+                  <table>
+                    <thead>
+                      <tr>
+                        {#each projectionTable.columns as column}
+                          <th>{column}</th>
+                        {/each}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {#each projectionTable.rows as row}
+                        <tr>
+                          {#each row as cell}
+                            <td>{cell}</td>
+                          {/each}
+                        </tr>
+                      {/each}
+                    </tbody>
+                  </table>
+                </div>
+              {:else}
+                <p class="hint">No rows.</p>
+              {/if}
             {/if}
           </div>
         {/each}
@@ -962,6 +1021,43 @@
     border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
     padding: 1px var(--space-2);
+  }
+
+  .projection-table {
+    overflow-x: auto;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+  }
+
+  .projection-table table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--text-xs);
+  }
+
+  .projection-table th,
+  .projection-table td {
+    padding: var(--space-2) var(--space-3);
+    text-align: left;
+    white-space: nowrap;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .projection-table th {
+    position: sticky;
+    top: 0;
+    font-weight: var(--weight-medium);
+    color: var(--color-text-secondary);
+    background: var(--color-bg);
+  }
+
+  .projection-table td {
+    font-family: var(--font-mono);
+    color: var(--color-text);
+  }
+
+  .projection-table tbody tr:last-child td {
+    border-bottom: none;
   }
 
   .cp-name {

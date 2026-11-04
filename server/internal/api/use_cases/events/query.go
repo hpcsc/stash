@@ -19,6 +19,8 @@ const (
 	tailPollInterval = time.Second
 )
 
+var ErrUnknownProjection = errors.New("unknown projection")
+
 const eventColumns = `id::text, stream_id, version, transaction_id, sequence, type, schema_version, data, metadata, created_at`
 
 type StoredEvent struct {
@@ -69,6 +71,7 @@ type Reader interface {
 	Checkpoints(ctx context.Context) ([]CheckpointRow, *domain.Position, error)
 	CountAfter(ctx context.Context, position domain.Position, eventTypes []string) (uint64, error)
 	NextEvent(ctx context.Context, position domain.Position, eventTypes []string) (*NextEvent, error)
+	Projection(ctx context.Context, name string) (*ProjectionTable, error)
 	Tail(ctx context.Context, after *domain.Position, emit func(StoredEvent) error) error
 }
 
@@ -252,6 +255,73 @@ func (r *reader) NextEvent(ctx context.Context, position domain.Position, eventT
 		return nil, fmt.Errorf("failed to read the next event after %d: %w", position.Sequence, err)
 	}
 	return &next, nil
+}
+
+func (r *reader) Projection(ctx context.Context, name string) (*ProjectionTable, error) {
+	table, columns, where, order, err := projectionColumns(name)
+	if err != nil {
+		return nil, err
+	}
+
+	selects := make([]string, len(columns))
+	for i, column := range columns {
+		selects[i] = column + "::text"
+	}
+
+	query := "SELECT " + strings.Join(selects, ", ") + " FROM " + table
+	args := []any{}
+	if !r.scope.IsAll() {
+		query += " WHERE " + where
+		args = append(args, r.scope.User().String())
+	}
+	query += " ORDER BY " + order
+
+	rows, err := r.pool.Query(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read the %s projection: %w", name, err)
+	}
+	defer rows.Close()
+
+	result := &ProjectionTable{Columns: columns, Rows: [][]string{}}
+	for rows.Next() {
+		values, err := rows.Values()
+		if err != nil {
+			return nil, fmt.Errorf("failed to read a %s row: %w", name, err)
+		}
+		row := make([]string, len(values))
+		for i, value := range values {
+			if value != nil {
+				row[i] = fmt.Sprint(value)
+			}
+		}
+		result.Rows = append(result.Rows, row)
+	}
+	return result, rows.Err()
+}
+
+func projectionColumns(name string) (table string, columns []string, where, order string, err error) {
+	switch name {
+	case "items":
+		return "items",
+			[]string{"id", "user_id", "type", "body", "state", "title", "description", "file_path", "thumbnail_path", "file_name", "file_size", "mime_type", "captured_at", "version", "created_at", "updated_at"},
+			"user_id = $1",
+			"captured_at DESC",
+			nil
+	case "tags":
+		return "tags",
+			[]string{"id", "user_id", "name", "version", "created_at", "updated_at"},
+			"user_id = $1",
+			"LOWER(name)",
+			nil
+	case "item-tags":
+		return "item_tags",
+			[]string{"item_id", "tag_id"},
+			"item_id IN (SELECT id FROM items WHERE user_id = $1)",
+			"item_id, tag_id",
+			nil
+	default:
+		return "", nil, "", "", ErrUnknownProjection
+	}
 }
 
 func (r *reader) Tail(ctx context.Context, after *domain.Position, emit func(StoredEvent) error) error {

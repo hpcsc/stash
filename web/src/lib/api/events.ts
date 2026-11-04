@@ -52,6 +52,11 @@ export interface Checkpoints {
   checkpoints: Checkpoint[]
 }
 
+export interface ProjectionTable {
+  columns: string[]
+  rows: string[][]
+}
+
 interface Envelope {
   successful: boolean
   messages: string[]
@@ -121,6 +126,12 @@ export async function streamEvents(streamId: string): Promise<EventRow[]> {
 export async function listCheckpoints(): Promise<Checkpoints> {
   const envelope = await getJson('/events/checkpoints')
   return envelope.data as Checkpoints
+}
+
+export async function listProjection(name: string): Promise<ProjectionTable> {
+  const envelope = await getJson(`/events/projection?name=${encodeURIComponent(name)}`)
+  const table = envelope.data as ProjectionTable | undefined
+  return { columns: table?.columns ?? [], rows: table?.rows ?? [] }
 }
 
 export function openTail(onEvent: (event: EventRow) => void): () => void {
