@@ -107,7 +107,10 @@ replace it.
 - **Events** — the store in commit order. Filter by type, stream prefix, correlation id, or a
   time range, and follow new events with **Live**.
 - **Streams** — a tree of every stream in the scope. Open a stream to read it in version order.
-- **Checkpoints** — each consumer's position and how far it lags the head of the store.
+- **Checkpoints** — each consumer, whether it is a projection or a reaction, the event types it
+  reads, how far it lags those types, and when it last progressed. A lagging consumer shows the
+  next event it will process. A projection also opens to show its read model, so its state can
+  be checked against the events that produced it.
 
 An event opens in a side panel with its raw payload, its metadata, and the decoded struct. An
 event the build cannot decode still opens: the panel shows the parse error instead of failing.
