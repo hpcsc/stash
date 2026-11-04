@@ -14,15 +14,19 @@ func NewProjection() *Projection {
 
 type Projection struct{}
 
+const Name = "tags"
+
+var EventTypes = []string{
+	event.TagCreated{}.EventType(),
+	event.TagRenamed{}.EventType(),
+}
+
 func (p *Projection) Name() string {
-	return "tags"
+	return Name
 }
 
 func (p *Projection) EventTypes() []string {
-	return []string{
-		event.TagCreated{}.EventType(),
-		event.TagRenamed{}.EventType(),
-	}
+	return EventTypes
 }
 
 func (p *Projection) Handle(ctx context.Context, tx pgx.Tx, evt *domain.Event) error {

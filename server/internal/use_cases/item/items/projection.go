@@ -14,23 +14,27 @@ func NewProjection() *Projection {
 
 type Projection struct{}
 
+const Name = "items"
+
+var EventTypes = []string{
+	event.LinkCaptured{}.EventType(),
+	event.ImageCaptured{}.EventType(),
+	event.FileCaptured{}.EventType(),
+	event.NoteCaptured{}.EventType(),
+	event.LinkMetadataFetched{}.EventType(),
+	event.ThumbnailGenerated{}.EventType(),
+	event.ItemKept{}.EventType(),
+	event.ItemDropped{}.EventType(),
+	event.ItemRestored{}.EventType(),
+	event.ItemDeleted{}.EventType(),
+}
+
 func (p *Projection) Name() string {
-	return "items"
+	return Name
 }
 
 func (p *Projection) EventTypes() []string {
-	return []string{
-		event.LinkCaptured{}.EventType(),
-		event.ImageCaptured{}.EventType(),
-		event.FileCaptured{}.EventType(),
-		event.NoteCaptured{}.EventType(),
-		event.LinkMetadataFetched{}.EventType(),
-		event.ThumbnailGenerated{}.EventType(),
-		event.ItemKept{}.EventType(),
-		event.ItemDropped{}.EventType(),
-		event.ItemRestored{}.EventType(),
-		event.ItemDeleted{}.EventType(),
-	}
+	return EventTypes
 }
 
 func (p *Projection) Handle(ctx context.Context, tx pgx.Tx, evt *domain.Event) error {

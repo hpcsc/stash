@@ -67,6 +67,8 @@ type Reader interface {
 	Streams(ctx context.Context) ([]StreamSummary, error)
 	Types(ctx context.Context) ([]string, error)
 	Checkpoints(ctx context.Context) ([]CheckpointRow, *domain.Position, error)
+	CountAfter(ctx context.Context, position domain.Position, eventTypes []string) (uint64, error)
+	NextEvent(ctx context.Context, position domain.Position, eventTypes []string) (*NextEvent, error)
 	Tail(ctx context.Context, after *domain.Position, emit func(StoredEvent) error) error
 }
 
@@ -223,6 +225,33 @@ func (r *reader) Checkpoints(ctx context.Context) ([]CheckpointRow, *domain.Posi
 		return nil, nil, err
 	}
 	return checkpoints, head, nil
+}
+
+func (r *reader) CountAfter(ctx context.Context, position domain.Position, eventTypes []string) (uint64, error) {
+	var count uint64
+	err := r.pool.QueryRow(ctx,
+		`SELECT COUNT(*) FROM events WHERE sequence > $1 AND type = ANY($2)`,
+		position.Sequence, eventTypes,
+	).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("failed to count events after %d: %w", position.Sequence, err)
+	}
+	return count, nil
+}
+
+func (r *reader) NextEvent(ctx context.Context, position domain.Position, eventTypes []string) (*NextEvent, error) {
+	var next NextEvent
+	err := r.pool.QueryRow(ctx,
+		`SELECT transaction_id, sequence, type, stream_id FROM events WHERE sequence > $1 AND type = ANY($2) ORDER BY sequence LIMIT 1`,
+		position.Sequence, eventTypes,
+	).Scan(&next.Position.TransactionID, &next.Position.Sequence, &next.Type, &next.StreamID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to read the next event after %d: %w", position.Sequence, err)
+	}
+	return &next, nil
 }
 
 func (r *reader) Tail(ctx context.Context, after *domain.Position, emit func(StoredEvent) error) error {

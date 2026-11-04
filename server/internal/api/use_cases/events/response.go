@@ -38,11 +38,20 @@ type StreamSummary struct {
 	LastCreatedAt time.Time `json:"lastCreatedAt"`
 }
 
+type NextEvent struct {
+	Position Position `json:"position"`
+	Type     string   `json:"type"`
+	StreamID string   `json:"streamId"`
+}
+
 type Checkpoint struct {
-	Name      string    `json:"name"`
-	Position  Position  `json:"position"`
-	UpdatedAt time.Time `json:"updatedAt"`
-	Lag       uint64    `json:"lag"`
+	Name       string     `json:"name"`
+	Position   Position   `json:"position"`
+	UpdatedAt  time.Time  `json:"updatedAt"`
+	Kind       string     `json:"kind,omitempty"`
+	EventTypes []string   `json:"eventTypes,omitempty"`
+	Lag        uint64     `json:"lag"`
+	Next       *NextEvent `json:"next,omitempty"`
 }
 
 type Checkpoints struct {

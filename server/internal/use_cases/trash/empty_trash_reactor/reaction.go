@@ -28,12 +28,16 @@ func New(bus *command.Bus, logger *slog.Logger) *Reaction {
 	}
 }
 
+const Name = "empty-trash"
+
+var EventTypes = []string{event.TrashEmptied{}.EventType()}
+
 func (r *Reaction) Name() string {
-	return "empty-trash"
+	return Name
 }
 
 func (r *Reaction) EventTypes() []string {
-	return []string{event.TrashEmptied{}.EventType()}
+	return EventTypes
 }
 
 func (r *Reaction) Handle(ctx context.Context, evt *domain.Event) error {

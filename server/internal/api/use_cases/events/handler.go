@@ -1,6 +1,7 @@
 package events
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -15,6 +16,7 @@ import (
 	"github.com/hpcsc/stash/internal/api/session"
 	"github.com/hpcsc/stash/internal/domain"
 	"github.com/hpcsc/stash/internal/domain/event/registry"
+	"github.com/hpcsc/stash/internal/use_cases/consumers"
 	"github.com/unrolled/render"
 )
 
@@ -31,6 +33,7 @@ func NewHandler(source ReaderSource, reg *registry.OfEvents, issuer *session.Iss
 		registry:          reg,
 		issuer:            issuer,
 		eventBrowserUsers: userIDSet(eventBrowserUserIDs),
+		consumers:         consumerCatalog(),
 		logger:            logger,
 	}
 }
@@ -41,6 +44,7 @@ type handler struct {
 	registry          *registry.OfEvents
 	issuer            *session.Issuer
 	eventBrowserUsers map[string]struct{}
+	consumers         map[string]consumers.Description
 	logger            *slog.Logger
 }
 
@@ -177,22 +181,63 @@ func (h *handler) checkpoints(w http.ResponseWriter, r *http.Request) {
 
 	checkpoints := make([]Checkpoint, 0, len(rows))
 	for _, row := range rows {
-		var lag uint64
-		if head != nil && row.Position.Sequence < head.Sequence {
-			lag = head.Sequence - row.Position.Sequence
+		cp, err := h.checkpoint(r.Context(), reader, row, head)
+		if err != nil {
+			_ = h.renderer.JSON(w, http.StatusInternalServerError, response.Fail(err.Error()))
+			return
 		}
-		checkpoints = append(checkpoints, Checkpoint{
-			Name:      row.Name,
-			Position:  Position{TransactionID: row.Position.TransactionID, Sequence: row.Position.Sequence},
-			UpdatedAt: row.UpdatedAt,
-			Lag:       lag,
-		})
+		checkpoints = append(checkpoints, cp)
 	}
 
 	_ = h.renderer.JSON(w, http.StatusOK, response.SucceedWithData(Checkpoints{
 		LastPosition: toPosition(head),
 		Checkpoints:  checkpoints,
 	}))
+}
+
+func (h *handler) checkpoint(ctx context.Context, reader Reader, row CheckpointRow, head *domain.Position) (Checkpoint, error) {
+	cp := Checkpoint{
+		Name:      row.Name,
+		Position:  Position{TransactionID: row.Position.TransactionID, Sequence: row.Position.Sequence},
+		UpdatedAt: row.UpdatedAt,
+	}
+
+	description, known := h.consumers[row.Name]
+	if !known {
+		cp.Lag = lagFromHead(row.Position, head)
+		return cp, nil
+	}
+
+	cp.Kind = string(description.Kind)
+	cp.EventTypes = description.EventTypes
+
+	lag, err := reader.CountAfter(ctx, row.Position, description.EventTypes)
+	if err != nil {
+		return Checkpoint{}, err
+	}
+	cp.Lag = lag
+
+	next, err := reader.NextEvent(ctx, row.Position, description.EventTypes)
+	if err != nil {
+		return Checkpoint{}, err
+	}
+	cp.Next = next
+	return cp, nil
+}
+
+func lagFromHead(position domain.Position, head *domain.Position) uint64 {
+	if head == nil || position.Sequence >= head.Sequence {
+		return 0
+	}
+	return head.Sequence - position.Sequence
+}
+
+func consumerCatalog() map[string]consumers.Description {
+	catalog := make(map[string]consumers.Description, len(consumers.Descriptions()))
+	for _, description := range consumers.Descriptions() {
+		catalog[description.Name] = description
+	}
+	return catalog
 }
 
 func (h *handler) tail(w http.ResponseWriter, r *http.Request) {

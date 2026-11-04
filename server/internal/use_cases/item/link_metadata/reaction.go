@@ -69,12 +69,16 @@ func New(items *item.Repository, logger *slog.Logger) *Reaction {
 	}
 }
 
+const Name = "link-metadata"
+
+var EventTypes = []string{event.LinkCaptured{}.EventType()}
+
 func (r *Reaction) Name() string {
-	return "link-metadata"
+	return Name
 }
 
 func (r *Reaction) EventTypes() []string {
-	return []string{event.LinkCaptured{}.EventType()}
+	return EventTypes
 }
 
 func (r *Reaction) Handle(ctx context.Context, evt *domain.Event) error {

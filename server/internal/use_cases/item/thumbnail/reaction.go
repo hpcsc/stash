@@ -39,14 +39,18 @@ func New(items *item.Repository, store storage.Storage, logger *slog.Logger) *Re
 	}
 }
 
+const Name = "thumbnail"
+
+var EventTypes = []string{
+	event.ImageCaptured{}.EventType(),
+}
+
 func (r *Reaction) Name() string {
-	return "thumbnail"
+	return Name
 }
 
 func (r *Reaction) EventTypes() []string {
-	return []string{
-		event.ImageCaptured{}.EventType(),
-	}
+	return EventTypes
 }
 
 func (r *Reaction) Handle(ctx context.Context, evt *domain.Event) error {

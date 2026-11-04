@@ -184,10 +184,16 @@ func TestHandler(t *testing.T) {
 	})
 
 	t.Run("checkpoints", func(t *testing.T) {
-		t.Run("computes the lag from the last position", func(t *testing.T) {
+		t.Run("labels a known consumer and counts its subscribed lag", func(t *testing.T) {
 			reader := &fakeReader{
 				checkpoints: []events.CheckpointRow{{Name: "items", Position: domain.Position{TransactionID: 1, Sequence: 4}}},
 				head:        &domain.Position{TransactionID: 2, Sequence: 10},
+				countAfter:  3,
+				nextEvent: &events.NextEvent{
+					Position: events.Position{TransactionID: 2, Sequence: 7},
+					Type:     "stash.item-dropped",
+					StreamID: "user/a/item-1",
+				},
 			}
 			router := newRouter(t, &fakeSource{reader: reader})
 
@@ -197,7 +203,29 @@ func TestHandler(t *testing.T) {
 			view := dataOf[events.Checkpoints](t, w)
 			require.Equal(t, uint64(2), view.LastPosition.TransactionID)
 			require.Len(t, view.Checkpoints, 1)
-			require.Equal(t, uint64(6), view.Checkpoints[0].Lag)
+			cp := view.Checkpoints[0]
+			require.Equal(t, "projection", cp.Kind)
+			require.NotEmpty(t, cp.EventTypes)
+			require.Equal(t, uint64(3), cp.Lag)
+			require.Equal(t, uint64(7), cp.Next.Position.Sequence)
+			require.Equal(t, "stash.item-dropped", cp.Next.Type)
+		})
+
+		t.Run("falls back to the head for an unknown consumer", func(t *testing.T) {
+			reader := &fakeReader{
+				checkpoints: []events.CheckpointRow{{Name: "mystery", Position: domain.Position{TransactionID: 1, Sequence: 4}}},
+				head:        &domain.Position{TransactionID: 2, Sequence: 10},
+			}
+			router := newRouter(t, &fakeSource{reader: reader})
+
+			w := send(router, "GET", "/events/checkpoints", sessionToken(t))
+
+			require.Equal(t, http.StatusOK, w.Code)
+			view := dataOf[events.Checkpoints](t, w)
+			require.Len(t, view.Checkpoints, 1)
+			cp := view.Checkpoints[0]
+			require.Empty(t, cp.Kind)
+			require.Equal(t, uint64(6), cp.Lag)
 		})
 	})
 
@@ -245,6 +273,10 @@ type fakeReader struct {
 	types       []string
 	checkpoints []events.CheckpointRow
 	head        *domain.Position
+	countAfter  uint64
+	countErr    error
+	nextEvent   *events.NextEvent
+	nextErr     error
 	tail        []events.StoredEvent
 }
 
@@ -271,6 +303,14 @@ func (f *fakeReader) Types(context.Context) ([]string, error) {
 
 func (f *fakeReader) Checkpoints(context.Context) ([]events.CheckpointRow, *domain.Position, error) {
 	return f.checkpoints, f.head, nil
+}
+
+func (f *fakeReader) CountAfter(context.Context, domain.Position, []string) (uint64, error) {
+	return f.countAfter, f.countErr
+}
+
+func (f *fakeReader) NextEvent(context.Context, domain.Position, []string) (*events.NextEvent, error) {
+	return f.nextEvent, f.nextErr
 }
 
 func (f *fakeReader) Tail(_ context.Context, _ *domain.Position, emit func(events.StoredEvent) error) error {
