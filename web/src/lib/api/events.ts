@@ -72,6 +72,8 @@ export interface ListFilter {
   types?: string[]
   streamPrefix?: string
   correlationId?: string
+  since?: string
+  until?: string
   limit?: number
 }
 
@@ -84,6 +86,8 @@ export async function listEvents(filter: ListFilter = {}): Promise<Page> {
   filter.types?.forEach((t) => params.append('type', t))
   if (filter.streamPrefix) params.set('streamPrefix', filter.streamPrefix)
   if (filter.correlationId) params.set('correlationId', filter.correlationId)
+  if (filter.since) params.set('since', filter.since)
+  if (filter.until) params.set('until', filter.until)
   if (filter.limit) params.set('limit', String(filter.limit))
   const qs = params.toString()
   const envelope = await getJson(`/events${qs ? `?${qs}` : ''}`)

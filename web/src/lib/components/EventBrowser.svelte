@@ -43,6 +43,8 @@
   let typeFilter = $state('')
   let streamPrefix = $state('')
   let correlationId = $state('')
+  let since = $state('')
+  let until = $state('')
 
   let streams = $state<StreamSummary[]>([])
   let loadingStreams = $state(false)
@@ -99,7 +101,7 @@
     error = null
     try {
       const [page, availableTypes] = await Promise.all([
-        listEvents({ types: typeFilter ? [typeFilter] : [], streamPrefix, correlationId }),
+        listEvents({ types: typeFilter ? [typeFilter] : [], streamPrefix, correlationId, since: iso(since), until: iso(until) }),
         listTypes(),
       ])
       events = page.events
@@ -122,6 +124,8 @@
         types: typeFilter ? [typeFilter] : [],
         streamPrefix,
         correlationId,
+        since: iso(since),
+        until: iso(until),
       })
       events = [...events, ...page.events]
       next = page.next ?? null
@@ -213,6 +217,10 @@
 
   function pretty(value: unknown): string {
     return JSON.stringify(value, null, 2)
+  }
+
+  function iso(datetimeLocal: string): string | undefined {
+    return datetimeLocal ? new Date(datetimeLocal).toISOString() : undefined
   }
 
   const STALE_AFTER_MS = 5 * 60 * 1000
@@ -326,6 +334,14 @@
         <label class="field grow">
           <span>Correlation id</span>
           <input type="text" bind:value={correlationId} placeholder="uuid" />
+        </label>
+        <label class="field">
+          <span>Since</span>
+          <input type="datetime-local" bind:value={since} />
+        </label>
+        <label class="field">
+          <span>Until</span>
+          <input type="datetime-local" bind:value={until} />
         </label>
         <button type="button" class="apply-btn" onclick={loadEvents}>Apply</button>
       </div>
