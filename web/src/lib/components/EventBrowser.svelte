@@ -8,11 +8,12 @@
     streamEvents,
     openTail,
     type EventRow,
+    type Checkpoint,
     type Checkpoints,
     type StreamSummary,
     type Position,
   } from '../api/events'
-  import { formatDate } from '../time'
+  import { formatDate, relativeTime } from '../time'
   import ErrorBanner from './ErrorBanner.svelte'
   import EmptyState from './EmptyState.svelte'
 
@@ -212,6 +213,12 @@
 
   function pretty(value: unknown): string {
     return JSON.stringify(value, null, 2)
+  }
+
+  const STALE_AFTER_MS = 5 * 60 * 1000
+
+  function isStale(checkpoint: Checkpoint): boolean {
+    return checkpoint.lag > 0 && Date.now() - new Date(checkpoint.updatedAt).getTime() > STALE_AFTER_MS
   }
 
   function buildStreamTree(streams: StreamSummary[]): StreamNode[] {
@@ -433,10 +440,11 @@
     {:else}
       <div class="checkpoint-list">
         {#each checkpoints.checkpoints as cp (cp.name)}
-          <div class="checkpoint-row">
+          <div class="checkpoint-row" class:stale={isStale(cp)}>
             <span class="cp-name">{cp.name}</span>
             <span class="cp-position">{cp.position.transactionId}:{cp.position.sequence}</span>
             <span class="cp-lag" class:caught={cp.lag === 0}>{cp.lag === 0 ? 'caught up' : `${cp.lag} behind`}</span>
+            <span class="cp-updated">progressed {relativeTime(cp.updatedAt)}</span>
           </div>
         {/each}
       </div>
@@ -896,6 +904,16 @@
 
   .cp-lag.caught {
     color: var(--color-success);
+  }
+
+  .cp-updated {
+    font-size: var(--text-xs);
+    color: var(--color-text-tertiary);
+    white-space: nowrap;
+  }
+
+  .checkpoint-row.stale {
+    opacity: 0.5;
   }
 
   .detail {
