@@ -457,10 +457,26 @@
       <div class="checkpoint-list">
         {#each checkpoints.checkpoints as cp (cp.name)}
           <div class="checkpoint-row" class:stale={isStale(cp)}>
-            <span class="cp-name">{cp.name}</span>
-            <span class="cp-position">{cp.position.transactionId}:{cp.position.sequence}</span>
-            <span class="cp-lag" class:caught={cp.lag === 0}>{cp.lag === 0 ? 'caught up' : `${cp.lag} behind`}</span>
-            <span class="cp-updated">progressed {relativeTime(cp.updatedAt)}</span>
+            <div class="cp-line">
+              <span class="cp-name">{cp.name}</span>
+              {#if cp.kind}
+                <span class="cp-kind" class:reaction={cp.kind === 'reaction'}>{cp.kind}</span>
+              {/if}
+              <span class="cp-position">{cp.position.transactionId}:{cp.position.sequence}</span>
+              <span class="cp-lag" class:caught={cp.lag === 0}>{cp.lag === 0 ? 'caught up' : `${cp.lag} behind`}</span>
+              <span class="cp-updated">progressed {relativeTime(cp.updatedAt)}</span>
+            </div>
+            {#if cp.next}
+              <div class="cp-line cp-detail">next <code>{cp.next.type}</code> on <code>{cp.next.streamId}</code></div>
+            {/if}
+            {#if cp.eventTypes && cp.eventTypes.length > 0}
+              <div class="cp-line cp-detail cp-types">
+                <span>reads</span>
+                {#each cp.eventTypes as type}
+                  <span class="cp-type">{type}</span>
+                {/each}
+              </div>
+            {/if}
           </div>
         {/each}
       </div>
@@ -892,13 +908,60 @@
 
   .checkpoint-row {
     display: flex;
-    align-items: center;
-    gap: var(--space-3);
+    flex-direction: column;
+    gap: var(--space-2);
     padding: var(--space-3) var(--space-4);
     background: var(--color-surface);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
     font-size: var(--text-sm);
+  }
+
+  .cp-line {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+  }
+
+  .cp-kind {
+    font-size: var(--text-xs);
+    font-weight: var(--weight-medium);
+    color: var(--color-accent);
+    background: var(--color-accent-subtle);
+    padding: 2px var(--space-2);
+    border-radius: var(--radius-sm);
+    text-transform: capitalize;
+  }
+
+  .cp-kind.reaction {
+    color: var(--color-text-secondary);
+    background: var(--color-bg);
+  }
+
+  .cp-detail {
+    font-size: var(--text-xs);
+    color: var(--color-text-tertiary);
+  }
+
+  .cp-detail code {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--color-text-secondary);
+  }
+
+  .cp-types {
+    gap: var(--space-2);
+  }
+
+  .cp-type {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--color-text-secondary);
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    padding: 1px var(--space-2);
   }
 
   .cp-name {

@@ -31,11 +31,20 @@ export interface StreamSummary {
   lastCreatedAt: string
 }
 
+export interface NextEvent {
+  position: Position
+  type: string
+  streamId: string
+}
+
 export interface Checkpoint {
   name: string
   position: Position
   updatedAt: string
+  kind?: string
+  eventTypes?: string[]
   lag: number
+  next?: NextEvent
 }
 
 export interface Checkpoints {
