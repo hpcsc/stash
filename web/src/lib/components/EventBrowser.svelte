@@ -28,6 +28,13 @@
   let { onsignout }: Props = $props()
 
   type View = 'events' | 'streams' | 'checkpoints'
+  type CheckpointTab = 'projections' | 'reactions' | 'other'
+
+  const checkpointTabs: { id: CheckpointTab; label: string }[] = [
+    { id: 'projections', label: 'Projections' },
+    { id: 'reactions', label: 'Reactions' },
+    { id: 'other', label: 'Other' },
+  ]
 
   interface StreamNode {
     name: string
@@ -37,6 +44,7 @@
   }
 
   let view = $state<View>('events')
+  let checkpointTab = $state<CheckpointTab>('projections')
 
   let events = $state<EventRow[]>([])
   let next = $state<Position | null>(null)
@@ -59,6 +67,14 @@
 
   let checkpoints = $state<Checkpoints | null>(null)
   let loadingCheckpoints = $state(false)
+  let checkpointGroups = $derived.by(() => {
+    const all = checkpoints?.checkpoints ?? []
+    return {
+      projections: all.filter((cp) => cp.kind === 'projection'),
+      reactions: all.filter((cp) => cp.kind === 'reaction'),
+      other: all.filter((cp) => cp.kind !== 'projection' && cp.kind !== 'reaction'),
+    }
+  })
 
   let expandedProjection = $state<string | null>(null)
   let projectionTable = $state<ProjectionTable | null>(null)
@@ -109,6 +125,18 @@
     closeProjection()
     if (next === 'streams') await loadStreams()
     if (next === 'checkpoints') await loadCheckpoints()
+  }
+
+  function switchCheckpointTab(next: CheckpointTab) {
+    if (checkpointTab === next) return
+    checkpointTab = next
+    closeProjection()
+  }
+
+  function tabLabel(tab: CheckpointTab): string {
+    if (tab === 'projections') return 'projections'
+    if (tab === 'reactions') return 'reactions'
+    return 'other consumers'
   }
 
   async function loadEvents() {
@@ -545,101 +573,120 @@
     {:else if !checkpoints || checkpoints.checkpoints.length === 0}
       <EmptyState title="No checkpoints" description="Consumers write a checkpoint as they read the store." />
     {:else}
-      <div class="checkpoint-list">
-        {#each checkpoints.checkpoints as cp (cp.name)}
-          <div class="checkpoint-row" class:stale={isStale(cp)}>
-            <div class="cp-line">
-              <span class="cp-name">{cp.name}</span>
-              {#if cp.kind}
-                <span class="cp-kind" class:reaction={cp.kind === 'reaction'}>{cp.kind}</span>
-              {/if}
-              <span class="cp-meta">
-                <span class="cp-position" title={positionTitle(cp.position)}>event #{cp.position.sequence}</span>
-                <span class="cp-lag" class:caught={cp.lag === 0}>{cp.lag === 0 ? 'caught up' : `${cp.lag} behind`}</span>
-                <span class="cp-updated">progressed {relativeTime(cp.updatedAt)}</span>
-                {#if cp.kind === 'projection'}
-                  <button type="button" class="ghost-btn" onclick={() => toggleProjection(cp.name)}>
-                    {expandedProjection === cp.name ? 'Hide read model' : 'Read model'}
-                  </button>
-                {/if}
-              </span>
-            </div>
-            {#if cp.next}
-              <div class="cp-line cp-detail">next <code>{cp.next.type}</code> on <code>{cp.next.streamId}</code></div>
-            {/if}
-            {#if cp.eventTypes && cp.eventTypes.length > 0}
-              <div class="cp-line cp-detail cp-types">
-                <span>reads</span>
-                {#each cp.eventTypes as type}
-                  <span class="cp-type">{type}</span>
-                {/each}
-              </div>
-            {/if}
-            {#if expandedProjection === cp.name}
-              {#if projectionTable === null}
-                {#if loadingProjection}
-                  <p class="hint">Loading…</p>
-                {/if}
-              {:else}
-                <div class="projection-controls">
-                  <select value={projectionFilter.column} onchange={(e) => setProjectionColumn(e.currentTarget.value)}>
-                    <option value="">All columns</option>
-                    {#each projectionTable.columns as column}
-                      <option value={column}>{column}</option>
-                    {/each}
-                  </select>
-                  <select
-                    value={projectionFilter.operator}
-                    disabled={!projectionFilter.column}
-                    onchange={(e) => setProjectionOperator(e.currentTarget.value as ProjectionOperator)}
-                  >
-                    <option value="contains">contains</option>
-                    <option value="equals">equals</option>
-                    <option value="prefix">starts with</option>
-                    <option value="empty">is empty</option>
-                  </select>
-                  {#if projectionFilter.column && projectionFilter.operator !== 'empty'}
-                    <input
-                      type="search"
-                      placeholder="value"
-                      value={projectionFilter.value}
-                      oninput={(e) => setProjectionValue(e.currentTarget.value)}
-                    />
-                  {/if}
-                </div>
-                <p class="cp-detail">
-                  {#if loadingProjection}Loading… · {/if}
-                  {projectionSummary(projectionTable)}
-                </p>
-                {#if projectionTable.rows.length === 0}
-                  <p class="hint">{projectionFilter.column ? 'No rows match the filter.' : 'No rows.'}</p>
-                {:else}
-                  <div class="projection-table" class:loading={loadingProjection}>
-                    <table>
-                      <thead>
-                        <tr>
-                          {#each projectionTable.columns as column}
-                            <th>{column}</th>
-                          {/each}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {#each projectionTable.rows as row}
-                          <tr>
-                            {#each row as cell}
-                              <td>{cell}</td>
-                            {/each}
-                          </tr>
-                        {/each}
-                      </tbody>
-                    </table>
-                  </div>
-                {/if}
-              {/if}
-            {/if}
-          </div>
+      <div class="checkpoint-tabs" role="tablist" aria-label="Checkpoint kind">
+        {#each checkpointTabs as tab}
+          {#if tab.id !== 'other' || checkpointGroups.other.length > 0}
+            <button
+              type="button"
+              class="segment"
+              class:active={checkpointTab === tab.id}
+              role="tab"
+              aria-selected={checkpointTab === tab.id}
+              onclick={() => switchCheckpointTab(tab.id)}
+            >
+              {tab.label}
+              <span class="tab-count">{checkpointGroups[tab.id].length}</span>
+            </button>
+          {/if}
         {/each}
       </div>
+
+      {#if checkpointGroups[checkpointTab].length === 0}
+        <p class="hint">No {tabLabel(checkpointTab)} have written a checkpoint yet.</p>
+      {:else}
+        <div class="checkpoint-list">
+          {#each checkpointGroups[checkpointTab] as cp (cp.name)}
+            <div class="checkpoint-row" class:stale={isStale(cp)}>
+              <div class="cp-line">
+                <span class="cp-name">{cp.name}</span>
+                <span class="cp-meta">
+                  <span class="cp-position" title={positionTitle(cp.position)}>event #{cp.position.sequence}</span>
+                  <span class="cp-lag" class:caught={cp.lag === 0}>{cp.lag === 0 ? 'caught up' : `${cp.lag} behind`}</span>
+                  <span class="cp-updated">progressed {relativeTime(cp.updatedAt)}</span>
+                  {#if cp.kind === 'projection'}
+                    <button type="button" class="ghost-btn" onclick={() => toggleProjection(cp.name)}>
+                      {expandedProjection === cp.name ? 'Hide read model' : 'Read model'}
+                    </button>
+                  {/if}
+                </span>
+              </div>
+              {#if cp.next}
+                <div class="cp-line cp-detail">next <code>{cp.next.type}</code> on <code>{cp.next.streamId}</code></div>
+              {/if}
+              {#if cp.eventTypes && cp.eventTypes.length > 0}
+                <div class="cp-line cp-detail cp-types">
+                  <span>reads</span>
+                  {#each cp.eventTypes as type}
+                    <span class="cp-type">{type}</span>
+                  {/each}
+                </div>
+              {/if}
+              {#if expandedProjection === cp.name}
+                {#if projectionTable === null}
+                  {#if loadingProjection}
+                    <p class="hint">Loading…</p>
+                  {/if}
+                {:else}
+                  <div class="projection-controls">
+                    <select value={projectionFilter.column} onchange={(e) => setProjectionColumn(e.currentTarget.value)}>
+                      <option value="">All columns</option>
+                      {#each projectionTable.columns as column}
+                        <option value={column}>{column}</option>
+                      {/each}
+                    </select>
+                    <select
+                      value={projectionFilter.operator}
+                      disabled={!projectionFilter.column}
+                      onchange={(e) => setProjectionOperator(e.currentTarget.value as ProjectionOperator)}
+                    >
+                      <option value="contains">contains</option>
+                      <option value="equals">equals</option>
+                      <option value="prefix">starts with</option>
+                      <option value="empty">is empty</option>
+                    </select>
+                    {#if projectionFilter.column && projectionFilter.operator !== 'empty'}
+                      <input
+                        type="search"
+                        placeholder="value"
+                        value={projectionFilter.value}
+                        oninput={(e) => setProjectionValue(e.currentTarget.value)}
+                      />
+                    {/if}
+                  </div>
+                  <p class="cp-detail">
+                    {#if loadingProjection}Loading… · {/if}
+                    {projectionSummary(projectionTable)}
+                  </p>
+                  {#if projectionTable.rows.length === 0}
+                    <p class="hint">{projectionFilter.column ? 'No rows match the filter.' : 'No rows.'}</p>
+                  {:else}
+                    <div class="projection-table" class:loading={loadingProjection}>
+                      <table>
+                        <thead>
+                          <tr>
+                            {#each projectionTable.columns as column}
+                              <th>{column}</th>
+                            {/each}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {#each projectionTable.rows as row}
+                            <tr>
+                              {#each row as cell}
+                                <td>{cell}</td>
+                              {/each}
+                            </tr>
+                          {/each}
+                        </tbody>
+                      </table>
+                    </div>
+                  {/if}
+                {/if}
+              {/if}
+            </div>
+          {/each}
+        </div>
+      {/if}
     {/if}
   {/if}
   </div>
@@ -1084,19 +1131,24 @@
     flex-wrap: wrap;
   }
 
-  .cp-kind {
-    font-size: var(--text-xs);
-    font-weight: var(--weight-medium);
-    color: var(--color-accent);
-    background: var(--color-accent-subtle);
-    padding: 2px var(--space-2);
-    border-radius: var(--radius-sm);
-    text-transform: capitalize;
+  .checkpoint-tabs {
+    display: flex;
+    gap: var(--space-1);
+    padding: 3px;
+    background: var(--color-bg);
+    border: 1px solid var(--color-border-light);
+    border-radius: var(--radius-md);
+    align-self: flex-start;
   }
 
-  .cp-kind.reaction {
-    color: var(--color-text-secondary);
-    background: var(--color-bg);
+  .checkpoint-tabs .segment {
+    padding: var(--space-1) var(--space-3);
+    font-size: var(--text-xs);
+  }
+
+  .tab-count {
+    margin-left: var(--space-1);
+    color: var(--color-text-tertiary);
   }
 
   .cp-detail {
