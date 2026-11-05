@@ -52,9 +52,18 @@ export interface Checkpoints {
   checkpoints: Checkpoint[]
 }
 
+export type ProjectionOperator = 'contains' | 'equals' | 'prefix' | 'empty'
+
+export interface ProjectionFilter {
+  column: string
+  operator: ProjectionOperator
+  value: string
+}
+
 export interface ProjectionTable {
   columns: string[]
   rows: string[][]
+  total: number
 }
 
 interface Envelope {
@@ -128,10 +137,17 @@ export async function listCheckpoints(): Promise<Checkpoints> {
   return envelope.data as Checkpoints
 }
 
-export async function listProjection(name: string): Promise<ProjectionTable> {
-  const envelope = await getJson(`/events/projection?name=${encodeURIComponent(name)}`)
+export async function listProjection(name: string, filter?: ProjectionFilter): Promise<ProjectionTable> {
+  const params = new URLSearchParams({ name })
+  if (filter?.column) {
+    params.set('filterColumn', filter.column)
+    params.set('filterOp', filter.operator)
+    if (filter.operator !== 'empty') params.set('filterValue', filter.value)
+  }
+
+  const envelope = await getJson(`/events/projection?${params}`)
   const table = envelope.data as ProjectionTable | undefined
-  return { columns: table?.columns ?? [], rows: table?.rows ?? [] }
+  return { columns: table?.columns ?? [], rows: table?.rows ?? [], total: table?.total ?? 0 }
 }
 
 export function openTail(onEvent: (event: EventRow) => void): () => void {

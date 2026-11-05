@@ -247,7 +247,7 @@ func TestQuery(t *testing.T) {
 			firstID := insertItem(t, pool, "alice-"+test.NewStringID(t), "note", "hello")
 			secondID := insertItem(t, pool, "bob-"+test.NewStringID(t), "note", "world")
 
-			table, err := events.NewQuery(pool).Scoped(events.AllScope()).Projection(context.Background(), "items")
+			table, err := events.NewQuery(pool).Scoped(events.AllScope()).Projection(context.Background(), "items", nil)
 			require.NoError(t, err)
 			require.Contains(t, table.Columns, "id")
 			ids := make([]string, 0, len(table.Rows))
@@ -265,7 +265,7 @@ func TestQuery(t *testing.T) {
 			firstID := insertItem(t, pool, alice, "note", "hello")
 			insertItem(t, pool, "bob-"+unique, "note", "world")
 
-			table, err := events.NewQuery(pool).Scoped(events.UserScope(domain.UserID(alice))).Projection(context.Background(), "items")
+			table, err := events.NewQuery(pool).Scoped(events.UserScope(domain.UserID(alice))).Projection(context.Background(), "items", nil)
 			require.NoError(t, err)
 			require.Len(t, table.Rows, 1)
 			require.Equal(t, firstID, table.Rows[0][0])
@@ -274,15 +274,59 @@ func TestQuery(t *testing.T) {
 		t.Run("returns empty rows when the read model has none", func(t *testing.T) {
 			pool := test.NewDBPool(t)
 
-			table, err := events.NewQuery(pool).Scoped(events.UserScope(domain.UserID("nobody-"+test.NewStringID(t)))).Projection(context.Background(), "items")
+			table, err := events.NewQuery(pool).Scoped(events.UserScope(domain.UserID("nobody-"+test.NewStringID(t)))).Projection(context.Background(), "items", nil)
 			require.NoError(t, err)
 			require.NotNil(t, table.Rows)
 			require.Empty(t, table.Rows)
 		})
 
+		t.Run("filters the read model by a column", func(t *testing.T) {
+			pool := test.NewDBPool(t)
+			unique := "body-" + test.NewStringID(t)
+			matchingID := insertItem(t, pool, "alice-"+test.NewStringID(t), "note", unique)
+			insertItem(t, pool, "alice-"+test.NewStringID(t), "note", "something else")
+
+			table, err := events.NewQuery(pool).Scoped(events.AllScope()).Projection(context.Background(), "items", &events.ProjectionFilter{
+				Column:   "body",
+				Operator: events.ProjectionContains,
+				Value:    unique,
+			})
+			require.NoError(t, err)
+			require.Len(t, table.Rows, 1)
+			require.Equal(t, matchingID, table.Rows[0][0])
+			require.Equal(t, 1, table.Total)
+		})
+
+		t.Run("caps the rows and reports the full match count", func(t *testing.T) {
+			pool := test.NewDBPool(t)
+			user := "bulk-" + test.NewStringID(t)
+			_, err := pool.Exec(context.Background(),
+				`INSERT INTO items (id, user_id, type, body, captured_at, version)
+				 SELECT gen_random_uuid(), $1, 'note', 'bulk ' || i, NOW(), 1
+				 FROM generate_series(1, $2) AS i`,
+				user, events.ProjectionRowLimit+5,
+			)
+			require.NoError(t, err)
+
+			table, err := events.NewQuery(pool).Scoped(events.UserScope(domain.UserID(user))).Projection(context.Background(), "items", nil)
+			require.NoError(t, err)
+			require.Len(t, table.Rows, events.ProjectionRowLimit)
+			require.Equal(t, events.ProjectionRowLimit+5, table.Total)
+		})
+
+		t.Run("rejects an unknown filter column", func(t *testing.T) {
+			pool := test.NewDBPool(t)
+			_, err := events.NewQuery(pool).Scoped(events.AllScope()).Projection(context.Background(), "items", &events.ProjectionFilter{
+				Column:   "secret",
+				Operator: events.ProjectionEquals,
+				Value:    "1",
+			})
+			require.ErrorIs(t, err, events.ErrUnknownColumn)
+		})
+
 		t.Run("rejects an unknown projection", func(t *testing.T) {
 			pool := test.NewDBPool(t)
-			_, err := events.NewQuery(pool).Scoped(events.AllScope()).Projection(context.Background(), "nope")
+			_, err := events.NewQuery(pool).Scoped(events.AllScope()).Projection(context.Background(), "nope", nil)
 			require.ErrorIs(t, err, events.ErrUnknownProjection)
 		})
 	})

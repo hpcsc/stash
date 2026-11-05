@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -19,7 +20,37 @@ const (
 	tailPollInterval = time.Second
 )
 
-var ErrUnknownProjection = errors.New("unknown projection")
+const ProjectionRowLimit = 200
+
+var (
+	ErrUnknownProjection = errors.New("unknown projection")
+	ErrUnknownColumn     = errors.New("unknown projection column")
+	ErrUnknownOperator   = errors.New("unknown projection operator")
+)
+
+type ProjectionOperator string
+
+const (
+	ProjectionContains ProjectionOperator = "contains"
+	ProjectionEquals   ProjectionOperator = "equals"
+	ProjectionPrefix   ProjectionOperator = "prefix"
+	ProjectionEmpty    ProjectionOperator = "empty"
+)
+
+func (o ProjectionOperator) Valid() bool {
+	switch o {
+	case ProjectionContains, ProjectionEquals, ProjectionPrefix, ProjectionEmpty:
+		return true
+	default:
+		return false
+	}
+}
+
+type ProjectionFilter struct {
+	Column   string
+	Operator ProjectionOperator
+	Value    string
+}
 
 const eventColumns = `id::text, stream_id, version, transaction_id, sequence, type, schema_version, data, metadata, created_at`
 
@@ -71,7 +102,7 @@ type Reader interface {
 	Checkpoints(ctx context.Context) ([]CheckpointRow, *domain.Position, error)
 	CountAfter(ctx context.Context, position domain.Position, eventTypes []string) (uint64, error)
 	NextEvent(ctx context.Context, position domain.Position, eventTypes []string) (*NextEvent, error)
-	Projection(ctx context.Context, name string) (*ProjectionTable, error)
+	Projection(ctx context.Context, name string, filter *ProjectionFilter) (*ProjectionTable, error)
 	Tail(ctx context.Context, after *domain.Position, emit func(StoredEvent) error) error
 }
 
@@ -257,7 +288,7 @@ func (r *reader) NextEvent(ctx context.Context, position domain.Position, eventT
 	return &next, nil
 }
 
-func (r *reader) Projection(ctx context.Context, name string) (*ProjectionTable, error) {
+func (r *reader) Projection(ctx context.Context, name string, filter *ProjectionFilter) (*ProjectionTable, error) {
 	table, columns, where, order, err := projectionColumns(name)
 	if err != nil {
 		return nil, err
@@ -268,13 +299,28 @@ func (r *reader) Projection(ctx context.Context, name string) (*ProjectionTable,
 		selects[i] = column + "::text"
 	}
 
-	query := "SELECT " + strings.Join(selects, ", ") + " FROM " + table
+	clauses := []string{}
 	args := []any{}
 	if !r.scope.IsAll() {
-		query += " WHERE " + where
+		clauses = append(clauses, where)
 		args = append(args, r.scope.User().String())
 	}
-	query += " ORDER BY " + order
+	if filter != nil && filter.Column != "" {
+		clause, value, err := filterClause(*filter, columns, len(args)+1)
+		if err != nil {
+			return nil, err
+		}
+		clauses = append(clauses, clause)
+		if value != nil {
+			args = append(args, *value)
+		}
+	}
+
+	query := "SELECT " + strings.Join(selects, ", ") + ", COUNT(*) OVER() FROM " + table
+	if len(clauses) > 0 {
+		query += " WHERE " + strings.Join(clauses, " AND ")
+	}
+	query += " ORDER BY " + order + fmt.Sprintf(" LIMIT %d", ProjectionRowLimit)
 
 	rows, err := r.pool.Query(ctx, query, args...)
 	if err != nil {
@@ -288,15 +334,38 @@ func (r *reader) Projection(ctx context.Context, name string) (*ProjectionTable,
 		if err != nil {
 			return nil, fmt.Errorf("failed to read a %s row: %w", name, err)
 		}
-		row := make([]string, len(values))
-		for i, value := range values {
-			if value != nil {
-				row[i] = fmt.Sprint(value)
+		row := make([]string, len(columns))
+		for i := range columns {
+			if values[i] != nil {
+				row[i] = fmt.Sprint(values[i])
 			}
 		}
 		result.Rows = append(result.Rows, row)
+		if total, ok := values[len(columns)].(int64); ok {
+			result.Total = int(total)
+		}
 	}
 	return result, rows.Err()
+}
+
+func filterClause(filter ProjectionFilter, columns []string, argIdx int) (string, *string, error) {
+	if !slices.Contains(columns, filter.Column) {
+		return "", nil, fmt.Errorf("%w: %s", ErrUnknownColumn, filter.Column)
+	}
+
+	text := filter.Column + "::text"
+	switch filter.Operator {
+	case ProjectionContains:
+		return fmt.Sprintf("strpos(lower(%s), lower($%d)) > 0", text, argIdx), &filter.Value, nil
+	case ProjectionEquals:
+		return fmt.Sprintf("lower(%s) = lower($%d)", text, argIdx), &filter.Value, nil
+	case ProjectionPrefix:
+		return fmt.Sprintf("starts_with(lower(%s), lower($%d))", text, argIdx), &filter.Value, nil
+	case ProjectionEmpty:
+		return fmt.Sprintf("(%s IS NULL OR %s = '')", filter.Column, text), nil, nil
+	default:
+		return "", nil, fmt.Errorf("%w: %s", ErrUnknownOperator, filter.Operator)
+	}
 }
 
 func projectionColumns(name string) (table string, columns []string, where, order string, err error) {

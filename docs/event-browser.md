@@ -110,7 +110,9 @@ replace it.
 - **Checkpoints** — each consumer, whether it is a projection or a reaction, the event types it
   reads, how far it lags those types, and when it last progressed. A lagging consumer shows the
   next event it will process. A projection also opens to show its read model, so its state can
-  be checked against the events that produced it.
+  be checked against the events that produced it. The read model shows at most 200 rows and
+  reports how many rows match, and it can be filtered by column with `contains`, `equals`,
+  `starts with`, or `is empty`.
 
 An event opens in a side panel with its raw payload, its metadata, and the decoded struct. An
 event the build cannot decode still opens: the panel shows the parse error instead of failing.

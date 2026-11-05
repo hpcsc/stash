@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -239,9 +240,19 @@ func (h *handler) projection(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	table, err := reader.Projection(r.Context(), name)
+	filter, err := projectionFilter(r)
+	if err != nil {
+		_ = h.renderer.JSON(w, http.StatusBadRequest, response.Fail(err.Error()))
+		return
+	}
+
+	table, err := reader.Projection(r.Context(), name, filter)
 	if errors.Is(err, ErrUnknownProjection) {
 		_ = h.renderer.JSON(w, http.StatusNotFound, response.Fail("unknown projection"))
+		return
+	}
+	if errors.Is(err, ErrUnknownColumn) || errors.Is(err, ErrUnknownOperator) {
+		_ = h.renderer.JSON(w, http.StatusBadRequest, response.Fail(err.Error()))
 		return
 	}
 	if err != nil {
@@ -250,6 +261,24 @@ func (h *handler) projection(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_ = h.renderer.JSON(w, http.StatusOK, response.SucceedWithData(table))
+}
+
+func projectionFilter(r *http.Request) (*ProjectionFilter, error) {
+	values := r.URL.Query()
+	column := strings.TrimSpace(values.Get("filterColumn"))
+	if column == "" {
+		return nil, nil
+	}
+
+	operator := ProjectionOperator(strings.TrimSpace(values.Get("filterOp")))
+	if operator == "" {
+		operator = ProjectionContains
+	}
+	if !operator.Valid() {
+		return nil, fmt.Errorf("%w: %s", ErrUnknownOperator, operator)
+	}
+
+	return &ProjectionFilter{Column: column, Operator: operator, Value: values.Get("filterValue")}, nil
 }
 
 func lagFromHead(position domain.Position, head *domain.Position) uint64 {

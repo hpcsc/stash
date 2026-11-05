@@ -11,6 +11,8 @@
     type EventRow,
     type Checkpoint,
     type Checkpoints,
+    type ProjectionFilter,
+    type ProjectionOperator,
     type ProjectionTable,
     type StreamSummary,
     type Position,
@@ -61,6 +63,9 @@
   let expandedProjection = $state<string | null>(null)
   let projectionTable = $state<ProjectionTable | null>(null)
   let loadingProjection = $state(false)
+  let projectionFilter = $state<ProjectionFilter>({ column: '', operator: 'contains', value: '' })
+  let projectionRequest = 0
+  let projectionTimer: ReturnType<typeof setTimeout> | null = null
 
   let error = $state<string | null>(null)
   let selected = $state<EventRow | null>(null)
@@ -90,7 +95,10 @@
 
   onMount(() => {
     loadEvents()
-    return () => closeTail?.()
+    return () => {
+      closeTail?.()
+      clearProjectionTimer()
+    }
   })
 
   async function switchView(next: View) {
@@ -98,7 +106,7 @@
     error = null
     selected = null
     expandedStream = null
-    expandedProjection = null
+    closeProjection()
     if (next === 'streams') await loadStreams()
     if (next === 'checkpoints') await loadCheckpoints()
   }
@@ -196,21 +204,74 @@
 
   async function toggleProjection(name: string) {
     if (expandedProjection === name) {
-      expandedProjection = null
-      projectionTable = null
+      closeProjection()
       return
     }
+    clearProjectionTimer()
     expandedProjection = name
+    projectionFilter = { column: '', operator: 'contains', value: '' }
     projectionTable = null
+    await loadProjection(name)
+  }
+
+  function closeProjection() {
+    clearProjectionTimer()
+    projectionRequest++
+    expandedProjection = null
+    projectionTable = null
+    loadingProjection = false
+  }
+
+  async function loadProjection(name: string) {
+    const request = ++projectionRequest
     loadingProjection = true
     error = null
     try {
-      projectionTable = await listProjection(name)
+      const filter = projectionFilter.column ? { ...projectionFilter } : undefined
+      const table = await listProjection(name, filter)
+      if (request !== projectionRequest) return
+      projectionTable = table
     } catch (e) {
+      if (request !== projectionRequest) return
       error = e instanceof Error ? e.message : 'Failed to load the projection'
     } finally {
-      loadingProjection = false
+      if (request === projectionRequest) loadingProjection = false
     }
+  }
+
+  function setProjectionColumn(column: string) {
+    projectionFilter.column = column
+    applyProjectionFilter()
+  }
+
+  function setProjectionOperator(operator: ProjectionOperator) {
+    projectionFilter.operator = operator
+    applyProjectionFilter()
+  }
+
+  function setProjectionValue(value: string) {
+    projectionFilter.value = value
+    clearProjectionTimer()
+    projectionTimer = setTimeout(applyProjectionFilter, 300)
+  }
+
+  function applyProjectionFilter() {
+    clearProjectionTimer()
+    if (expandedProjection) loadProjection(expandedProjection)
+  }
+
+  function clearProjectionTimer() {
+    if (projectionTimer !== null) {
+      clearTimeout(projectionTimer)
+      projectionTimer = null
+    }
+  }
+
+  function projectionSummary(table: ProjectionTable): string {
+    const noun = table.total === 1 ? 'row' : 'rows'
+    return table.rows.length < table.total
+      ? `showing first ${table.rows.length} of ${table.total} ${noun}`
+      : `${table.total} ${noun}`
   }
 
   function retry() {
@@ -515,31 +576,65 @@
               </div>
             {/if}
             {#if expandedProjection === cp.name}
-              {#if loadingProjection}
-                <p class="hint">Loading…</p>
-              {:else if projectionTable && projectionTable.rows.length > 0}
-                <div class="projection-table">
-                  <table>
-                    <thead>
-                      <tr>
-                        {#each projectionTable.columns as column}
-                          <th>{column}</th>
-                        {/each}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {#each projectionTable.rows as row}
+              {#if projectionTable === null}
+                {#if loadingProjection}
+                  <p class="hint">Loading…</p>
+                {/if}
+              {:else}
+                <div class="projection-controls">
+                  <select value={projectionFilter.column} onchange={(e) => setProjectionColumn(e.currentTarget.value)}>
+                    <option value="">All columns</option>
+                    {#each projectionTable.columns as column}
+                      <option value={column}>{column}</option>
+                    {/each}
+                  </select>
+                  <select
+                    value={projectionFilter.operator}
+                    disabled={!projectionFilter.column}
+                    onchange={(e) => setProjectionOperator(e.currentTarget.value as ProjectionOperator)}
+                  >
+                    <option value="contains">contains</option>
+                    <option value="equals">equals</option>
+                    <option value="prefix">starts with</option>
+                    <option value="empty">is empty</option>
+                  </select>
+                  {#if projectionFilter.column && projectionFilter.operator !== 'empty'}
+                    <input
+                      type="search"
+                      placeholder="value"
+                      value={projectionFilter.value}
+                      oninput={(e) => setProjectionValue(e.currentTarget.value)}
+                    />
+                  {/if}
+                </div>
+                <p class="cp-detail">
+                  {#if loadingProjection}Loading… · {/if}
+                  {projectionSummary(projectionTable)}
+                </p>
+                {#if projectionTable.rows.length === 0}
+                  <p class="hint">{projectionFilter.column ? 'No rows match the filter.' : 'No rows.'}</p>
+                {:else}
+                  <div class="projection-table" class:loading={loadingProjection}>
+                    <table>
+                      <thead>
                         <tr>
-                          {#each row as cell}
-                            <td>{cell}</td>
+                          {#each projectionTable.columns as column}
+                            <th>{column}</th>
                           {/each}
                         </tr>
-                      {/each}
-                    </tbody>
-                  </table>
-                </div>
-              {:else}
-                <p class="hint">No rows.</p>
+                      </thead>
+                      <tbody>
+                        {#each projectionTable.rows as row}
+                          <tr>
+                            {#each row as cell}
+                              <td>{cell}</td>
+                            {/each}
+                          </tr>
+                        {/each}
+                      </tbody>
+                    </table>
+                  </div>
+                {/if}
               {/if}
             {/if}
           </div>
@@ -1037,10 +1132,51 @@
     margin-left: auto;
   }
 
-  .projection-table {
-    overflow-x: auto;
+  .projection-controls {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+    margin-bottom: var(--space-2);
+  }
+
+  .projection-controls select,
+  .projection-controls input {
+    padding: var(--space-1) var(--space-2);
+    font-size: var(--text-xs);
+    color: var(--color-text);
+    background: var(--color-surface);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
+    box-shadow: var(--shadow-xs);
+  }
+
+  .projection-controls select {
+    min-width: 120px;
+    cursor: pointer;
+  }
+
+  .projection-controls input {
+    min-width: 160px;
+  }
+
+  .projection-controls select:focus,
+  .projection-controls input:focus {
+    outline: none;
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px var(--color-accent-subtle);
+  }
+
+  .projection-table {
+    max-height: 60vh;
+    overflow: auto;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    transition: opacity var(--duration-fast) var(--ease-out);
+  }
+
+  .projection-table.loading {
+    opacity: 0.6;
   }
 
   .projection-table table {

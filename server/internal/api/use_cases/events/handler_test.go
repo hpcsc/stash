@@ -253,6 +253,37 @@ func TestHandler(t *testing.T) {
 
 			require.Equal(t, http.StatusNotFound, w.Code)
 		})
+
+		t.Run("passes the filter to the reader", func(t *testing.T) {
+			reader := &fakeReader{projection: &events.ProjectionTable{}}
+			router := newRouter(t, &fakeSource{reader: reader})
+
+			w := send(router, "GET", "/events/projection?name=items&filterColumn=body&filterOp=contains&filterValue=hello", sessionToken(t))
+
+			require.Equal(t, http.StatusOK, w.Code)
+			require.Equal(t, &events.ProjectionFilter{
+				Column:   "body",
+				Operator: events.ProjectionContains,
+				Value:    "hello",
+			}, reader.projectionFilter)
+		})
+
+		t.Run("rejects an unknown filter operator", func(t *testing.T) {
+			router := newRouter(t, &fakeSource{reader: &fakeReader{}})
+
+			w := send(router, "GET", "/events/projection?name=items&filterColumn=body&filterOp=regex", sessionToken(t))
+
+			require.Equal(t, http.StatusBadRequest, w.Code)
+		})
+
+		t.Run("rejects an unknown filter column", func(t *testing.T) {
+			reader := &fakeReader{projectionErr: events.ErrUnknownColumn}
+			router := newRouter(t, &fakeSource{reader: reader})
+
+			w := send(router, "GET", "/events/projection?name=items&filterColumn=secret&filterOp=equals&filterValue=1", sessionToken(t))
+
+			require.Equal(t, http.StatusBadRequest, w.Code)
+		})
 	})
 
 	t.Run("tail", func(t *testing.T) {
@@ -289,23 +320,24 @@ func (f *fakeSource) Scoped(scope events.Scope) events.Reader {
 }
 
 type fakeReader struct {
-	list          []events.StoredEvent
-	next          *domain.Position
-	listErr       error
-	filter        events.ListFilter
-	stream        []events.StoredEvent
-	streamID      string
-	streams       []events.StreamSummary
-	types         []string
-	checkpoints   []events.CheckpointRow
-	head          *domain.Position
-	countAfter    uint64
-	countErr      error
-	nextEvent     *events.NextEvent
-	nextErr       error
-	projection    *events.ProjectionTable
-	projectionErr error
-	tail          []events.StoredEvent
+	list             []events.StoredEvent
+	next             *domain.Position
+	listErr          error
+	filter           events.ListFilter
+	stream           []events.StoredEvent
+	streamID         string
+	streams          []events.StreamSummary
+	types            []string
+	checkpoints      []events.CheckpointRow
+	head             *domain.Position
+	countAfter       uint64
+	countErr         error
+	nextEvent        *events.NextEvent
+	nextErr          error
+	projection       *events.ProjectionTable
+	projectionErr    error
+	projectionFilter *events.ProjectionFilter
+	tail             []events.StoredEvent
 }
 
 func (f *fakeReader) List(_ context.Context, filter events.ListFilter) ([]events.StoredEvent, *domain.Position, error) {
@@ -341,7 +373,8 @@ func (f *fakeReader) NextEvent(context.Context, domain.Position, []string) (*eve
 	return f.nextEvent, f.nextErr
 }
 
-func (f *fakeReader) Projection(context.Context, string) (*events.ProjectionTable, error) {
+func (f *fakeReader) Projection(_ context.Context, _ string, filter *events.ProjectionFilter) (*events.ProjectionTable, error) {
+	f.projectionFilter = filter
 	return f.projection, f.projectionErr
 }
 

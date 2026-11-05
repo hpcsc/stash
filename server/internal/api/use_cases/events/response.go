@@ -62,4 +62,5 @@ type Checkpoints struct {
 type ProjectionTable struct {
 	Columns []string   `json:"columns"`
 	Rows    [][]string `json:"rows"`
+	Total   int        `json:"total"`
 }
