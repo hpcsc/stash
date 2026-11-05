@@ -1,7 +1,27 @@
 version: '3'
 
 tasks:
+  install:
+    desc: install the extension's dependencies
+    cmds:
+      - npm ci
+
   test:
     desc: run the extension tests
     cmds:
       - npm test
+
+  build:
+    desc: build the Chrome and Firefox packages into dist/
+    cmds:
+      - npm run build
+
+  lint:
+    desc: lint the Firefox package
+    cmds:
+      - npm run lint:firefox
+
+  sign:
+    desc: sign the Firefox package as an unlisted AMO add-on
+    cmds:
+      - npm run sign:firefox

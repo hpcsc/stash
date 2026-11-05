@@ -3,10 +3,17 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
-    "test": "vitest run"
+    "test": "vitest run",
+    "build": "node scripts/build.mjs",
+    "lint:firefox": "web-ext lint --source-dir dist/firefox",
+    "sign:firefox": "web-ext sign --channel=unlisted --source-dir dist/firefox --artifacts-dir dist/signed"
   },
   "devDependencies": {
-    "vitest": "^5.0.5"
+    "vitest": "^5.0.5",
+    "web-ext": "^10.8.0"
   }
 }
