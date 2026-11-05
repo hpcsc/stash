@@ -255,6 +255,10 @@
     return checkpoint.lag > 0 && Date.now() - new Date(checkpoint.updatedAt).getTime() > STALE_AFTER_MS
   }
 
+  function positionTitle(position: Position): string {
+    return `transaction ${position.transactionId}, sequence ${position.sequence}`
+  }
+
   function buildStreamTree(streams: StreamSummary[]): StreamNode[] {
     const roots: StreamNode[] = []
     const byPath = new Map<string, StreamNode>()
@@ -471,7 +475,7 @@
     <div class="section-header">
       <h2>Checkpoints</h2>
       {#if checkpoints?.lastPosition}
-        <span class="count">head {checkpoints.lastPosition.transactionId}:{checkpoints.lastPosition.sequence}</span>
+        <span class="count" title={positionTitle(checkpoints.lastPosition)}>head event #{checkpoints.lastPosition.sequence}</span>
       {/if}
     </div>
 
@@ -488,14 +492,16 @@
               {#if cp.kind}
                 <span class="cp-kind" class:reaction={cp.kind === 'reaction'}>{cp.kind}</span>
               {/if}
-              <span class="cp-position">{cp.position.transactionId}:{cp.position.sequence}</span>
-              <span class="cp-lag" class:caught={cp.lag === 0}>{cp.lag === 0 ? 'caught up' : `${cp.lag} behind`}</span>
-              <span class="cp-updated">progressed {relativeTime(cp.updatedAt)}</span>
-              {#if cp.kind === 'projection'}
-                <button type="button" class="ghost-btn" onclick={() => toggleProjection(cp.name)}>
-                  {expandedProjection === cp.name ? 'Hide read model' : 'Read model'}
-                </button>
-              {/if}
+              <span class="cp-meta">
+                <span class="cp-position" title={positionTitle(cp.position)}>event #{cp.position.sequence}</span>
+                <span class="cp-lag" class:caught={cp.lag === 0}>{cp.lag === 0 ? 'caught up' : `${cp.lag} behind`}</span>
+                <span class="cp-updated">progressed {relativeTime(cp.updatedAt)}</span>
+                {#if cp.kind === 'projection'}
+                  <button type="button" class="ghost-btn" onclick={() => toggleProjection(cp.name)}>
+                    {expandedProjection === cp.name ? 'Hide read model' : 'Read model'}
+                  </button>
+                {/if}
+              </span>
             </div>
             {#if cp.next}
               <div class="cp-line cp-detail">next <code>{cp.next.type}</code> on <code>{cp.next.streamId}</code></div>
@@ -1023,6 +1029,14 @@
     padding: 1px var(--space-2);
   }
 
+  .cp-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+    margin-left: auto;
+  }
+
   .projection-table {
     overflow-x: auto;
     border: 1px solid var(--color-border);
@@ -1061,7 +1075,6 @@
   }
 
   .cp-name {
-    flex: 1;
     font-family: var(--font-mono);
     font-size: var(--text-xs);
   }
