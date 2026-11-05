@@ -5,6 +5,7 @@ package identity_test
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -78,6 +79,30 @@ func TestHandler(t *testing.T) {
 			require.Equal(t, http.StatusUnauthorized, w.Code)
 		})
 
+		t.Run("logs why the verifier rejected the token", func(t *testing.T) {
+			logs := commonTest.NewFakeLogHandler()
+			bus := command.NewBus()
+			bus.Register[identityCommand.SignIn](fake.NewHandler[identityCommand.SignIn]())
+			router := apiTest.NewRouterWithRoutable(identity.NewHandler(bus, map[string]identity.IDTokenVerifier{
+				"google": fakeVerifier{err: errors.New("oidc: audience mismatch")},
+			}, issuer, "client-id", slog.New(logs)))
+
+			w := send(router, "POST", "/auth/signin", `{"provider": "google", "idToken": "bad"}`)
+
+			require.Equal(t, http.StatusUnauthorized, w.Code)
+			require.NotNil(t, logs.Record)
+			require.Equal(t, "sign-in rejected", logs.Record.Message)
+			var loggedError error
+			logs.Record.Attrs(func(a slog.Attr) bool {
+				if a.Key == "error" {
+					loggedError = a.Value.Any().(error)
+					return false
+				}
+				return true
+			})
+			require.ErrorContains(t, loggedError, "audience mismatch")
+		})
+
 		t.Run("rejects a body without an ID token", func(t *testing.T) {
 			bus := command.NewBus()
 			bus.Register[identityCommand.SignIn](fake.NewHandler[identityCommand.SignIn]())
@@ -116,7 +141,7 @@ func (v fakeVerifier) Verify(context.Context, string) (string, error) {
 }
 
 func newRouter(bus *command.Bus, issuer *session.Issuer, verifier identity.IDTokenVerifier) http.Handler {
-	return apiTest.NewRouterWithRoutable(identity.NewHandler(bus, map[string]identity.IDTokenVerifier{"google": verifier}, issuer, "client-id"))
+	return apiTest.NewRouterWithRoutable(identity.NewHandler(bus, map[string]identity.IDTokenVerifier{"google": verifier}, issuer, "client-id", commonTest.DiscardLogger()))
 }
 
 func send(router http.Handler, method, path, body string) *httptest.ResponseRecorder {

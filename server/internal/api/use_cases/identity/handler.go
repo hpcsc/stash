@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 
 	"github.com/gookit/validate"
@@ -25,13 +26,14 @@ type IDTokenVerifier interface {
 
 var _ route.Routable = (*handler)(nil)
 
-func NewHandler(bus *command.Bus, verifiers map[string]IDTokenVerifier, issuer *session.Issuer, googleClientID string) route.Routable {
+func NewHandler(bus *command.Bus, verifiers map[string]IDTokenVerifier, issuer *session.Issuer, googleClientID string, logger *slog.Logger) route.Routable {
 	return &handler{
 		renderer:       render.New(),
 		bus:            bus,
 		verifiers:      verifiers,
 		issuer:         issuer,
 		googleClientID: googleClientID,
+		logger:         logger,
 	}
 }
 
@@ -41,6 +43,7 @@ type handler struct {
 	verifiers      map[string]IDTokenVerifier
 	issuer         *session.Issuer
 	googleClientID string
+	logger         *slog.Logger
 }
 
 func (h *handler) Routes() []*route.Route {
@@ -71,12 +74,14 @@ func (h *handler) signIn(w http.ResponseWriter, req *http.Request) {
 
 	subject, err := verifier.Verify(req.Context(), body.IDToken)
 	if err != nil {
+		h.logger.Warn("sign-in rejected", "provider", body.Provider, "error", err)
 		_ = h.renderer.JSON(w, http.StatusUnauthorized, response.Fail("sign-in failed"))
 		return
 	}
 
 	user := domain.UserID(subject)
 	if !user.Valid() {
+		h.logger.Warn("sign-in rejected", "provider", body.Provider, "subject", subject)
 		_ = h.renderer.JSON(w, http.StatusUnauthorized, response.Fail("sign-in failed"))
 		return
 	}

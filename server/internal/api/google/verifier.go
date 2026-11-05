@@ -3,6 +3,7 @@ package google
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/coreos/go-oidc/v3/oidc"
 )
@@ -27,14 +28,14 @@ func New(ctx context.Context, clientID string) (*Verifier, error) {
 func (v *Verifier) Verify(ctx context.Context, raw string) (string, error) {
 	token, err := v.verifier.Verify(ctx, raw)
 	if err != nil {
-		return "", ErrInvalidToken
+		return "", fmt.Errorf("%w: %v", ErrInvalidToken, err)
 	}
 
 	var claims struct {
 		Subject string `json:"sub"`
 	}
 	if err := token.Claims(&claims); err != nil {
-		return "", ErrInvalidToken
+		return "", fmt.Errorf("%w: %v", ErrInvalidToken, err)
 	}
 	if claims.Subject == "" {
 		return "", ErrInvalidToken

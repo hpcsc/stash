@@ -64,6 +64,7 @@ func (h *handler) requireScope(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		scope, ok := resolveScope(r, h.issuer, h.eventBrowserUsers)
 		if !ok {
+			h.logger.Warn("request rejected, no valid session", "path", r.URL.Path)
 			writeUnauthorized(w)
 			return
 		}
