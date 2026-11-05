@@ -1,6 +1,11 @@
 <script lang="ts">
   import { renderButton } from '../auth/google'
-  import { googleClientId } from '../config'
+
+  interface Props {
+    clientId: string
+  }
+
+  let { clientId }: Props = $props()
 
   function mountButton(node: HTMLDivElement) {
     renderButton(node)
@@ -44,7 +49,7 @@
 
   <section class="auth-panel">
     <div class="auth-card">
-      {#if googleClientId}
+      {#if clientId}
         <p class="auth-heading">Sign in to continue</p>
         <div use:mountButton class="google-btn"></div>
         <p class="auth-note">One account for the web, the browser extension and the app.</p>
@@ -55,7 +60,7 @@
             <path d="M10 7v3M10 13v.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
           </svg>
           <p>Google sign-in is not configured.</p>
-          <p class="config-hint">Set <code>VITE_GOOGLE_CLIENT_ID</code> in your environment.</p>
+          <p class="config-hint">Set <code>GOOGLE_CLIENT_ID</code> on the API.</p>
         </div>
       {/if}
     </div>

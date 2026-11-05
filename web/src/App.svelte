@@ -7,25 +7,29 @@
   import Trash from './lib/components/Trash.svelte'
   import { token, signIn, signOut } from './lib/auth/session'
   import { init, start } from './lib/auth/google'
-  import { googleClientId } from './lib/config'
+  import { fetchGoogleClientId } from './lib/api/client'
 
   let waiting = $state($token === null)
   let showSignIn = $state(false)
   let activeTab = $state<string>('inbox')
+  let clientId = $state('')
 
   onMount(async () => {
     if ($token !== null) return
     try {
-      init(googleClientId, async (idToken) => {
-        try {
-          await signIn(idToken)
-        } catch {
-          showSignIn = true
-        }
-      })
-      await start()
+      clientId = await fetchGoogleClientId()
+      if (clientId) {
+        init(clientId, async (idToken) => {
+          try {
+            await signIn(idToken)
+          } catch {
+            showSignIn = true
+          }
+        })
+        await start()
+      }
     } catch {
-      // Google client ID not set — SignIn will show the error.
+      clientId = ''
     } finally {
       waiting = false
       if (!showSignIn) showSignIn = true
@@ -74,7 +78,7 @@
     <span>Loading…</span>
   </div>
 {:else}
-  <SignIn />
+  <SignIn clientId={clientId} />
 {/if}
 
 <style>

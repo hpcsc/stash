@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { setToken, setUnauthorizedHandler, signIn, signOut, listItems, captureLink, captureNote, restoreItem, deleteItem, emptyTrash, fileUrl } from './client'
+import { setToken, setUnauthorizedHandler, signIn, signOut, fetchGoogleClientId, listItems, captureLink, captureNote, restoreItem, deleteItem, emptyTrash, fileUrl } from './client'
 
 function jsonResponse(body: object, status = 200): Response {
   return new Response(JSON.stringify(body), { status })
@@ -45,6 +45,19 @@ describe('client', () => {
 
     const [, init] = fetchMock.mock.calls[0]
     expect(init.headers.Authorization).toBe('Bearer session-token')
+  })
+
+  it('fetchGoogleClientId returns the client id from the config endpoint', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({ successful: true, messages: [], data: { googleClientId: 'client-id.apps.googleusercontent.com' } }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    const clientId = await fetchGoogleClientId()
+
+    expect(clientId).toBe('client-id.apps.googleusercontent.com')
+    const [url] = fetchMock.mock.calls[0]
+    expect(url).toBe('http://127.0.0.1:3333/api/auth/config')
   })
 
   it('listItems returns the items', async () => {

@@ -99,6 +99,11 @@ export async function signOut(): Promise<void> {
   await request('POST', '/auth/signout')
 }
 
+export async function fetchGoogleClientId(): Promise<string> {
+  const envelope = await request('GET', '/auth/config')
+  return (envelope.data as { googleClientId: string }).googleClientId
+}
+
 export interface Item {
   id: string
   type: string

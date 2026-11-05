@@ -55,7 +55,6 @@ if [[ -z "$client_id" ]]; then
 else
   echo "Set the client ID:"
   echo "  server/.env.local:  GOOGLE_CLIENT_ID=$client_id"
-  echo "  web/.env.local:     VITE_GOOGLE_CLIENT_ID=$client_id"
   echo
   echo "Run the app:"
   echo "  web:     cd web && npm run dev -- --port $web_port"

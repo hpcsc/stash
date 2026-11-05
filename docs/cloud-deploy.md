@@ -7,8 +7,8 @@ managed Postgres, so nothing survives on the VM's disk and the API and consumer 
 
 Two images — `ghcr.io/hpcsc/stash-api` and `ghcr.io/hpcsc/stash-catchup` — are published to
 GitHub Container Registry on every push to `main` (see `.github/workflows/ci.yml`, the
-`publish` job). The `api` image bundles the built web app (the Google client ID is baked in as
-a build arg), so no web build happens at deploy time.
+`publish` job). The `api` image bundles the built web app, which reads the Google client ID
+from the API at runtime, so no web build happens at deploy time.
 
 ## Cheapest options (provider cheat sheet)
 

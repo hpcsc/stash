@@ -6,9 +6,10 @@ The flow: the app obtains a Google ID token, posts it to `POST /api/auth/signin`
 validates the token's audience (`aud`) against `GOOGLE_CLIENT_ID`, records `SignedIn`, and
 returns a session token.
 
-One Google client ID — a **Web application** OAuth client — is used everywhere: as the web
-`clientId`, the Android `serverClientId`, and the API's `GOOGLE_CLIENT_ID`. Every platform then
-produces an ID token with the same `aud`, and the API accepts them all.
+One Google client ID — a **Web application** OAuth client — is used everywhere: as the Android
+`serverClientId` and the API's `GOOGLE_CLIENT_ID`. The web app and the event browser read the
+client ID from the API, so there is no separate value to keep in sync. Every platform produces
+an ID token with the same `aud`, and the API accepts them all.
 
 The Google Cloud steps below have no public API, so they are done in the console; a helper
 script prints the checklist and the run commands with the values filled in:
@@ -62,13 +63,8 @@ The API listens on `:3333`. `SESSION_SECRET` can stay at its local-dev value.
 
 ## 3. Web (Svelte)
 
-Set the Google client ID in `web/.env.local`:
-
-```sh
-VITE_GOOGLE_CLIENT_ID=<id>.apps.googleusercontent.com
-```
-
-Then run the dev server and open `http://127.0.0.1:8080`:
+The web app reads the Google client ID from the API, so step 2 is all it needs. Run the dev
+server and open `http://127.0.0.1:8080`:
 
 ```sh
 cd web
@@ -96,8 +92,8 @@ On a physical device, replace `10.0.2.2` with the machine's LAN (or Tailscale) I
 
 | Symptom | Cause |
 | --- | --- |
-| "Google sign-in is not configured" | The Google client ID was not passed to the app. |
-| `401 sign-in failed` from the API | The ID token's `aud` does not match `GOOGLE_CLIENT_ID`. Use the same web client ID for the web `clientId`, the Android `serverClientId`, and the API. |
+| "Google sign-in is not configured" | The API's `GOOGLE_CLIENT_ID` is empty, or the web app cannot reach the API. |
+| `401 sign-in failed` from the API | The ID token's `aud` does not match `GOOGLE_CLIENT_ID`. Use the same web client ID for the Android `serverClientId` and the API's `GOOGLE_CLIENT_ID`. |
 | Web popup blocked / "origin not allowed" | The origin is not in the web client's authorised JavaScript origins (`http://127.0.0.1:8080` for the web app, `http://127.0.0.1:7777` for the event browser). |
 | Android sign-in error | SHA-1 mismatch with the Android client, or the emulator has no Play services. |
 | "Failed to fetch" from the web app | CORS — the web origin is not in `ALLOWED_ORIGINS` (default `http://localhost:8080`, `http://127.0.0.1:8080`). |

@@ -153,7 +153,7 @@ Push to `main`, or run the workflow manually from the Actions tab. The `CI` work
 1. Runs the shellcheck, unit, integration, and vulnerability checks. Nothing is published or
    deployed unless they pass.
 2. Builds the `api` and `catchup` images and pushes them to GHCR. The `api` image bundles
-   the built web app (the Google client ID is baked in as a build arg).
+   the built web app, which reads the Google client ID from the API at runtime.
 3. `terraform apply` — provisions (or updates) the VM, the Neon project, the R2 bucket, and
    (when `domain` is set in `vars/production.tfvars`) the Cloudflare Tunnel and its DNS record.
 4. Writes `server/.env.cloud` on the VM from the Terraform outputs and the app secrets.
