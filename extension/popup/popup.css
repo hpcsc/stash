@@ -24,6 +24,14 @@ main {
   color: #6b6375;
 }
 
+.server {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  color: #90899c;
+}
+
 button {
   padding: 8px 12px;
   font-size: 13px;

@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Stash settings</title>
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Stash settings</h1>
+        <p class="hint">The extension saves to the Stash server you choose here.</p>
+      </header>
+
+      <form id="settings">
+        <label for="server">Server URL</label>
+        <input
+          id="server"
+          name="server"
+          type="text"
+          inputmode="url"
+          autocomplete="url"
+          spellcheck="false"
+          placeholder="https://stash.example.com"
+          required
+        />
+        <p class="hint">Use <code>http://127.0.0.1:3333</code> for a local server.</p>
+
+        <div class="actions">
+          <button type="submit" class="primary">Save</button>
+          <button type="button" id="reset">Use default</button>
+          <button type="button" id="test">Test connection</button>
+        </div>
+        <p class="status" id="status" role="status"></p>
+      </form>
+
+      <section>
+        <h2>Google sign-in</h2>
+        <p class="hint">
+          The server supplies the Google client ID. Add this redirect URI to that server's Google
+          OAuth client before signing in.
+        </p>
+        <p class="redirect"><code id="redirect">…</code></p>
+      </section>
+    </main>
+    <script type="module" src="options.js"></script>
+  </body>
+</html>

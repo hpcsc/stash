@@ -1,4 +1,4 @@
-import { apiBaseUrl, apiPrefix } from './config.js'
+import { apiUrl } from './settings.js'
 import { getToken } from './storage.js'
 
 export class ApiError extends Error {
@@ -29,7 +29,7 @@ async function bearer() {
 }
 
 async function postJson(path, body) {
-  const response = await fetch(`${apiBaseUrl}${apiPrefix}${path}`, {
+  const response = await fetch(await apiUrl(path), {
     method: 'POST',
     headers: { ...(await bearer()), 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -48,7 +48,7 @@ export async function saveLink(url) {
 export async function saveImage(blob, filename) {
   const form = new FormData()
   form.append('file', blob, filename)
-  const response = await fetch(`${apiBaseUrl}${apiPrefix}/items`, {
+  const response = await fetch(await apiUrl('/items'), {
     method: 'POST',
     headers: await bearer(),
     body: form,

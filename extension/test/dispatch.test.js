@@ -2,20 +2,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { handleMenuClick } from '../src/dispatch.js'
 import { installBrowserMock, installChromeMock } from './webext-mock.js'
 
-vi.mock('../src/config.js', () => ({
-  apiBaseUrl: 'http://test',
-  apiPrefix: '/api',
-  googleClientId: '',
-}))
-
 function jsonResponse(body, status = 200) {
   return new Response(JSON.stringify(body), { status })
 }
 
 describe('handleMenuClick', () => {
   let chrome
-  beforeEach(() => {
+  beforeEach(async () => {
     ({ chrome } = installChromeMock())
+    await chrome.storage.sync.set({ apiBaseUrl: 'http://test' })
   })
   afterEach(() => {
     vi.unstubAllGlobals()
@@ -32,7 +27,8 @@ describe('handleMenuClick', () => {
 
     await handleMenuClick({ menuItemId: 'save-page', pageUrl: 'https://example.com' }, {})
 
-    const [, init] = fetchMock.mock.calls[0]
+    const [url, init] = fetchMock.mock.calls[0]
+    expect(url).toBe('http://test/api/items')
     expect(JSON.parse(init.body)).toEqual({ body: 'https://example.com', type: 'link' })
     expect(chrome.action.setBadgeText).toHaveBeenCalledWith({ text: '✓' })
   })
@@ -77,6 +73,7 @@ describe('handleMenuClick', () => {
 
   it('saves the page under the browser namespace (Firefox)', async () => {
     const { browser } = installBrowserMock()
+    await browser.storage.sync.set({ apiBaseUrl: 'http://test' })
     await browser.storage.local.set({ sessionToken: 'session-token' })
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ successful: true, messages: [] }))
     vi.stubGlobal('fetch', fetchMock)

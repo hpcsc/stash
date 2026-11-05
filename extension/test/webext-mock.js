@@ -1,32 +1,39 @@
 import { vi } from 'vitest'
 
+function storageArea(store) {
+  return {
+    async get(key) {
+      if (typeof key === 'string') {
+        return store.has(key) ? { [key]: store.get(key) } : {}
+      }
+      const out = {}
+      for (const k of key ?? []) {
+        if (store.has(k)) out[k] = store.get(k)
+      }
+      return out
+    },
+    async set(obj) {
+      for (const [k, v] of Object.entries(obj)) store.set(k, v)
+    },
+    async remove(key) {
+      for (const k of Array.isArray(key) ? key : [key]) store.delete(k)
+    },
+  }
+}
+
 function buildMock() {
-  const data = new Map()
+  const local = new Map()
+  const sync = new Map()
 
   const api = {
     runtime: {
       id: 'test-extension-id',
       onInstalled: { addListener: vi.fn() },
+      openOptionsPage: vi.fn(async () => {}),
     },
     storage: {
-      local: {
-        async get(key) {
-          if (typeof key === 'string') {
-            return data.has(key) ? { [key]: data.get(key) } : {}
-          }
-          const out = {}
-          for (const k of key ?? []) {
-            if (data.has(k)) out[k] = data.get(k)
-          }
-          return out
-        },
-        async set(obj) {
-          for (const [k, v] of Object.entries(obj)) data.set(k, v)
-        },
-        async remove(key) {
-          data.delete(key)
-        },
-      },
+      local: storageArea(local),
+      sync: storageArea(sync),
     },
     identity: {
       launchWebAuthFlow: vi.fn(async () => ''),
@@ -42,19 +49,19 @@ function buildMock() {
     },
   }
 
-  return { api, data }
+  return { api, local, sync }
 }
 
 export function installChromeMock() {
-  const { api, data } = buildMock()
+  const { api, local, sync } = buildMock()
   globalThis.chrome = api
   delete globalThis.browser
-  return { chrome: api, data }
+  return { chrome: api, local, sync }
 }
 
 export function installBrowserMock() {
-  const { api, data } = buildMock()
+  const { api, local, sync } = buildMock()
   globalThis.browser = api
   delete globalThis.chrome
-  return { browser: api, data }
+  return { browser: api, local, sync }
 }

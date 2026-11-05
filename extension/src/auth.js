@@ -1,4 +1,4 @@
-import { apiBaseUrl, apiPrefix, googleClientId } from './config.js'
+import { apiUrl, getGoogleClientId } from './settings.js'
 import { browser } from './browser.js'
 import { clearToken, getToken, setToken } from './storage.js'
 
@@ -9,14 +9,19 @@ export class SignInFailed extends Error {
   }
 }
 
+export function redirectUri() {
+  if (browser.identity.getRedirectURL) {
+    return browser.identity.getRedirectURL()
+  }
+  return `https://${browser.runtime.id}.chromiumapp.org/`
+}
+
 export async function signInWithGoogle() {
-  const redirectUri = browser.identity.getRedirectURL
-    ? browser.identity.getRedirectURL()
-    : `https://${browser.runtime.id}.chromiumapp.org/`
+  const googleClientId = await getGoogleClientId()
   const nonce = crypto.randomUUID()
   const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth')
   authUrl.searchParams.set('client_id', googleClientId)
-  authUrl.searchParams.set('redirect_uri', redirectUri)
+  authUrl.searchParams.set('redirect_uri', redirectUri())
   authUrl.searchParams.set('response_type', 'id_token')
   authUrl.searchParams.set('scope', 'openid email profile')
   authUrl.searchParams.set('nonce', nonce)
@@ -28,7 +33,7 @@ export async function signInWithGoogle() {
     throw new SignInFailed('Google sign-in did not return an ID token')
   }
 
-  const response = await fetch(`${apiBaseUrl}${apiPrefix}/auth/signin`, {
+  const response = await fetch(await apiUrl('/auth/signin'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ provider: 'google', idToken }),
@@ -53,7 +58,7 @@ export async function signOut() {
   const token = await getToken()
   if (token) {
     try {
-      await fetch(`${apiBaseUrl}${apiPrefix}/auth/signout`, {
+      await fetch(await apiUrl('/auth/signout'), {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       })

@@ -2,19 +2,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError, saveImage, saveLink, saveText } from '../src/api.js'
 import { installChromeMock } from './webext-mock.js'
 
-vi.mock('../src/config.js', () => ({
-  apiBaseUrl: 'http://test',
-  apiPrefix: '/api',
-  googleClientId: '',
-}))
-
 function jsonResponse(body, status = 200) {
   return new Response(JSON.stringify(body), { status })
 }
 
 describe('api', () => {
-  beforeEach(() => {
-    installChromeMock()
+  let chrome
+  beforeEach(async () => {
+    ({ chrome } = installChromeMock())
+    await chrome.storage.sync.set({ apiBaseUrl: 'http://test' })
   })
   afterEach(() => {
     vi.unstubAllGlobals()
