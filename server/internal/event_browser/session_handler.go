@@ -99,6 +99,7 @@ func (h *sessionHandler) signIn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !result.Successful {
+		h.logger.Warn("backend rejected sign-in", "status", resp.StatusCode, "messages", result.Messages)
 		writeJSON(w, resp.StatusCode, result)
 		return
 	}

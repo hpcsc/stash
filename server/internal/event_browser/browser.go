@@ -87,6 +87,7 @@ func newProxy(target *url.URL, session Session, logger *slog.Logger) *httputil.R
 			if resp.StatusCode != http.StatusUnauthorized || session.Fixed() {
 				return nil
 			}
+			logger.Warn("backend returned Unauthorized, clearing the session", "path", resp.Request.URL.Path)
 			if err := session.Clear(); err != nil {
 				logger.Warn("failed to clear the session", "error", err)
 			}
