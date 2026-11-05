@@ -44,8 +44,8 @@ Where `<your-hostname>` is the machine's LAN IP, or its Tailscale hostname
 (`<machine>.<tailnet>.ts.net`) if you want access away from home.
 
 For Tailscale, install it on the host machine and use its MagicDNS name. Point the Android
-app at `http://<machine>.<tailnet>.ts.net:3333` and the browser extension's `apiBaseUrl` at
-the same URL.
+app at `http://<machine>.<tailnet>.ts.net:3333` and set the browser extension's server URL to
+the same address in its Settings page.
 
 ## 4. Stop it
 

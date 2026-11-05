@@ -3,56 +3,117 @@ title: Firefox extension
 weight: 4
 ---
 
-The same `extension/` directory runs in Firefox as in Chrome. The manifest declares both a
-`background.service_worker` (used by Chrome) and `background.scripts` (used by Firefox), and
-the source resolves `browser.*` (Firefox) falling back to `chrome.*` (Chrome).
+The same source builds a Firefox package. It captures text, links, and images into the same
+Inbox as the web app, over the same API and with the same Google account.
 
-Sign-in reuses the same Web application OAuth client and `GOOGLE_CLIENT_ID` as the web and
-Android apps, but the redirect URI differs per browser: Firefox uses its own redirect URL
-derived from the extension's ID.
+Firefox release builds install only signed add-ons, so the GitHub release carries an AMO
+**unlisted** XPI: signed by Mozilla, installable, but not listed in AMO search. See
+[Chrome extension](/docs/chrome-extension/) for the Chrome package.
 
-## 1. Set the extension ID
+## 1. Install from a release
 
-`extension/manifest.json` already sets a stable Firefox ID so the redirect URL stays the same
-across reinstalls:
+1. Open the [latest release](https://github.com/hpcsc/stash/releases/latest).
+2. Download `stash-firefox-<version>.xpi`.
+3. Open `about:addons`, click the gear icon, choose **Install Add-on From File…**, and select
+   the XPI.
 
-```json
-"browser_specific_settings": { "gecko": { "id": "stash@example.com" } }
+If the release has no XPI, its signing secrets are not configured yet. Set them up under
+[Signing](#4-signing), then re-run the tag workflow, or sign locally.
+
+The `stash-firefox-<version>.zip` from `npm run build` is unsigned. Use it for
+`about:debugging` temporary installs and for `web-ext run`, not for normal installation.
+
+## 2. Point it at your server
+
+1. Click the toolbar icon, then **Settings**.
+2. Enter the server URL and click **Save**.
+   - Hosted: `https://stash.saphix.app`, the default.
+   - Local: `http://127.0.0.1:3333`.
+3. Click **Test connection**, then **Sign in with Google** in the popup.
+
+The client ID comes from the server's public `GET /api/auth/config`, so the server can change
+`GOOGLE_CLIENT_ID` without a new extension build. Changing the server clears the stored
+session.
+
+Firefox 140 or later is required; Firefox for Android 142 or later.
+
+## 3. Self-hosting: allow the redirect
+
+The add-on ID is fixed at `stash@saphix.app`, so Firefox derives the same redirect URI on
+every install:
+
+```
+https://aa9983a2262fb49a5f1a0291d8c833ab72951c3c.extensions.allizom.org/
 ```
 
-Change `stash@example.com` to an ID you own before publishing.
+Add it under **Authorised redirect URIs** on the OAuth client that the server's
+`GOOGLE_CLIENT_ID` belongs to. Firefox hashes the add-on ID rather than using it directly;
+the settings page shows the value from `browser.identity.getRedirectURL()`, which is the
+source of truth.
 
-## 2. Add the redirect URI in Google Cloud
+## 4. Signing
 
-Firefox requires the redirect URL returned by its own API, which is
-`https://<id>.extensions.allizom.org/`. Get the exact value by loading the extension and
-reading `browser.identity.getRedirectURL()` from the extension console (or run it in
-`about:debugging`'s console). Add that value under **Authorised redirect URIs** on the Web
-application OAuth client, alongside the Chrome one from
-[Chrome extension](/docs/chrome-extension/).
+Create an API key at <https://addons.mozilla.org/developers/addon/api/key/>, then add two
+GitHub repository secrets:
 
-## 3. Configure the extension
+| Secret | Value |
+| --- | --- |
+| `AMO_API_KEY` | the AMO API key (JWT issuer) |
+| `AMO_API_SECRET` | the AMO API secret |
 
-Set the client ID in `extension/src/config.js` if you have not already:
+When both exist, the release workflow runs `web-ext sign --channel=unlisted` and attaches the
+signed XPI. Without them it publishes only the Chrome zip and prints a notice.
 
-```js
-export const googleClientId = '<id>.apps.googleusercontent.com'
+To sign locally:
+
+```sh
+cd extension
+npm ci
+npm run build
+WEB_EXT_API_KEY='<key>' WEB_EXT_API_SECRET='<secret>' npm run sign:firefox
 ```
 
-`apiBaseUrl` defaults to `http://127.0.0.1:3333`, matching the local API.
+The XPI lands in `extension/dist/signed/`. The first signing registers the add-on ID on AMO.
 
-## 4. Load it
+AMO rejects a version it has already signed, so every release needs a new version. The tag
+supplies it: `v1.2.3` builds and signs version `1.2.3`.
+
+## Build and lint
+
+```sh
+cd extension
+npm run build
+npm run lint:firefox
+```
+
+The build writes `extension/dist/stash-firefox-<version>.zip` and an unpacked copy in
+`extension/dist/firefox/`. `web-ext lint` validates the unpacked copy.
+
+## Data disclosure
+
+Firefox asks for consent at install time because captures leave the browser. The manifest
+declares three required categories:
+
+| Category | Why |
+| --- | --- |
+| `authenticationInfo` | the Stash session token |
+| `browsingActivity` | the page URL of a saved page or image |
+| `websiteContent` | the text, link, or image you choose to save |
+
+Only what you explicitly capture is sent, and only to the server you configure in settings.
+
+## Develop
 
 1. Open `about:debugging#/runtime/this-firefox`.
 2. Click **Load Temporary Add-on…** and select `extension/manifest.json`.
 
-Temporary add-ons are removed when Firefox restarts; use `web-ext run` (from the `extension/`
-directory) for a persistent dev loop, or package with `web-ext build`.
+Temporary add-ons are removed when Firefox restarts. For a persistent dev loop:
 
-## 5. Use it
-
-Same as Chrome: click the toolbar icon and **Sign in with Google**, then right-click a
-selection, an image, or a page.
+```sh
+cd extension
+npm ci && npm run build
+npx web-ext run --source-dir dist/firefox
+```
 
 ## Test
 

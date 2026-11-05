@@ -47,7 +47,8 @@ Any cheap VPS works the same way.
    docker compose --env-file server/.env.production -f server/docker-compose.production.yml up -d --build
    ```
 5. Put the web app behind TLS (a domain + Caddy or Let's Encrypt, or Tailscale) so Google
-   sign-in works over HTTPS. Point the Android app and the extension at the API.
+   sign-in works over HTTPS. Point the Android app at the API, and set the browser
+   extension's server URL in its Settings page.
 
 ### Option B — Neon + R2 free tier (managed)
 

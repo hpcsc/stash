@@ -11,6 +11,10 @@ One Google client ID — a **Web application** OAuth client — is used everywhe
 client ID from the API, so there is no separate value to keep in sync. Every platform produces
 an ID token with the same `aud`, and the API accepts them all.
 
+The browser extensions reuse this client ID but sign in with their own redirect URI, which
+must be added to the same web client — see [chrome-extension.md](chrome-extension.md) and
+[firefox-extension.md](firefox-extension.md).
+
 The Google Cloud steps below have no public API, so they are done in the console; a helper
 script prints the checklist and the run commands with the values filled in:
 
