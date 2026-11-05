@@ -114,6 +114,8 @@ replace it.
   and reports how many rows match, and it can be filtered by column with `contains`, `equals`,
   `starts with`, or `is empty`.
 
+The selected view is kept in the URL fragment, so a refresh or a bookmark returns to it.
+
 An event opens in a side panel with its raw payload, its metadata, and the decoded struct. An
 event the build cannot decode still opens: the panel shows the parse error instead of failing.
 

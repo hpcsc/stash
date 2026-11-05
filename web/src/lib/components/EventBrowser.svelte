@@ -36,6 +36,16 @@
     { id: 'other', label: 'Other' },
   ]
 
+  function readLocation(): { view: View; tab: CheckpointTab } {
+    if (typeof window === 'undefined') return { view: 'events', tab: 'projections' }
+    const [rawView, rawTab] = window.location.hash.replace(/^#/, '').split('/')
+    const view: View = rawView === 'streams' || rawView === 'checkpoints' ? rawView : 'events'
+    const tab: CheckpointTab = rawTab === 'reactions' || rawTab === 'other' ? rawTab : 'projections'
+    return { view, tab }
+  }
+
+  const initialLocation = readLocation()
+
   interface StreamNode {
     name: string
     path: string
@@ -43,8 +53,8 @@
     children: StreamNode[]
   }
 
-  let view = $state<View>('events')
-  let checkpointTab = $state<CheckpointTab>('projections')
+  let view = $state<View>(initialLocation.view)
+  let checkpointTab = $state<CheckpointTab>(initialLocation.tab)
 
   let events = $state<EventRow[]>([])
   let next = $state<Position | null>(null)
@@ -110,27 +120,65 @@
   })
 
   onMount(() => {
-    loadEvents()
+    void openView(view, { replace: true })
+
+    const onHashChange = () => {
+      const next = readLocation()
+      if (next.view !== view) {
+        if (next.view === 'checkpoints') checkpointTab = next.tab
+        void openView(next.view, { replace: true })
+        return
+      }
+      if (next.tab !== checkpointTab) {
+        checkpointTab = next.tab
+        closeProjection()
+      }
+    }
+    window.addEventListener('hashchange', onHashChange)
+
     return () => {
+      window.removeEventListener('hashchange', onHashChange)
       closeTail?.()
       clearProjectionTimer()
     }
   })
 
-  async function switchView(next: View) {
+  function locationHash(): string {
+    return view === 'checkpoints' && checkpointTab !== 'projections'
+      ? `#checkpoints/${checkpointTab}`
+      : `#${view}`
+  }
+
+  function writeLocation(replace = false) {
+    if (typeof window === 'undefined') return
+    const hash = locationHash()
+    if (window.location.hash === hash) return
+    if (replace) window.history.replaceState(null, '', hash)
+    else window.location.hash = hash
+  }
+
+  async function openView(next: View, options: { replace?: boolean } = {}) {
     view = next
     error = null
     selected = null
     expandedStream = null
     closeProjection()
-    if (next === 'streams') await loadStreams()
-    if (next === 'checkpoints') await loadCheckpoints()
+    writeLocation(options.replace === true)
+
+    if (next === 'events') await loadEvents()
+    else if (next === 'streams') await loadStreams()
+    else await loadCheckpoints()
+  }
+
+  async function switchView(next: View) {
+    await openView(next)
   }
 
   function switchCheckpointTab(next: CheckpointTab) {
     if (checkpointTab === next) return
     checkpointTab = next
     closeProjection()
+    writeLocation()
   }
 
   function tabLabel(tab: CheckpointTab): string {
