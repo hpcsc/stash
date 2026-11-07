@@ -54,13 +54,14 @@ Timeline: `SignedIn` → `SignedOut`
 Google is the identity provider; the provider is interchangeable. "Refuse while signed out"
 is middleware, not an event.
 
-### Process 2 — Capture an item
+### Process 2 — Capture an item, and edit a note
 
-Timeline: `NoteCaptured` / `LinkCaptured` / `ImageCaptured` / `FileCaptured` → (`LinkMetadataFetched`, `ThumbnailGenerated`)
+Timeline: `NoteCaptured` / `LinkCaptured` / `ImageCaptured` / `FileCaptured` → (`LinkMetadataFetched`, `ThumbnailGenerated`); a note continues `NoteCaptured` → `NoteEdited` × N
 
 | Event | Description | Key data |
 |---|---|---|
 | `NoteCaptured` | Markdown note saved to the Inbox | itemId, markdown |
+| `NoteEdited` | A saved note's markdown replaced | itemId, markdown |
 | `LinkCaptured` | Link saved to the Inbox | itemId, url |
 | `ImageCaptured` | Image saved to the Inbox | itemId, fileRef |
 | `FileCaptured` | File saved to the Inbox | itemId, fileRef, fileName, fileSize, mimeType |
@@ -70,6 +71,7 @@ Timeline: `NoteCaptured` / `LinkCaptured` / `ImageCaptured` / `FileCaptured` →
 | Command | Actor | Produces | Refused when |
 |---|---|---|---|
 | `CaptureNote` | User | `NoteCaptured` | `CapturedOnce`, `NoteEmpty` |
+| `EditNote` | User | `NoteEdited` | `NoteEditable`, `EditFromInboxOrLibrary`, `NoteEmpty`, `VersionCurrent` |
 | `CaptureLink` | User | `LinkCaptured` | `CapturedOnce` |
 | `CaptureImage` | User | `ImageCaptured` | `CapturedOnce` |
 | `CaptureFile` | User | `FileCaptured` | `CapturedOnce`, `FileTooLarge`, `VideoRejected` |
@@ -86,6 +88,18 @@ A note carries its whole document as one markdown string, with inline image refe
 the images it contains. One note is one triage unit, so keep, drop and tag act on the note
 as a whole. Images are captured as part of the note rather than as separate items, which is
 why the composer holds them until the user saves.
+
+Editing a note replaces its whole markdown body. `EditNote` carries the version the client
+read, and the aggregate refuses an edit whose version is not current, so two tabs cannot
+silently overwrite each other. The event carries the new document rather than a delta, because
+the user can change anything in it. An edit changes content only: `state`, `captured_at`, and
+tags are untouched, so the note keeps its place, its list order, and when it was first saved.
+Adding a selection to a note needs no separate command — the client loads the note, joins the
+selection with a blank line, and sends `EditNote`.
+
+Only notes are editable. A link's title, an image, and a file have no body to edit, and a note
+in the Trash is waiting to be deleted, so both are refused. Empty markdown is refused as it is
+at capture.
 
 `FileTooLarge` (25 MB) and `VideoRejected` are command-input validation, decided from the
 command payload rather than the item's history. A note must contain markdown text or an image.
@@ -180,27 +194,29 @@ empty state.
 
 | View | Subscribes to | Purpose | Read by |
 |---|---|---|---|
-| `ItemsView` | 4 capture events | Captured content, type, and markdown | Inbox item detail |
+| `ItemsView` | 4 capture events | Captured content and type | Inbox item detail |
+| `NoteBodyView` | `NoteCaptured`, `NoteEdited` | A note's current markdown | Note Editor |
 | `ItemStateView` | 4 location events | Triage state (inbox/library/trash) | Drop / Restore / Delete / Empty triggers |
 | `ItemTagsView` | `ItemTagged` | Item-to-tag mapping | Library item |
 | `TagsView` | `TagCreated`, `TagRenamed` | Tag names | Tags screen |
 | `LinksToEnrichView` | `LinkCaptured`, `LinkMetadataFetched` | Links still needing metadata | LinkMetadataReactor |
 | `ImagesToThumbnailView` | `ImageCaptured`, `ThumbnailGenerated` | Images still needing thumbnails | ThumbnailReactor |
 
-The items read model is split into content (`ItemsView`) and state (`ItemStateView`) —
-the same content-vs-location boundary as the events. At implementation these two join into
-one `items` table (as the proposal specifies), and the enrichment events
-(`LinkMetadataFetched`, `ThumbnailGenerated`) additionally fill the title/description and
-thumbnail columns. A note stores its markdown source in the `body` column, with inline image
-references for the images it contains. The Inbox is the set of captured
-items whose state is still "inbox".
+The items read model is split into content (`ItemsView`), a note's body (`NoteBodyView`), and
+state (`ItemStateView`) — the same content-vs-location boundary as the events. At
+implementation these join into one `items` table (as the proposal specifies), and the
+enrichment events (`LinkMetadataFetched`, `ThumbnailGenerated`) additionally fill the
+title/description and thumbnail columns. A note stores its markdown source in the `body`
+column, with inline image references for the images it contains; `NoteEdited` rewrites that
+column in place and leaves state, capture time, and tags alone. The Inbox is the set of
+captured items whose state is still "inbox".
 
 ## Autonomous Components
 
 | Component | Owned events | Owned commands | Consumes from |
 |---|---|---|---|
 | Identity | `SignedIn`, `SignedOut` | `SignIn`, `SignOut` | Google |
-| Item | `NoteCaptured`…`ItemDeleted`, `ItemTagged`, `LinkMetadataFetched`, `ThumbnailGenerated` | capture / enrich / keep / tag / drop / restore / delete | — |
+| Item | `NoteCaptured`, `NoteEdited`, `LinkCaptured`…`ItemDeleted`, `ItemTagged`, `LinkMetadataFetched`, `ThumbnailGenerated` | capture / edit / enrich / keep / tag / drop / restore / delete | — |
 | Trash | `TrashEmptied` | `EmptyTrash` | — |
 | Tag | `TagCreated`, `TagRenamed` | `CreateTag`, `RenameTag` | — |
 
@@ -225,7 +241,7 @@ fetch). No saga, process manager, policy, or scheduler.
 | # | Slice | Component | Events | Commands | Views |
 |---|---|---|---|---|---|
 | 1 | Sign In / Sign Out | Identity | `SignedIn`, `SignedOut` | `SignIn`, `SignOut` | — |
-| 2 | Capture note | Item | `NoteCaptured` | `CaptureNote` | `ItemsView` |
+| 2 | Capture note | Item | `NoteCaptured` | `CaptureNote` | `ItemsView`, `NoteBodyView` |
 | 3 | Capture link + metadata | Item | `LinkCaptured`, `LinkMetadataFetched` | `CaptureLink`, `RecordLinkMetadata` | `ItemsView`, `LinksToEnrichView` |
 | 4 | Capture image + thumbnail | Item | `ImageCaptured`, `ThumbnailGenerated` | `CaptureImage`, `RecordThumbnail` | `ItemsView`, `ImagesToThumbnailView` |
 | 5 | Capture file | Item | `FileCaptured` | `CaptureFile` | `ItemsView` |
@@ -233,6 +249,7 @@ fetch). No saga, process manager, policy, or scheduler.
 | 7 | Drop / restore / delete | Item | `ItemDropped`, `ItemRestored`, `ItemDeleted` | `DropItem`, `RestoreItem`, `DeleteItem` | `ItemStateView` |
 | 8 | Empty trash | Trash | `TrashEmptied`, `ItemDeleted` | `EmptyTrash`, `DeleteItem` | `ItemStateView` |
 | 9 | Tags | Tag | `TagCreated`, `TagRenamed` | `CreateTag`, `RenameTag` | `TagsView` |
+| 10 | Edit note | Item | `NoteEdited` | `EditNote` | `NoteBodyView` |
 
 ## Decisions & Assumptions
 
@@ -251,3 +268,15 @@ fetch). No saga, process manager, policy, or scheduler.
 - **Images are uploaded with the note** — the composer keeps pasted images in memory and
   sends the markdown plus the files in one multipart request on Save. Limits are 10 images
   and 100 MB per note, with the existing 25 MB per-image limit.
+- **`EditNote` replaces the whole body** — the event carries the new markdown, not a delta,
+  because the user can change anything. Appending is built on top: the client loads the note,
+  joins the selection with a blank line, and sends `EditNote`.
+- **Edits are guarded by the version read** — `ExpectedVersion` is the item's stream version
+  from the read model. A mismatch is refused (`VersionCurrent`) rather than overwriting a
+  concurrent change; the event store's optimistic concurrency still covers a write that races
+  during the request.
+- **Only notes are editable, and only while in the Inbox or Library** — a link's title, an
+  image, and a file have no body to edit; a note in the Trash is waiting to be deleted. An
+  edit changes content only, never place, first-saved time, or tags.
+- **Empty markdown is refused on edit as it is on capture** — a note must contain text or an
+  image.

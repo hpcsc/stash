@@ -3,7 +3,6 @@ emod = 1
 // Every stream that holds user data is prefixed with the user ID — user/<id>/item-<uuid>,
 // user/<id>/tag-<uuid>, user/<id>/trash — so the user is the stream, not a payload field.
 // The Account aggregate keeps its identity-<subject> shape and is never projected or broadcast.
-
 model "Stash" {
   description = "A self-hosted capture inbox: save text, links, images, and files, then keep them into tagged libraries or drop them into a recoverable trash"
 }
@@ -132,6 +131,10 @@ context "Item" {
       CapturedOnce           = "an item is captured at most once"
       FileTooLarge           = "a captured file is at most 25 MB"
       VideoRejected          = "a captured file is not a video"
+      NoteEmpty              = "a note must contain markdown text or an image"
+      NoteEditable           = "only a note is edited"
+      EditFromInboxOrLibrary = "a note is edited only from the Inbox or Library"
+      VersionCurrent         = "an edit is made against the note's current version"
       KeepFromInbox          = "an item is kept only from the Inbox"
       TagFromLibrary         = "only a kept item is tagged"
       DropFromInboxOrLibrary = "an item is dropped only from the Inbox or Library"
@@ -172,6 +175,7 @@ context "Item" {
       flow = <<-FLOW
         command -> event:    CaptureNote -> NoteCaptured
         command -> rejected: CaptureNote -> CapturedOnce
+        command -> rejected: CaptureNote -> NoteEmpty
       FLOW
 
       spec "saves a note to the Inbox" {
@@ -183,6 +187,78 @@ context "Item" {
         given = [NoteCaptured]
         when  = CaptureNote
         then  = rejected(CapturedOnce)
+      }
+
+      spec "refuses an empty note" {
+        when = CaptureNote({ markdown = "" })
+        then = rejected(NoteEmpty)
+      }
+    }
+
+    slice "Edit Note" {
+      description = "The user changes a saved note's markdown"
+
+      trigger "Note Editor" {
+        description = "A saved note with its edit action"
+        actor       = User
+        reads       = NoteBodyView
+      }
+
+      command "EditNote" {
+        description = "Ask to replace a saved note's markdown"
+
+        fields {
+          itemId          = required(uuid)
+          markdown        = required(string)
+          expectedVersion = required(int)
+        }
+      }
+
+      event "NoteEdited" {
+        description = "A saved note's markdown was replaced"
+
+        fields {
+          itemId   = required(uuid)
+          markdown = required(string)
+        }
+      }
+
+      flow = <<-FLOW
+        command -> event:    EditNote -> NoteEdited
+        command -> rejected: EditNote -> NoteEditable
+        command -> rejected: EditNote -> EditFromInboxOrLibrary
+        command -> rejected: EditNote -> NoteEmpty
+        command -> rejected: EditNote -> VersionCurrent
+      FLOW
+
+      spec "replaces a saved note's markdown" {
+        given = [NoteCaptured]
+        when  = EditNote
+        then  = [NoteEdited]
+      }
+
+      spec "refuses to edit an item that is not a note" {
+        given = [LinkCaptured]
+        when  = EditNote
+        then  = rejected(NoteEditable)
+      }
+
+      spec "refuses to edit a note in the Trash" {
+        given = [NoteCaptured, ItemDropped]
+        when  = EditNote
+        then  = rejected(EditFromInboxOrLibrary)
+      }
+
+      spec "refuses an empty note" {
+        given = [NoteCaptured]
+        when  = EditNote({ markdown = "" })
+        then  = rejected(NoteEmpty)
+      }
+
+      spec "refuses an edit against a stale version" {
+        given = [NoteCaptured]
+        when  = EditNote({ expectedVersion = 0 })
+        then  = rejected(VersionCurrent)
       }
     }
 
@@ -354,6 +430,30 @@ context "Item" {
       spec "shows a captured item" {
         given = [NoteCaptured]
         then  = view(ItemsView)
+      }
+    }
+
+    slice "View Note Body" {
+      description = "A note's current markdown, after capture and after each edit"
+
+      view "NoteBodyView" {
+        description = "The markdown body of a note"
+        subscribes  = [NoteCaptured, NoteEdited]
+
+        fields {
+          itemId   = required(uuid)
+          markdown = required(string)
+        }
+      }
+
+      spec "shows a captured note's markdown" {
+        given = [NoteCaptured]
+        then  = view(NoteBodyView)
+      }
+
+      spec "shows an edited note's new markdown" {
+        given = [NoteCaptured, NoteEdited]
+        then  = view(NoteBodyView)
       }
     }
 
@@ -752,7 +852,6 @@ context "Item" {
         then  = view(ImagesToThumbnailView)
       }
     }
-
   }
 
   aggregate "Trash" {

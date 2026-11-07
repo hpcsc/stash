@@ -204,7 +204,7 @@
 <main class="sm-layout">
 <div class="sm-diagram">
 <svg id="sm-flow" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
-     viewBox="0 0 1240 830" width="1240" height="830" role="img"
+     viewBox="0 0 1240 888" width="1240" height="888" role="img"
      aria-label="Stash: the event flow, with a chip on each part that a story adds or changes.">
   <style>
     .bg { fill: #FFFFFF; }
@@ -292,14 +292,14 @@
     </g>
   </defs>
 
-  <rect id="sm-bg" x="0" y="0" width="1240" height="830" class="bg"/>
+  <rect id="sm-bg" x="0" y="0" width="1240" height="888" class="bg"/>
   <text x="24" y="30" class="title">Stash: where each story changes the flow</text>
 
   <!-- ===== edges first ===== -->
   <g class="sm-part" data-name="Share sheet → ItemCaptured" data-stories="US-010">
     <line x1="240" y1="119" x2="380" y2="194" class="edge-gated" marker-end="url(#arrow-gated)"/>
   </g>
-  <g class="sm-part" data-name="Browser extension → ItemCaptured" data-stories="US-012">
+  <g class="sm-part" data-name="Browser extension → ItemCaptured" data-stories="US-012 US-022">
     <line x1="240" y1="199" x2="380" y2="194" class="edge" marker-end="url(#arrow)"/>
   </g>
   <g class="sm-part" data-name="Offline queue → ItemCaptured" data-stories="US-011">
@@ -314,26 +314,29 @@
   <g class="sm-part" data-name="ItemCaptured → Catchup" data-stories="US-002">
     <line x1="580" y1="194" x2="780" y2="430" class="edge" marker-end="url(#arrow)"/>
   </g>
-  <g class="sm-part" data-name="ItemKept → Catchup" data-stories="US-005">
+  <g class="sm-part" data-name="NoteEdited → Catchup" data-stories="US-021 US-023">
     <line x1="580" y1="268" x2="780" y2="430" class="edge" marker-end="url(#arrow)"/>
   </g>
-  <g class="sm-part" data-name="ItemRetagged → Catchup" data-stories="US-005">
+  <g class="sm-part" data-name="ItemKept → Catchup" data-stories="US-005">
     <line x1="580" y1="326" x2="780" y2="430" class="edge" marker-end="url(#arrow)"/>
   </g>
-  <g class="sm-part" data-name="ItemDropped → Catchup" data-stories="US-006">
+  <g class="sm-part" data-name="ItemRetagged → Catchup" data-stories="US-005">
     <line x1="580" y1="384" x2="780" y2="430" class="edge" marker-end="url(#arrow)"/>
   </g>
-  <g class="sm-part" data-name="ItemRestored → Catchup" data-stories="US-006">
+  <g class="sm-part" data-name="ItemDropped → Catchup" data-stories="US-006">
     <line x1="580" y1="442" x2="780" y2="430" class="edge" marker-end="url(#arrow)"/>
   </g>
-  <g class="sm-part" data-name="ItemDeleted → Catchup" data-stories="US-006">
+  <g class="sm-part" data-name="ItemRestored → Catchup" data-stories="US-006">
     <line x1="580" y1="500" x2="780" y2="430" class="edge" marker-end="url(#arrow)"/>
   </g>
+  <g class="sm-part" data-name="ItemDeleted → Catchup" data-stories="US-006">
+    <line x1="580" y1="558" x2="780" y2="430" class="edge" marker-end="url(#arrow)"/>
+  </g>
   <g class="sm-part" data-name="TagCreated → Catchup" data-stories="US-007">
-    <line x1="580" y1="578" x2="780" y2="430" class="edge" marker-end="url(#arrow)"/>
+    <line x1="580" y1="636" x2="780" y2="430" class="edge" marker-end="url(#arrow)"/>
   </g>
   <g class="sm-part" data-name="TagRenamed → Catchup" data-stories="US-007">
-    <line x1="580" y1="636" x2="780" y2="430" class="edge" marker-end="url(#arrow)"/>
+    <line x1="580" y1="694" x2="780" y2="430" class="edge" marker-end="url(#arrow)"/>
   </g>
   <g class="sm-part" data-name="LinkMetadata → items" data-stories="US-003">
     <line x1="780" y1="176" x2="960" y2="265" class="edge" marker-end="url(#arrow)"/>
@@ -354,7 +357,7 @@
     <text x="135" y="118" text-anchor="middle" class="name">Android share sheet</text>
     <text x="135" y="134" text-anchor="middle" class="sub">text · link · image · file</text>
   </g>
-  <g class="sm-part" data-name="Browser extension" data-stories="US-012 US-013" data-chips="US-012 US-013" data-chip-pos="tr">
+  <g class="sm-part" data-name="Browser extension" data-stories="US-012 US-013 US-022" data-chips="US-012 US-013 US-022" data-chip-pos="tr">
     <rect x="30" y="176" width="210" height="46" rx="8" class="store sm-anchor"/>
     <text x="135" y="198" text-anchor="middle" class="name">Browser extension</text>
     <text x="135" y="214" text-anchor="middle" class="sub">Chrome · Firefox</text>
@@ -365,40 +368,44 @@
     <text x="135" y="294" text-anchor="middle" class="sub">captures while offline</text>
   </g>
 
-  <g class="sm-part" data-name="ItemCaptured" data-stories="US-002 US-003 US-004 US-019" data-chips="US-002 US-019" data-chip-pos="tr">
+  <g class="sm-part" data-name="ItemCaptured" data-stories="US-002 US-003 US-004 US-019 US-022" data-chips="US-002 US-019" data-chip-pos="tr">
     <rect x="380" y="176" width="200" height="36" rx="18" class="event sm-anchor"/>
     <text x="480" y="198" text-anchor="middle" class="event-t">ItemCaptured</text>
   </g>
-  <g class="sm-part" data-name="ItemKept" data-stories="US-005" data-chips="US-005" data-chip-pos="tr">
+  <g class="sm-part" data-name="NoteEdited" data-stories="US-021 US-023" data-chips="US-021" data-chip-pos="tr">
     <rect x="380" y="250" width="200" height="36" rx="18" class="event sm-anchor"/>
-    <text x="480" y="272" text-anchor="middle" class="event-t">ItemKept</text>
+    <text x="480" y="272" text-anchor="middle" class="event-t">NoteEdited</text>
+  </g>
+  <g class="sm-part" data-name="ItemKept" data-stories="US-005" data-chips="US-005" data-chip-pos="tr">
+    <rect x="380" y="308" width="200" height="36" rx="18" class="event sm-anchor"/>
+    <text x="480" y="330" text-anchor="middle" class="event-t">ItemKept</text>
   </g>
   <g class="sm-part" data-name="ItemRetagged" data-stories="US-005">
-    <rect x="380" y="308" width="200" height="36" rx="18" class="event"/>
-    <text x="480" y="330" text-anchor="middle" class="event-t">ItemRetagged</text>
+    <rect x="380" y="366" width="200" height="36" rx="18" class="event"/>
+    <text x="480" y="388" text-anchor="middle" class="event-t">ItemRetagged</text>
   </g>
   <g class="sm-part" data-name="ItemDropped" data-stories="US-006" data-chips="US-006" data-chip-pos="tr">
-    <rect x="380" y="366" width="200" height="36" rx="18" class="event sm-anchor"/>
-    <text x="480" y="388" text-anchor="middle" class="event-t">ItemDropped</text>
+    <rect x="380" y="424" width="200" height="36" rx="18" class="event sm-anchor"/>
+    <text x="480" y="446" text-anchor="middle" class="event-t">ItemDropped</text>
   </g>
   <g class="sm-part" data-name="ItemRestored" data-stories="US-006">
-    <rect x="380" y="424" width="200" height="36" rx="18" class="event"/>
-    <text x="480" y="446" text-anchor="middle" class="event-t">ItemRestored</text>
+    <rect x="380" y="482" width="200" height="36" rx="18" class="event"/>
+    <text x="480" y="504" text-anchor="middle" class="event-t">ItemRestored</text>
   </g>
   <g class="sm-part" data-name="ItemDeleted" data-stories="US-006">
-    <rect x="380" y="482" width="200" height="36" rx="18" class="event"/>
-    <text x="480" y="504" text-anchor="middle" class="event-t">ItemDeleted</text>
+    <rect x="380" y="540" width="200" height="36" rx="18" class="event"/>
+    <text x="480" y="562" text-anchor="middle" class="event-t">ItemDeleted</text>
   </g>
   <g class="sm-part" data-name="TagCreated" data-stories="US-007" data-chips="US-007" data-chip-pos="tr">
-    <rect x="380" y="560" width="200" height="36" rx="18" class="event sm-anchor"/>
-    <text x="480" y="582" text-anchor="middle" class="event-t">TagCreated</text>
+    <rect x="380" y="618" width="200" height="36" rx="18" class="event sm-anchor"/>
+    <text x="480" y="640" text-anchor="middle" class="event-t">TagCreated</text>
   </g>
   <g class="sm-part" data-name="TagRenamed" data-stories="US-007">
-    <rect x="380" y="618" width="200" height="36" rx="18" class="event"/>
-    <text x="480" y="640" text-anchor="middle" class="event-t">TagRenamed</text>
+    <rect x="380" y="676" width="200" height="36" rx="18" class="event"/>
+    <text x="480" y="698" text-anchor="middle" class="event-t">TagRenamed</text>
   </g>
 
-  <g class="sm-part" data-name="Catchup" data-stories="US-002 US-005 US-006 US-007">
+  <g class="sm-part" data-name="Catchup" data-stories="US-002 US-005 US-006 US-007 US-021 US-023">
     <use href="#gear" xlink:href="#gear" transform="translate(780,430)"/>
     <text x="780" y="462" text-anchor="middle" class="name">Catchup</text>
   </g>
@@ -412,7 +419,7 @@
     <text x="1070" y="82" text-anchor="middle" class="name">Files (Disk / S3)</text>
     <text x="1070" y="98" text-anchor="middle" class="sub">image &amp; file bytes · thumbnail</text>
   </g>
-  <g class="sm-part" data-name="items" data-stories="US-002 US-005 US-006 US-008 US-019" data-chips="US-008 US-019" data-chip-pos="tr">
+  <g class="sm-part" data-name="items" data-stories="US-002 US-005 US-006 US-008 US-019 US-021 US-023" data-chips="US-008 US-019" data-chip-pos="tr">
     <rect x="960" y="240" width="220" height="50" rx="8" class="store sm-anchor"/>
     <text x="1070" y="262" text-anchor="middle" class="name">items</text>
     <text x="1070" y="278" text-anchor="middle" class="sub">Inbox · Library · Trash · search</text>
@@ -427,22 +434,26 @@
   </g>
 
   <!-- strip: parts outside this flow -->
-  <text x="30" y="752" class="sub">Parts outside this flow</text>
+  <text x="30" y="810" class="sub">Parts outside this flow</text>
   <g class="sm-part" data-name="Recover from failures" data-stories="US-015" data-chips="US-015" data-chip-pos="tr">
-    <rect x="30" y="764" width="230" height="44" rx="8" class="store sm-anchor"/>
-    <text x="145" y="790" text-anchor="middle" class="name">Recover from failures</text>
+    <rect x="30" y="822" width="220" height="44" rx="8" class="store sm-anchor"/>
+    <text x="140" y="848" text-anchor="middle" class="name">Recover from failures</text>
   </g>
   <g class="sm-part" data-name="Self-hosted deploy" data-stories="US-016" data-chips="US-016" data-chip-pos="tr">
-    <rect x="300" y="764" width="230" height="44" rx="8" class="store sm-anchor"/>
-    <text x="415" y="790" text-anchor="middle" class="name">Self-hosted deploy</text>
+    <rect x="270" y="822" width="220" height="44" rx="8" class="store sm-anchor"/>
+    <text x="380" y="848" text-anchor="middle" class="name">Self-hosted deploy</text>
   </g>
   <g class="sm-part" data-name="Cloud deploy" data-stories="US-017" data-chips="US-017" data-chip-pos="tr">
-    <rect x="570" y="764" width="230" height="44" rx="8" class="store sm-anchor"/>
-    <text x="685" y="790" text-anchor="middle" class="name">Cloud deploy</text>
+    <rect x="510" y="822" width="220" height="44" rx="8" class="store sm-anchor"/>
+    <text x="620" y="848" text-anchor="middle" class="name">Cloud deploy</text>
   </g>
   <g class="sm-part" data-name="Remote image in a note" data-stories="US-020" data-chips="US-020" data-chip-pos="tr">
-    <rect x="840" y="764" width="230" height="44" rx="8" class="store sm-anchor"/>
-    <text x="955" y="790" text-anchor="middle" class="name">Remote image in a note</text>
+    <rect x="750" y="822" width="220" height="44" rx="8" class="store sm-anchor"/>
+    <text x="860" y="848" text-anchor="middle" class="name">Remote image in a note</text>
+  </g>
+  <g class="sm-part" data-name="Note picker" data-stories="US-023" data-chips="US-023" data-chip-pos="tr">
+    <rect x="990" y="822" width="220" height="44" rx="8" class="store sm-anchor"/>
+    <text x="1100" y="848" text-anchor="middle" class="name">Note picker</text>
   </g>
 
   <!-- ===== labels ===== -->
@@ -503,6 +514,9 @@ const STORIES = [
   { id: "US-017", title: "Deploy to a cloud provider", value: "I use Stash without running a server at home.", deps: ["US-016"] },
   { id: "US-019", title: "Write notes in markdown", value: "I add headings, emphasis, lists, and links to what I save.", deps: ["US-002"] },
   { id: "US-020", title: "Add an image from its URL", value: "I reference a picture without downloading it first.", deps: ["US-019"] },
+  { id: "US-021", title: "Edit a saved note", value: "I correct a mistake without losing the note's place or tags.", deps: ["US-019"] },
+  { id: "US-022", title: "Save a selection with its images", value: "Pictures stay where they were in the text.", deps: ["US-012", "US-019"] },
+  { id: "US-023", title: "Add a selection to an existing note", value: "I build up one note while I read.", deps: ["US-021", "US-022"] },
 ];
 
 (function () {
