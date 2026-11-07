@@ -27,6 +27,15 @@ The Chrome Web Store rejects a manifest that contains `key` and would assign a d
 This package is for GitHub distribution; a store listing would need a separate build without
 the key.
 
+### Brave
+
+Brave uses Chromium's extension model, so it installs the same Chrome package. Open
+`brave://extensions` instead of `chrome://extensions`; the other steps are the same. Brave
+derives the same extension ID and redirect URI from the fixed `key`, so a self-hoster's OAuth
+client needs no change.
+
+Brave on Android and iOS does not support extensions.
+
 ## 2. Point it at your server
 
 1. Click the toolbar icon, then **Settings** (or right-click the icon and choose **Options**).
