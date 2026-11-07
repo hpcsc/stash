@@ -21,6 +21,11 @@ export interface NoteUpload {
   images: File[]
 }
 
+export interface NoteEditorOptions {
+  initialMarkdown?: string
+  fileUrl?: (path: string) => string
+}
+
 export interface NoteEditor {
   upload(): NoteUpload
   clear(): void
@@ -31,6 +36,21 @@ export interface NoteEditor {
 const imageUrlRe = /^https?:\/\/\S+\.(?:png|jpe?g|gif|webp|bmp)(?:\?\S*)?$/i
 
 const unsafeProtocol = /^(javascript|data|vbscript):/i
+
+const storedImageMarkdownRe = /!\[([^\]]*)\]\(([^\s)]+)\)/g
+
+function resolveStoredImages(markdown: string, fileUrlFn?: (path: string) => string): { markdown: string; keyByUrl: Map<string, string> } {
+  const keyByUrl = new Map<string, string>()
+  if (!fileUrlFn) return { markdown, keyByUrl }
+
+  const result = markdown.replace(storedImageMarkdownRe, (full, alt, url) => {
+    if (!url.includes('/images/')) return full
+    const displayUrl = fileUrlFn(url)
+    keyByUrl.set(displayUrl, url)
+    return `![${alt}](${displayUrl})`
+  })
+  return { markdown: result, keyByUrl }
+}
 
 // Turns the markdown link syntax [text](url) into a real link as the closing parenthesis is typed.
 const linkInputRule = $inputRule(
@@ -50,8 +70,12 @@ const linkInputRule = $inputRule(
 export async function createNoteEditor(
   container: HTMLElement,
   onChange: (markdown: string) => void = () => {},
+  options: NoteEditorOptions = {},
 ): Promise<NoteEditor> {
   const filesByUrl = new Map<string, File>()
+  const { initialMarkdown, fileUrl: fileUrlFn } = options
+
+  const resolved = resolveStoredImages(initialMarkdown ?? '', fileUrlFn)
 
   const uploader: Uploader = async (files, schema) => {
     const nodes = []
@@ -80,7 +104,7 @@ export async function createNoteEditor(
   const editor = await Editor.make()
     .config((ctx) => {
       ctx.set(rootCtx, container)
-      ctx.set(defaultValueCtx, '')
+      ctx.set(defaultValueCtx, resolved.markdown)
       ctx.update(editorViewOptionsCtx, (prev) => ({
         ...prev,
         attributes: { class: 'capture-editor', spellcheck: 'false' },
@@ -104,16 +128,20 @@ export async function createNoteEditor(
 
   return {
     upload() {
-      const raw = editor.action(getMarkdown())
+      let raw = editor.action(getMarkdown())
       const images: File[] = []
       let index = 0
-      const markdown = raw.replace(/blob:https?:\/\/[^\s)]+/g, (url) => {
+      raw = raw.replace(/blob:https?:\/\/[^\s)]+/g, (url) => {
         const file = filesByUrl.get(url)
         if (!file) return url
         images.push(file)
         return `@stash-image-${index++}`
       })
-      return { markdown, images }
+      // Reverse stored-image display URLs back to keys so the token is never saved.
+      for (const [displayUrl, storedKey] of resolved.keyByUrl) {
+        raw = raw.replaceAll(displayUrl, storedKey)
+      }
+      return { markdown: raw, images }
     },
     clear() {
       editor.action(replaceAll(''))

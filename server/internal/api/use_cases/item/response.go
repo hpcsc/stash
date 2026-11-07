@@ -13,5 +13,6 @@ type NoteResponse struct {
 	Type       string    `json:"type"`
 	Body       string    `json:"body"`
 	State      string    `json:"state"`
+	Version    uint64    `json:"version"`
 	CapturedAt time.Time `json:"capturedAt"`
 }

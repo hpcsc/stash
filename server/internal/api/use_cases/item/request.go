@@ -7,6 +7,11 @@ type CaptureRequest struct {
 	Type string `json:"type"`
 }
 
+type EditRequest struct {
+	Body    string `json:"body" validate:"required"`
+	Version uint64 `json:"version" validate:"required|gt:0"`
+}
+
 type KeepRequest struct {
 	Tags []string `json:"tags"`
 }

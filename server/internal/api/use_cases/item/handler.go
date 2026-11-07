@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"path/filepath"
 	"strconv"
@@ -23,6 +24,7 @@ import (
 	"github.com/hpcsc/stash/internal/domain/event"
 	"github.com/hpcsc/stash/internal/storage"
 	itemCommand "github.com/hpcsc/stash/internal/use_cases/item/command"
+	itemCore "github.com/hpcsc/stash/internal/use_cases/item"
 	"github.com/hpcsc/stash/internal/use_cases/item/items"
 	trashCommand "github.com/hpcsc/stash/internal/use_cases/trash/command"
 	"github.com/unrolled/render"
@@ -57,6 +59,7 @@ func (h *handler) Routes() []*route.Route {
 		route.Protected("POST", "/items", h.capture),
 		route.Protected("GET", "/items", h.list),
 		route.Protected("GET", "/items/{id}", h.get),
+		route.Protected("PATCH", "/items/{id}", h.editItem),
 		route.Protected("POST", "/items/{id}/keep", h.keep),
 		route.Protected("POST", "/items/{id}/drop", h.dropItem),
 		route.Protected("POST", "/items/{id}/restore", h.restoreItem),
@@ -260,6 +263,10 @@ func (h *handler) dispatch[P any](w http.ResponseWriter, req *http.Request, payl
 		_ = h.renderer.JSON(w, http.StatusConflict, response.Fail(fmt.Sprintf("%v, retry the request", err)))
 		return false
 	}
+	if errors.Is(err, itemCore.ErrNoteChanged) {
+		_ = h.renderer.JSON(w, http.StatusConflict, response.Fail("the note changed, reload it and try again"))
+		return false
+	}
 	if err != nil {
 		_ = h.renderer.JSON(w, http.StatusBadRequest, response.Fail(err.Error()))
 		return false
@@ -364,51 +371,13 @@ func (h *handler) captureNote(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	var totalSize int64
-	for _, header := range headers {
-		if header.Size > itemCommand.MaxFileSize {
-			_ = h.renderer.JSON(w, http.StatusBadRequest, response.Fail("image too large, max 25 MB"))
-			return
-		}
-		totalSize += header.Size
-		if totalSize > itemCommand.MaxNoteSize {
-			_ = h.renderer.JSON(w, http.StatusBadRequest, response.Fail("note is too large, max 100 MB"))
-			return
-		}
-
-		mimeType := header.Header.Get("Content-Type")
-		if strings.HasPrefix(mimeType, "video/") {
-			_ = h.renderer.JSON(w, http.StatusBadRequest, response.Fail("videos are not accepted"))
-			return
-		}
-		if !isImage(mimeType) {
-			_ = h.renderer.JSON(w, http.StatusBadRequest, response.Fail("only images can be added to a note"))
-			return
-		}
+	markdown, ok := h.processImages(w, req, markdown, headers)
+	if !ok {
+		return
 	}
 
 	itemID := uuid.New()
 	now := time.Now()
-	user := middleware.UserFromContext(req.Context())
-	for idx, header := range headers {
-		file, err := header.Open()
-		if err != nil {
-			_ = h.renderer.JSON(w, http.StatusBadRequest, response.Fail("failed to read image"))
-			return
-		}
-
-		imageID := uuid.New()
-		fileName := filepath.Base(header.Filename)
-		key := domain.UserStream(user, "images/"+imageID.String()+filepath.Ext(fileName))
-		if !h.saveUpload(w, req, key, file) {
-			file.Close()
-			return
-		}
-		file.Close()
-
-		markdown = strings.ReplaceAll(markdown, "@stash-image-"+strconv.Itoa(idx), key)
-	}
-
 	if !h.dispatch(w, req, itemCommand.CaptureNote{
 		ItemID:     itemID,
 		Markdown:   markdown,
@@ -424,6 +393,149 @@ func (h *handler) captureNote(w http.ResponseWriter, req *http.Request) {
 		State:      "inbox",
 		CapturedAt: now,
 	}))
+}
+
+func (h *handler) editItem(w http.ResponseWriter, req *http.Request) {
+	id, err := uuid.Parse(chi.URLParam(req, "id"))
+	if err != nil {
+		_ = h.renderer.JSON(w, http.StatusBadRequest, response.Fail("invalid item id"))
+		return
+	}
+
+	contentType := req.Header.Get("Content-Type")
+	if strings.HasPrefix(contentType, "multipart/form-data") {
+		h.editUpload(w, req, id)
+		return
+	}
+
+	var body EditRequest
+	if !h.decode(w, req, &body) {
+		return
+	}
+
+	if !h.dispatch(w, req, itemCommand.EditNote{
+		ItemID:          id,
+		Markdown:        body.Body,
+		ExpectedVersion: body.Version,
+	}) {
+		return
+	}
+
+	i, err := h.view(req).ByID(req.Context(), id.String())
+	if err != nil || i == nil {
+		_ = h.renderer.JSON(w, http.StatusInternalServerError, response.Fail("failed to read item"))
+		return
+	}
+
+	_ = h.renderer.JSON(w, http.StatusOK, response.SucceedWithData(NoteResponse{
+		ID:         i.ID,
+		Type:       i.Type,
+		Body:       i.Body,
+		State:      i.State,
+		Version:    i.Version,
+		CapturedAt: i.CapturedAt,
+	}))
+}
+
+func (h *handler) editUpload(w http.ResponseWriter, req *http.Request, id uuid.UUID) {
+	req.Body = http.MaxBytesReader(w, req.Body, maxNoteUploadSize)
+
+	if err := req.ParseMultipartForm(maxMultipartMemory); err != nil {
+		_ = h.renderer.JSON(w, http.StatusBadRequest, response.Fail("upload is too large, max 100 MB"))
+		return
+	}
+
+	markdown := req.FormValue("markdown")
+	versionStr := req.FormValue("version")
+	version, err := strconv.ParseUint(versionStr, 10, 64)
+	if err != nil || version == 0 {
+		_ = h.renderer.JSON(w, http.StatusBadRequest, response.Fail("version is required"))
+		return
+	}
+
+	headers := req.MultipartForm.File["images"]
+	if len(headers) > itemCommand.MaxNoteImages {
+		_ = h.renderer.JSON(w, http.StatusBadRequest, response.Fail(fmt.Sprintf("too many images, max %d", itemCommand.MaxNoteImages)))
+		return
+	}
+	if strings.TrimSpace(markdown) == "" && len(headers) == 0 {
+		_ = h.renderer.JSON(w, http.StatusBadRequest, response.Fail("note must have text or an image"))
+		return
+	}
+
+	markdown, ok := h.processImages(w, req, markdown, headers)
+	if !ok {
+		return
+	}
+
+	if !h.dispatch(w, req, itemCommand.EditNote{
+		ItemID:          id,
+		Markdown:        markdown,
+		ExpectedVersion: version,
+	}) {
+		return
+	}
+
+	i, err := h.view(req).ByID(req.Context(), id.String())
+	if err != nil || i == nil {
+		_ = h.renderer.JSON(w, http.StatusInternalServerError, response.Fail("failed to read item"))
+		return
+	}
+
+	_ = h.renderer.JSON(w, http.StatusOK, response.SucceedWithData(NoteResponse{
+		ID:         i.ID,
+		Type:       i.Type,
+		Body:       i.Body,
+		State:      i.State,
+		Version:    i.Version,
+		CapturedAt: i.CapturedAt,
+	}))
+}
+
+func (h *handler) processImages(w http.ResponseWriter, req *http.Request, markdown string, headers []*multipart.FileHeader) (string, bool) {
+	var totalSize int64
+	for _, header := range headers {
+		if header.Size > itemCommand.MaxFileSize {
+			_ = h.renderer.JSON(w, http.StatusBadRequest, response.Fail("image too large, max 25 MB"))
+			return "", false
+		}
+		totalSize += header.Size
+		if totalSize > itemCommand.MaxNoteSize {
+			_ = h.renderer.JSON(w, http.StatusBadRequest, response.Fail("note is too large, max 100 MB"))
+			return "", false
+		}
+
+		mimeType := header.Header.Get("Content-Type")
+		if strings.HasPrefix(mimeType, "video/") {
+			_ = h.renderer.JSON(w, http.StatusBadRequest, response.Fail("videos are not accepted"))
+			return "", false
+		}
+		if !isImage(mimeType) {
+			_ = h.renderer.JSON(w, http.StatusBadRequest, response.Fail("only images can be added to a note"))
+			return "", false
+		}
+	}
+
+	user := middleware.UserFromContext(req.Context())
+	for idx, header := range headers {
+		file, err := header.Open()
+		if err != nil {
+			_ = h.renderer.JSON(w, http.StatusBadRequest, response.Fail("failed to read image"))
+			return "", false
+		}
+
+		imageID := uuid.New()
+		fileName := filepath.Base(header.Filename)
+		key := domain.UserStream(user, "images/"+imageID.String()+filepath.Ext(fileName))
+		if !h.saveUpload(w, req, key, file) {
+			file.Close()
+			return "", false
+		}
+		file.Close()
+
+		markdown = strings.ReplaceAll(markdown, "@stash-image-"+strconv.Itoa(idx), key)
+	}
+	return markdown, true
 }
 
 func (h *handler) saveUpload(w http.ResponseWriter, req *http.Request, key string, file io.Reader) bool {

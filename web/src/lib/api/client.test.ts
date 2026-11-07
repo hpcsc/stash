@@ -91,7 +91,7 @@ describe('client', () => {
 
   it('captureNote posts the markdown and returns the item', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
-      jsonResponse({ successful: true, messages: [], data: { id: 'item-1', type: 'note', body: 'remember this', state: 'inbox', capturedAt: '2026-01-01T00:00:00Z' } }),
+      jsonResponse({ successful: true, messages: [], data: { id: 'item-1', type: 'note', body: 'remember this', state: 'inbox', version: 1, capturedAt: '2026-01-01T00:00:00Z' } }),
     )
     vi.stubGlobal('fetch', fetchMock)
 
@@ -128,7 +128,7 @@ describe('client', () => {
       jsonResponse({
         successful: true,
         messages: [],
-        data: { id: 'item-1', type: 'note', body: '![](@stash-image-0)', state: 'inbox', capturedAt: '2026-01-01T00:00:00Z' },
+        data: { id: 'item-1', type: 'note', body: '![](@stash-image-0)', state: 'inbox', version: 1, capturedAt: '2026-01-01T00:00:00Z' },
       }),
     )
     vi.stubGlobal('fetch', fetchMock)

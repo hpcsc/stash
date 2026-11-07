@@ -20,6 +20,8 @@ var ErrThumbnailAlreadyRecorded = errors.New("thumbnail is already recorded")
 var ErrFileTooLarge = errors.New("file is too large")
 var ErrVideoRejected = errors.New("videos are not accepted")
 var ErrNoteEmpty = errors.New("note must have text or an image")
+var ErrNoteChanged = errors.New("the note changed after it was read")
+var ErrNotNote = errors.New("item is not a note")
 
 var _ domain.Aggregate = (*Item)(nil)
 
@@ -112,6 +114,30 @@ func (i *Item) CaptureNote(cmd command.CaptureNote) error {
 		ItemID:     cmd.ItemID,
 		Markdown:   cmd.Markdown,
 		CapturedAt: cmd.CapturedAt,
+	}))
+	return nil
+}
+
+func (i *Item) EditNote(cmd command.EditNote) error {
+	if i.id == uuid.Nil {
+		return ErrNotCaptured
+	}
+	if i.kind != "note" {
+		return ErrNotNote
+	}
+	if i.state == "dropped" || i.state == "deleted" {
+		return ErrNotCaptured
+	}
+	if cmd.ExpectedVersion != i.Version() {
+		return ErrNoteChanged
+	}
+	if strings.TrimSpace(cmd.Markdown) == "" {
+		return ErrNoteEmpty
+	}
+
+	i.record(domain.NewEvent(&event.NoteEdited{
+		ItemID:   cmd.ItemID,
+		Markdown: cmd.Markdown,
 	}))
 	return nil
 }
@@ -230,6 +256,9 @@ func (i *Item) Apply(e domain.Event) {
 		i.id = p.ItemID
 		i.state = "inbox"
 		i.kind = "note"
+	case *event.NoteEdited:
+		// Content-only change: body replaced, state/kind/time/tags unchanged.
+		// The event exists so the version advances and a later load sees the new body.
 	case *event.LinkMetadataFetched:
 		i.hasMetadata = true
 	case *event.ThumbnailGenerated:

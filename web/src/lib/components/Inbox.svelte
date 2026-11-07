@@ -84,7 +84,7 @@
       if (upload.images.length === 0 && urlRe.test(markdown)) {
         const captured = await captureLink(markdown)
         items = [
-          { id: captured.id, type: 'link', body: markdown, state: 'inbox', capturedAt: new Date().toISOString() },
+          { id: captured.id, type: 'link', body: markdown, state: 'inbox', version: 1, capturedAt: new Date().toISOString() },
           ...items,
         ]
         if (captured.duplicate) warning = duplicateNotice(captured.duplicateState)
@@ -110,6 +110,7 @@
         body: '',
         filePath,
         state: 'inbox',
+        version: 1,
         capturedAt: new Date().toISOString(),
       }
       if (type === 'file') {

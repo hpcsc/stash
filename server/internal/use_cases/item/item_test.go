@@ -343,6 +343,80 @@ func TestItem(t *testing.T) {
 			require.Empty(t, i.Recorded())
 		})
 	})
+
+	t.Run("edit note", func(t *testing.T) {
+		t.Run("edits a captured note", func(t *testing.T) {
+			i := given(captured())
+			cmd := editNoteCmd("updated content")
+
+			require.NoError(t, i.EditNote(cmd))
+
+			require.Equal(t, &event.NoteEdited{ItemID: itemID, Markdown: "updated content"}, onlyRecorded(t, i).Payload)
+		})
+
+		t.Run("edits a kept note", func(t *testing.T) {
+			i := given(captured(), kept())
+			cmd := editNoteCmdV("revised in library", 2)
+
+			require.NoError(t, i.EditNote(cmd))
+
+			require.Equal(t, &event.NoteEdited{ItemID: itemID, Markdown: "revised in library"}, onlyRecorded(t, i).Payload)
+		})
+
+		t.Run("rejects editing an item that is not captured", func(t *testing.T) {
+			var i item.Item
+
+			require.ErrorIs(t, i.EditNote(editNoteCmd("x")), item.ErrNotCaptured)
+			require.Empty(t, i.Recorded())
+		})
+
+		t.Run("rejects editing a non-note", func(t *testing.T) {
+			i := given(linkCaptured())
+
+			require.ErrorIs(t, i.EditNote(editNoteCmd("x")), item.ErrNotNote)
+			require.Empty(t, i.Recorded())
+		})
+
+		t.Run("rejects editing a dropped note", func(t *testing.T) {
+			i := given(captured(), dropped())
+
+			require.ErrorIs(t, i.EditNote(editNoteCmd("x")), item.ErrNotCaptured)
+			require.Empty(t, i.Recorded())
+		})
+
+		t.Run("rejects editing a deleted note", func(t *testing.T) {
+			i := given(captured(), dropped(), deleted())
+
+			require.ErrorIs(t, i.EditNote(editNoteCmd("x")), item.ErrNotCaptured)
+			require.Empty(t, i.Recorded())
+		})
+
+		t.Run("rejects empty markdown", func(t *testing.T) {
+			i := given(captured())
+			cmd := editNoteCmd("   ")
+
+			require.ErrorIs(t, i.EditNote(cmd), item.ErrNoteEmpty)
+			require.Empty(t, i.Recorded())
+		})
+
+		t.Run("rejects stale version", func(t *testing.T) {
+			i := given(captured())
+			cmd := editNoteCmd("content")
+			cmd.ExpectedVersion = 0
+
+			require.ErrorIs(t, i.EditNote(cmd), item.ErrNoteChanged)
+			require.Empty(t, i.Recorded())
+		})
+
+		t.Run("rejects version ahead of current", func(t *testing.T) {
+			i := given(captured())
+			cmd := editNoteCmd("content")
+			cmd.ExpectedVersion = 2
+
+			require.ErrorIs(t, i.EditNote(cmd), item.ErrNoteChanged)
+			require.Empty(t, i.Recorded())
+		})
+	})
 }
 
 var (
@@ -399,6 +473,18 @@ func deleteCmd() command.Delete {
 
 func dropCmd() command.Drop {
 	return command.Drop{ItemID: itemID}
+}
+
+func editNoteCmd(markdown string) command.EditNote {
+	return command.EditNote{ItemID: itemID, Markdown: markdown, ExpectedVersion: 1}
+}
+
+func editNoteCmdV(markdown string, version uint64) command.EditNote {
+	return command.EditNote{ItemID: itemID, Markdown: markdown, ExpectedVersion: version}
+}
+
+func deleted() domain.Event {
+	return domain.NewEvent(&event.ItemDeleted{ItemID: itemID})
 }
 
 func given(history ...domain.Event) *item.Item {

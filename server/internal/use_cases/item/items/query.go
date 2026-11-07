@@ -17,6 +17,7 @@ type Item struct {
 	Type          string    `json:"type"`
 	Body          string    `json:"body"`
 	State         string    `json:"state"`
+	Version       uint64    `json:"version"`
 	Title         string    `json:"title,omitempty"`
 	Description   string    `json:"description,omitempty"`
 	FilePath      string    `json:"filePath,omitempty"`
@@ -53,7 +54,7 @@ type Reader struct {
 	user domain.UserID
 }
 
-const itemColumns = `id::text, type, body, state, title, description, file_path, thumbnail_path, file_name, file_size, mime_type, captured_at`
+const itemColumns = `id::text, type, body, state, version, title, description, file_path, thumbnail_path, file_name, file_size, mime_type, captured_at`
 
 func (r *Reader) List(ctx context.Context, search string, states ...string) ([]Item, error) {
 	query := `
@@ -98,7 +99,7 @@ func (r *Reader) ByID(ctx context.Context, id string) (*Item, error) {
 		SELECT `+itemColumns+`
 		FROM items
 		WHERE id = $1 AND user_id = $2
-	`, id, r.user.String()).Scan(&i.ID, &i.Type, &i.Body, &i.State, &i.Title, &i.Description, &i.FilePath, &i.ThumbnailPath, &i.FileName, &i.FileSize, &i.MimeType, &i.CapturedAt)
+	`, id, r.user.String()).Scan(&i.ID, &i.Type, &i.Body, &i.State, &i.Version, &i.Title, &i.Description, &i.FilePath, &i.ThumbnailPath, &i.FileName, &i.FileSize, &i.MimeType, &i.CapturedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
@@ -128,6 +129,6 @@ func (r *Reader) Existing(ctx context.Context, itemType, body string) (*Item, er
 
 func scanItem(r pgx.CollectableRow) (Item, error) {
 	var i Item
-	err := r.Scan(&i.ID, &i.Type, &i.Body, &i.State, &i.Title, &i.Description, &i.FilePath, &i.ThumbnailPath, &i.FileName, &i.FileSize, &i.MimeType, &i.CapturedAt)
+	err := r.Scan(&i.ID, &i.Type, &i.Body, &i.State, &i.Version, &i.Title, &i.Description, &i.FilePath, &i.ThumbnailPath, &i.FileName, &i.FileSize, &i.MimeType, &i.CapturedAt)
 	return i, err
 }

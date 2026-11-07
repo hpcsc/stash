@@ -109,6 +109,7 @@ export interface Item {
   type: string
   body: string
   state?: string
+  version: number
   title?: string
   description?: string
   filePath?: string
@@ -153,6 +154,12 @@ async function postForm(path: string, form: FormData): Promise<Envelope> {
   return exchange('POST', path, form, headers, UPLOAD_TIMEOUT_MS)
 }
 
+async function patchForm(path: string, form: FormData): Promise<Envelope> {
+  const headers: Record<string, string> = {}
+  if (token) headers.Authorization = `Bearer ${token}`
+  return exchange('PATCH', path, form, headers, UPLOAD_TIMEOUT_MS)
+}
+
 export async function captureAttachment(file: File): Promise<CapturedAttachment> {
   const form = new FormData()
   form.append('file', file)
@@ -169,6 +176,19 @@ export async function captureNote(markdown: string, images: File[] = []): Promis
   form.append('markdown', markdown)
   for (const image of images) form.append('images', image, image.name)
   const envelope = await postForm('/items', form)
+  return envelope.data as Item
+}
+
+export async function editNote(id: string, markdown: string, version: number, images: File[] = []): Promise<Item> {
+  if (images.length === 0) {
+    const envelope = await request('PATCH', `/items/${id}`, { body: markdown, version })
+    return envelope.data as Item
+  }
+  const form = new FormData()
+  form.append('markdown', markdown)
+  form.append('version', String(version))
+  for (const image of images) form.append('images', image, image.name)
+  const envelope = await patchForm(`/items/${id}`, form)
   return envelope.data as Item
 }
 

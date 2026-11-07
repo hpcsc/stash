@@ -14,6 +14,7 @@ import (
 	"github.com/hpcsc/stash/internal/use_cases/item/capture_note"
 	"github.com/hpcsc/stash/internal/use_cases/item/delete_item"
 	"github.com/hpcsc/stash/internal/use_cases/item/drop"
+	"github.com/hpcsc/stash/internal/use_cases/item/edit_note"
 	"github.com/hpcsc/stash/internal/use_cases/item/keep"
 	"github.com/hpcsc/stash/internal/use_cases/item/restore"
 	"github.com/hpcsc/stash/internal/use_cases/tag"
@@ -43,6 +44,7 @@ func RegisterHandlers(bus *command.Bus, stream event.Stream) {
 	capture_image.Register(bus, items)
 	capture_file.Register(bus, items)
 	capture_note.Register(bus, items)
+	edit_note.Register(bus, items)
 	keep.Register(bus, items)
 	drop.Register(bus, items)
 	restore.Register(bus, items)

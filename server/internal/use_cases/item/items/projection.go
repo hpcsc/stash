@@ -21,6 +21,7 @@ var EventTypes = []string{
 	event.ImageCaptured{}.EventType(),
 	event.FileCaptured{}.EventType(),
 	event.NoteCaptured{}.EventType(),
+	event.NoteEdited{}.EventType(),
 	event.LinkMetadataFetched{}.EventType(),
 	event.ThumbnailGenerated{}.EventType(),
 	event.ItemKept{}.EventType(),
@@ -83,6 +84,12 @@ func (p *Projection) Handle(ctx context.Context, tx pgx.Tx, evt *domain.Event) e
 			VALUES ($1, $2, 'note', $3, $4, 'inbox', $5)
 			ON CONFLICT (id) DO NOTHING
 		`, payload.ItemID, user.String(), payload.Markdown, payload.CapturedAt, evt.Version)
+		return err
+	case *event.NoteEdited:
+		_, err := tx.Exec(ctx, `
+			UPDATE items SET body = $2, version = $3, updated_at = NOW()
+			WHERE id = $1 AND type = 'note'
+		`, payload.ItemID, payload.Markdown, evt.Version)
 		return err
 	case *event.ItemKept:
 		_, err := tx.Exec(ctx, `

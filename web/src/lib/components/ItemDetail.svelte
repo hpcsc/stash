@@ -1,9 +1,10 @@
 <script lang="ts">
   import type { Item } from '../api/client'
-  import { fileUrl } from '../api/client'
+  import { editNote, fileUrl } from '../api/client'
   import { formatDate } from '../time'
   import { formatFileSize } from '../format'
   import { renderMarkdown } from '../markdown'
+  import { createNoteEditor, type NoteEditor } from '../editor'
 
   interface Props {
     item: Item
@@ -24,6 +25,56 @@
   }
 
   const fullImage = $derived(item.filePath ? fileUrl(item.filePath) : null)
+  const editableNote = $derived(item.type === 'note' && (item.state === 'inbox' || item.state === 'kept'))
+
+  let editing = $state(false)
+  let saving = $state(false)
+  let saveError = $state('')
+  let editorEl = $state<HTMLElement>()
+  let editor: NoteEditor | null = $state(null)
+
+  $effect(() => {
+    if (!editing || !editorEl) return
+    createNoteEditor(editorEl, () => {}, {
+      initialMarkdown: item.body,
+      fileUrl,
+    }).then((ed) => {
+      editor = ed
+    })
+    return () => {
+      editor?.destroy()
+      editor = null
+    }
+  })
+
+  async function handleSave() {
+    if (!editor) return
+    saveError = ''
+    saving = true
+    try {
+      const { markdown, images } = editor.upload()
+      const updated = await editNote(item.id, markdown, item.version, images)
+      item = updated
+      editor.destroy()
+      editor = null
+      editing = false
+    } catch (e) {
+      if (e instanceof Error && e.message.includes('Conflict') || e instanceof Error && String((e as any).status) === '409') {
+        saveError = 'The note changed after you opened it. Your edits are still here — reload and try again.'
+        return
+      }
+      saveError = e instanceof Error ? e.message : 'Failed to save'
+    } finally {
+      saving = false
+    }
+  }
+
+  function handleCancel() {
+    editor?.destroy()
+    editor = null
+    editing = false
+    saveError = ''
+  }
 </script>
 
 <div class="detail">
@@ -37,75 +88,96 @@
     <span class="type-label">{typeMeta[item.type] ?? 'Text'}</span>
   </div>
 
-  {#if item.type === 'note'}
-    <div class="markdown">{@html renderMarkdown(item.body)}</div>
-  {:else if item.type === 'image' && fullImage}
-    <img class="full-image" src={fullImage} alt="" />
-  {:else if item.type === 'file'}
-    <div class="file-detail">
-      <span class="file-icon">📎</span>
-      <div class="file-info">
-        <p class="file-name">{item.fileName || 'File'}</p>
-        {#if item.fileSize}
-          <p class="file-size">{formatFileSize(item.fileSize)}</p>
-        {/if}
-      </div>
-      {#if item.filePath}
-        <a class="download-btn" href={fileUrl(item.filePath)} download={item.fileName}>Download</a>
-      {/if}
+  {#if editing}
+    <div bind:this={editorEl} class="edit-editor"></div>
+    {#if saveError}
+      <p class="edit-error" role="alert">{saveError}</p>
+    {/if}
+    <div class="edit-actions">
+      <button type="button" class="btn btn-edit-save" onclick={handleSave} disabled={saving}>
+        {saving ? 'Saving\u2026' : 'Save'}
+      </button>
+      <button type="button" class="btn btn-edit-cancel" onclick={handleCancel} disabled={saving}>Cancel</button>
     </div>
   {:else}
-    <p class="body">{item.title || item.body}</p>
-  {/if}
-
-  {#if item.type === 'link'}
-    <a class="link-url" href={item.body} target="_blank" rel="noopener noreferrer">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <path d="M12 8.5V13a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h4.5M10 2h4v4M7 9l7-7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
-      </svg>
-      {item.body}
-    </a>
-  {/if}
-
-  {#if item.description}
-    <p class="description">{item.description}</p>
-  {/if}
-
-  <div class="meta">
-    <span class="meta-item">{formatDate(item.capturedAt)}</span>
-  </div>
-
-  <div class="actions">
-    {#if item.state === 'dropped'}
-      <button type="button" class="btn btn-keep" onclick={onrestore}>
-        <svg width="20" height="20" viewBox="0 0 16 16" fill="none">
-          <path d="M3 8a5 5 0 1 0 1.5-3.5M3 3v3h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
-        Restore
-      </button>
-      <button type="button" class="btn btn-drop" onclick={ondelete}>
-        <svg width="20" height="20" viewBox="0 0 16 16" fill="none">
-          <path d="M3 4h10M5.5 4v8a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1V4M6.5 4V3a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
-        Delete forever
-      </button>
+    {#if item.type === 'note'}
+      <div class="markdown">{@html renderMarkdown(item.body)}</div>
+    {:else if item.type === 'image' && fullImage}
+      <img class="full-image" src={fullImage} alt="" />
+    {:else if item.type === 'file'}
+      <div class="file-detail">
+        <span class="file-icon">📎</span>
+        <div class="file-info">
+          <p class="file-name">{item.fileName || 'File'}</p>
+          {#if item.fileSize}
+            <p class="file-size">{formatFileSize(item.fileSize)}</p>
+          {/if}
+        </div>
+        {#if item.filePath}
+          <a class="download-btn" href={fileUrl(item.filePath)} download={item.fileName}>Download</a>
+        {/if}
+      </div>
     {:else}
-      {#if item.state !== 'kept'}
-        <button type="button" class="btn btn-keep" onclick={onkeep}>
+      <p class="body">{item.title || item.body}</p>
+    {/if}
+
+    {#if item.type === 'link'}
+      <a class="link-url" href={item.body} target="_blank" rel="noopener noreferrer">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M12 8.5V13a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h4.5M10 2h4v4M7 9l7-7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        {item.body}
+      </a>
+    {/if}
+
+    {#if item.description}
+      <p class="description">{item.description}</p>
+    {/if}
+
+    <div class="meta">
+      <span class="meta-item">{formatDate(item.capturedAt)}</span>
+    </div>
+
+    <div class="actions">
+      {#if item.state === 'dropped'}
+        <button type="button" class="btn btn-keep" onclick={onrestore}>
           <svg width="20" height="20" viewBox="0 0 16 16" fill="none">
-            <path d="M3 8.5l3 3 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            <path d="M3 8a5 5 0 1 0 1.5-3.5M3 3v3h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
-          Keep
+          Restore
+        </button>
+        <button type="button" class="btn btn-drop" onclick={ondelete}>
+          <svg width="20" height="20" viewBox="0 0 16 16" fill="none">
+            <path d="M3 4h10M5.5 4v8a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1V4M6.5 4V3a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+          Delete forever
+        </button>
+      {:else}
+        {#if editableNote}
+          <button type="button" class="btn btn-edit" onclick={() => (editing = true)}>
+            <svg width="20" height="20" viewBox="0 0 16 16" fill="none">
+              <path d="M11 2l3 3-9 9H2v-3l9-9zM2 14h2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            Edit
+          </button>
+        {/if}
+        {#if item.state !== 'kept'}
+          <button type="button" class="btn btn-keep" onclick={onkeep}>
+            <svg width="20" height="20" viewBox="0 0 16 16" fill="none">
+              <path d="M3 8.5l3 3 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            Keep
+          </button>
+        {/if}
+        <button type="button" class="btn btn-drop" onclick={ondrop}>
+          <svg width="20" height="20" viewBox="0 0 16 16" fill="none">
+            <path d="M3 4h10M5.5 4v8a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1V4M6.5 4V3a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+          Drop
         </button>
       {/if}
-      <button type="button" class="btn btn-drop" onclick={ondrop}>
-        <svg width="20" height="20" viewBox="0 0 16 16" fill="none">
-          <path d="M3 4h10M5.5 4v8a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1V4M6.5 4V3a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
-        Drop
-      </button>
-    {/if}
-  </div>
+    </div>
+  {/if}
 </div>
 
 <style>
@@ -343,6 +415,27 @@
     gap: var(--space-3);
   }
 
+  .edit-editor {
+    margin-bottom: var(--space-4);
+    min-height: 200px;
+    max-width: 68ch;
+  }
+
+  .edit-error {
+    margin: 0 0 var(--space-3);
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--text-sm);
+    color: var(--color-danger);
+    background: var(--color-danger-subtle);
+    border-radius: var(--radius-sm);
+  }
+
+  .edit-actions {
+    display: flex;
+    gap: var(--space-3);
+    margin-top: var(--space-4);
+  }
+
   .btn {
     display: inline-flex;
     align-items: center;
@@ -365,6 +458,17 @@
     color: white;
   }
 
+  .btn-edit {
+    color: var(--color-accent);
+    background: var(--color-accent-subtle);
+    border: 1px solid transparent;
+  }
+
+  .btn-edit:hover {
+    background: var(--color-accent);
+    color: white;
+  }
+
   .btn-drop {
     color: var(--color-text-secondary);
     background: var(--color-surface);
@@ -375,5 +479,37 @@
     color: var(--color-danger);
     border-color: var(--color-danger);
     background: var(--color-danger-subtle);
+  }
+
+  .btn-edit-save {
+    color: var(--color-success);
+    background: var(--color-success-subtle);
+    border: 1px solid transparent;
+  }
+
+  .btn-edit-save:hover:not(:disabled) {
+    background: var(--color-success);
+    color: white;
+  }
+
+  .btn-edit-save:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .btn-edit-cancel {
+    color: var(--color-text-secondary);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+  }
+
+  .btn-edit-cancel:hover:not(:disabled) {
+    color: var(--color-text);
+    border-color: var(--color-text);
+  }
+
+  .btn-edit-cancel:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 </style>
