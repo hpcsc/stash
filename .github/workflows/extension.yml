@@ -1,7 +1,9 @@
 # Tests and packages the browser extension. A v* tag publishes the Chrome zip
 # and, when AMO secrets are set, the signed Firefox XPI to a GitHub Release.
-# Release assets are the install channel: they are public, permanent, and
-# versioned, unlike workflow artifacts that expire and require a login.
+# A push to main publishes the same packages as a prerelease, so a change can
+# be tried before it gets a stable tag. Release assets are the install channel:
+# they are public, permanent, and versioned, unlike workflow artifacts that
+# expire and require a login.
 name: Extension
 
 on:
@@ -32,8 +34,12 @@ jobs:
       WEB_EXT_API_SECRET: ${{ secrets.AMO_API_SECRET }}
     outputs:
       version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+      prerelease: ${{ steps.version.outputs.prerelease }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -52,10 +58,33 @@ jobs:
         run: |
           if [ "$GITHUB_REF_TYPE" = "tag" ]; then
             version="${GITHUB_REF_NAME#v}"
+            tag="$GITHUB_REF_NAME"
+            prerelease=false
+            if ! echo "$version" | grep -qE '^[0-9]+(\.[0-9]+){0,3}$'; then
+              echo "::error::stable tags must be numeric, for example v1.2.3; pushes to main publish prereleases"
+              exit 1
+            fi
+          elif [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF" = "refs/heads/main" ]; then
+            if [ "$GITHUB_RUN_NUMBER" -gt 65535 ]; then
+              echo "::error::the run number no longer fits a browser version component (maximum 65535)"
+              exit 1
+            fi
+            latest=$(git tag --list | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1 || true)
+            IFS=. read -r major minor patch <<< "${latest:-v$(node -p "require('./package.json').version")}"
+            major="${major#v}"
+            # Four numeric parts so the browser orders 1.2.3.42 above stable 1.2.3
+            # and below the next stable tag, 1.2.4.
+            version="${major}.${minor}.${patch}.${GITHUB_RUN_NUMBER}"
+            tag="v${major}.${minor}.$((patch + 1))-${GITHUB_RUN_NUMBER}.g$(git rev-parse --short=7 HEAD)"
+            prerelease=true
           else
             version="$(node -p "require('./package.json').version")"
+            tag=""
+            prerelease=false
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "prerelease=$prerelease" >> "$GITHUB_OUTPUT"
 
       - name: Build packages
         run: npm run build -- --version "${{ steps.version.outputs.version }}"
@@ -104,3 +133,44 @@ jobs:
           gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 \
             || gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --generate-notes
           gh release upload "$GITHUB_REF_NAME" release/* --clobber
+
+  prerelease:
+    needs: package
+    if: needs.package.outputs.prerelease == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    # Prerelease tags carry the run number and the prune deletes older
+    # releases, so two pushes to main must not interleave.
+    concurrency:
+      group: extension-prerelease
+      cancel-in-progress: false
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: extension-${{ needs.package.outputs.version }}
+          path: release
+
+      # gh release create makes the tag at this commit, so a failed build
+      # leaves no tag behind.
+      - name: Publish prerelease assets
+        working-directory: .
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.package.outputs.tag }}
+        run: |
+          gh release view "$TAG" >/dev/null 2>&1 \
+            || gh release create "$TAG" --target "$GITHUB_SHA" --title "$TAG" --generate-notes --prerelease
+          gh release upload "$TAG" release/* --clobber
+
+      - name: Keep the 5 newest prereleases
+        working-directory: .
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release list --limit 100 --json tagName,isPrerelease,publishedAt \
+            --jq '[.[] | select(.isPrerelease and (.tagName | test("^v[0-9]+\\.[0-9]+\\.[0-9]+-[0-9]+\\.g[0-9a-f]+$")))]
+                  | sort_by(.publishedAt) | reverse | .[5:] | .[].tagName' |
+            while read -r tag; do
+              gh release delete "$tag" --cleanup-tag --yes
+            done

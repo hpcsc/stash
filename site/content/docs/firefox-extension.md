@@ -78,6 +78,10 @@ The XPI lands in `extension/dist/signed/`. The first signing registers the add-o
 AMO rejects a version it has already signed, so every release needs a new version. The tag
 supplies it: `v1.2.3` builds and signs version `1.2.3`.
 
+Prereleases from `main` are signed too, under their four-part version such as `1.2.3.42`.
+Deleting an old prerelease from GitHub does not remove its version from AMO; unlisted
+versions stay there.
+
 ## Build and lint
 
 ```sh

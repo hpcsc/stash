@@ -94,6 +94,17 @@ Pushing a `v*` tag runs `.github/workflows/extension.yml`, which tests, builds, 
 attaches the zip to a GitHub Release. Release assets are the distributable channel: unlike
 workflow artifacts they do not expire and do not require a GitHub login.
 
+A push to `main` that changes `extension/**` publishes a prerelease instead. It tags the
+commit `v<next>-<run>.g<sha>`, for example `v1.2.4-42.g4829f92`, and marks the release as a
+prerelease, so the latest release still points at the last stable tag. The browser version
+takes the latest stable version plus the run number as a fourth part, for example `1.2.3.42`:
+it installs over `1.2.3`, and stable `1.2.4` installs over it. Only the 5 newest prereleases
+are kept.
+
+Stable tags must be numeric (`v1.2.3`), because Chrome and Firefox reject a version with a
+suffix such as `-rc.1`. Use the prerelease channel for builds before the stable tag: open the
+Releases page and pick the newest one marked **Pre-release**.
+
 `extension/chrome-key.pub` holds the public key behind the fixed ID. The build injects it as
 `manifest.key`. Do not regenerate it — a new key means a new extension ID, and every
 self-hoster would have to add a new redirect URI to their Google OAuth client.
