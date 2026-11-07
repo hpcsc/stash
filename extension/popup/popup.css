@@ -134,8 +134,20 @@ button:disabled {
   overflow-y: auto;
 }
 
-.picker-row {
-  padding: 10px 12px;
+.picker-row-new {
+  border-style: dashed;
+  color: #7a4fa3;
+  font-weight: 600;
+  text-align: center;
+}
+
+.picker-row-new:hover {
+  background: #f3edf8;
+}
+
+.picker-row-new.picking {
+  border-style: solid;
+}
   border: 1px solid #d8d3e0;
   border-radius: 8px;
   background: #ffffff;

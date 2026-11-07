@@ -4,6 +4,8 @@ import { getApiBaseUrl } from '../src/settings.js'
 import { getToken } from '../src/storage.js'
 import { readStaged, clearStaged } from '../src/staged.js'
 import { appendToNote, loadNotes } from '../src/append.js'
+import { saveNote } from '../src/api.js'
+import { downloadSelectionImages, resolveImageTokens } from '../src/dispatch.js'
 import { markSaved } from '../src/badge.js'
 
 // Home view elements
@@ -115,11 +117,8 @@ async function loadPickerNotes() {
 
   try {
     const notes = await loadNotes()
-    if (notes.length === 0) {
-      pickerLoading.hidden = true
-      pickerEmpty.hidden = false
-      return
-    }
+    pickerLoading.hidden = true
+    pickerEmpty.hidden = notes.length > 0
     renderNotes(notes)
   } catch (e) {
     showPickerError('Could not load notes.')
@@ -129,6 +128,13 @@ async function loadPickerNotes() {
 function renderNotes(notes) {
   pickerLoading.hidden = true
   pickerList.innerHTML = ''
+
+  // "Save as new note" row at the top.
+  const newRow = document.createElement('li')
+  newRow.className = 'picker-row picker-row-new'
+  newRow.textContent = '+ Save as new note'
+  newRow.addEventListener('click', () => saveAsNewNote(newRow))
+  pickerList.appendChild(newRow)
 
   for (const note of notes) {
     const li = document.createElement('li')
@@ -145,6 +151,30 @@ function renderNotes(notes) {
     li.append(body, meta)
     li.addEventListener('click', () => selectNote(note, li))
     pickerList.appendChild(li)
+  }
+}
+
+async function saveAsNewNote(row) {
+  const prev = pickerList.querySelector('.picking')
+  if (prev) return
+
+  row.classList.add('picking')
+  const progress = document.createElement('div')
+  progress.className = 'picker-row-progress'
+  progress.textContent = 'Saving\u2026'
+  row.appendChild(progress)
+
+  try {
+    const downloads = await downloadSelectionImages(staged.images)
+    const { markdown, blobs } = resolveImageTokens(staged.markdown, downloads)
+    await saveNote(markdown, blobs)
+    staged = null
+    await markSaved()
+    window.close()
+  } catch (e) {
+    progress.remove()
+    showPickerError(e.message || 'Something went wrong.')
+    row.classList.remove('picking')
   }
 }
 
