@@ -3,7 +3,7 @@
   "name": "Stash",
   "version": "1.0.0",
   "description": "Save text, links, and images to your Stash inbox while you browse.",
-  "permissions": ["contextMenus", "storage", "identity"],
+  "permissions": ["contextMenus", "storage", "identity", "scripting"],
   "host_permissions": ["<all_urls>"],
   "background": {
     "scripts": ["src/background.js"],

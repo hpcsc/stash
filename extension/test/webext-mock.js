@@ -42,6 +42,9 @@ function buildMock() {
       create: vi.fn(),
       onClicked: { addListener: vi.fn() },
     },
+    scripting: {
+      executeScript: vi.fn(async () => [{ result: null }]),
+    },
     action: {
       setBadgeText: vi.fn(async () => {}),
       setBadgeBackgroundColor: vi.fn(async () => {}),

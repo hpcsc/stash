@@ -55,3 +55,22 @@ export async function saveImage(blob, filename) {
   })
   await parseEnvelope(response)
 }
+
+export async function saveNote(markdown, images = []) {
+  if (images.length === 0) {
+    await saveText(markdown)
+    return
+  }
+
+  const form = new FormData()
+  form.append('markdown', markdown)
+  for (const image of images) {
+    form.append('images', image.blob, image.name)
+  }
+  const response = await fetch(await apiUrl('/items'), {
+    method: 'POST',
+    headers: await bearer(),
+    body: form,
+  })
+  await parseEnvelope(response)
+}

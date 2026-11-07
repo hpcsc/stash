@@ -1,5 +1,5 @@
 import { browser } from './browser.js'
-import { saveImage, saveLink, saveText } from './api.js'
+import { saveImage, saveLink, saveNote, saveText } from './api.js'
 import { getToken } from './storage.js'
 
 export async function handleMenuClick(info, tab) {
@@ -20,7 +20,7 @@ export async function handleMenuClick(info, tab) {
 async function capture(info, tab) {
   switch (info.menuItemId) {
     case 'save-selection':
-      await saveText(info.selectionText)
+      await saveSelection(info, tab)
       break
     case 'save-image':
       await saveImageFromUrl(info.srcUrl)
@@ -29,6 +29,87 @@ async function capture(info, tab) {
       await saveLink(info.pageUrl || tab?.url)
       break
   }
+}
+
+async function saveSelection(info, tab) {
+  // Try the injected DOM reader first so images are preserved.
+  const result = await readPageSelection(tab.id, info.frameId)
+
+  if (result && (result.markdown || result.images.length > 0)) {
+    const { markdown, images } = result
+
+    if (images.length === 0) {
+      // No images: post JSON as today.
+      await saveText(markdown)
+      return
+    }
+
+    // Download each image, renumber placeholders for successful downloads.
+    const downloads = await downloadSelectionImages(images)
+    const { markdown: resolved, blobs } = resolveImageTokens(markdown, downloads)
+    await saveNote(resolved, blobs)
+    return
+  }
+
+  // Fall back to the plain-text selection.
+  if (info.selectionText) {
+    await saveText(info.selectionText)
+  }
+}
+
+async function readPageSelection(tabId, frameId) {
+  try {
+    const targets = [{ tabId }]
+    if (frameId !== undefined && frameId !== 0) {
+      targets[0].frameIds = [frameId]
+    }
+
+    const { readSelection } = await import('./selection.js')
+    const [injection] = await browser.scripting.executeScript({
+      target: targets[0],
+      func: readSelection,
+    })
+    return injection?.result
+  } catch {
+    // Injection is refused on browser-internal pages; fall back.
+    return null
+  }
+}
+
+async function downloadSelectionImages(images) {
+  const results = []
+  for (const img of images) {
+    // If the injected reader captured blob bytes, use them directly.
+    if (img._blobBytes) {
+      const blob = new Blob([new Uint8Array(img._blobBytes)], { type: img._blobType || 'image/png' })
+      results.push({ ok: true, blob, name: img._blobName || imageName(img.src) })
+      continue
+    }
+    try {
+      const response = await fetch(img.src)
+      if (!response.ok) throw new Error(`download failed: ${response.status}`)
+      const blob = await response.blob()
+      results.push({ ok: true, blob, name: imageName(img.src) })
+    } catch {
+      results.push({ ok: false, src: img.src })
+    }
+  }
+  return results
+}
+
+function resolveImageTokens(markdown, downloads) {
+  const blobs = []
+  let k = 0
+  const resolved = markdown.replace(/@stash-image-(\d+)/g, (_match, n) => {
+    const idx = Number.parseInt(n, 10)
+    const result = downloads[idx]
+    if (result && result.ok) {
+      blobs.push({ blob: result.blob, name: result.name })
+      return `@stash-image-${k++}`
+    }
+    return result?.src || ''
+  })
+  return { markdown: resolved, blobs }
 }
 
 async function saveImageFromUrl(url) {
