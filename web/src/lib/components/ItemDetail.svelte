@@ -423,8 +423,8 @@
   .edit-editor {
     position: relative;
     width: 100%;
-    min-height: 72px;
-    max-height: 50vh;
+    min-height: 160px;
+    max-height: 60vh;
     padding: var(--space-3) var(--space-4);
     box-sizing: border-box;
     overflow-y: auto;
@@ -448,12 +448,12 @@
   }
 
   .edit-editor :global(.milkdown) {
-    min-height: 48px;
+    min-height: 120px;
   }
 
   .edit-editor :global(.ProseMirror) {
     outline: none;
-    min-height: 48px;
+    min-height: 120px;
     overflow-wrap: anywhere;
   }
 
