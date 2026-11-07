@@ -421,9 +421,99 @@
   }
 
   .edit-editor {
+    position: relative;
+    width: 100%;
+    min-height: 72px;
+    max-height: 50vh;
+    padding: var(--space-3) var(--space-4);
+    box-sizing: border-box;
+    overflow-y: auto;
+    font-family: inherit;
+    font-size: var(--text-base);
+    line-height: var(--leading);
+    color: var(--color-text);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-xs);
     margin-bottom: var(--space-4);
-    min-height: 200px;
-    max-width: 68ch;
+    max-width: none;
+    transition: border-color var(--duration-fast) var(--ease-out),
+                box-shadow var(--duration-fast) var(--ease-out);
+  }
+
+  .edit-editor:focus-within {
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px var(--color-accent-subtle);
+  }
+
+  .edit-editor :global(.milkdown) {
+    min-height: 48px;
+  }
+
+  .edit-editor :global(.ProseMirror) {
+    outline: none;
+    min-height: 48px;
+    overflow-wrap: anywhere;
+  }
+
+  .edit-editor :global(.ProseMirror p) {
+    margin: 0 0 0.5em;
+  }
+
+  .edit-editor :global(.ProseMirror h1),
+  .edit-editor :global(.ProseMirror h2),
+  .edit-editor :global(.ProseMirror h3) {
+    margin: 0.6em 0 0.3em;
+    line-height: 1.3;
+  }
+
+  .edit-editor :global(.ProseMirror h1) { font-size: 1.4em; }
+  .edit-editor :global(.ProseMirror h2) { font-size: 1.25em; }
+  .edit-editor :global(.ProseMirror h3) { font-size: 1.1em; }
+
+  .edit-editor :global(.ProseMirror ul),
+  .edit-editor :global(.ProseMirror ol) {
+    margin: 0 0 0.5em;
+    padding-left: 1.5em;
+  }
+
+  .edit-editor :global(.ProseMirror blockquote) {
+    margin: 0 0 0.5em;
+    padding-left: 0.8em;
+    border-left: 3px solid var(--color-border);
+    color: var(--color-text-secondary);
+  }
+
+  .edit-editor :global(.ProseMirror code) {
+    font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+    font-size: 0.9em;
+    background: var(--color-bg);
+    padding: 0.1em 0.3em;
+    border-radius: var(--radius-sm);
+  }
+
+  .edit-editor :global(.ProseMirror pre) {
+    margin: 0 0 0.5em;
+    padding: var(--space-3);
+    background: var(--color-bg);
+    border-radius: var(--radius-md);
+    overflow-x: auto;
+  }
+
+  .edit-editor :global(.ProseMirror pre code) {
+    padding: 0;
+    background: none;
+  }
+
+  .edit-editor :global(.ProseMirror img) {
+    display: inline-block;
+    max-width: 100%;
+    max-height: 200px;
+    margin: 2px 0;
+    border-radius: var(--radius-md);
+    object-fit: contain;
+    vertical-align: middle;
   }
 
   .edit-error {
