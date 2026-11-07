@@ -8,7 +8,7 @@ import { buildManifest, chromeExtensionId, firefoxId } from './manifest.mjs'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const dist = join(root, 'dist')
-const runtimeDirs = ['src', 'popup', 'options', 'icons']
+const runtimeDirs = ['src', 'popup', 'options', 'icons', 'picker']
 const zipEntries = ['manifest.json', ...runtimeDirs]
 
 function parseArgs(argv) {

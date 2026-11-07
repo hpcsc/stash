@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Add to a note — Stash</title>
+    <link rel="stylesheet" href="picker.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Add to a note</h1>
+      <p class="preview" id="preview"></p>
+    </header>
+    <main>
+      <p class="status" id="status">Loading notes…</p>
+      <ul class="note-list" id="note-list"></ul>
+      <p class="error" id="error" hidden></p>
+      <p class="empty" id="empty" hidden>No notes to add to. Capture a note first.</p>
+      <p class="expired" id="expired" hidden>The selection has expired. Select again and try once more.</p>
+    </main>
+    <footer>
+      <button id="cancel">Cancel</button>
+    </footer>
+    <script type="module" src="picker.js"></script>
+  </body>
+</html>

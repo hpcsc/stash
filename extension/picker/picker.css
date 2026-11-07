@@ -1,0 +1,138 @@
+body {
+  margin: 0;
+  padding: 24px;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  color: #1a1523;
+  background: #f3f0f7;
+  max-width: 560px;
+}
+
+header {
+  margin-bottom: 20px;
+}
+
+h1 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.preview {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: #90899c;
+  max-height: 3em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: #6b6375;
+}
+
+.error {
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: #c53030;
+  background: #fee2e2;
+  border-radius: 8px;
+}
+
+.empty, .expired {
+  margin: 0;
+  font-size: 13px;
+  color: #6b6375;
+}
+
+.note-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.note-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid #d8d3e0;
+  border-radius: 10px;
+  background: #ffffff;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.note-row:hover {
+  border-color: #7a4fa3;
+}
+
+.note-row.selected {
+  border-color: #7a4fa3;
+  background: #f9f6fc;
+}
+
+.note-body {
+  font-size: 13px;
+  color: #1a1523;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.note-meta {
+  font-size: 12px;
+  color: #90899c;
+}
+
+.note-progress {
+  font-size: 12px;
+  color: #7a4fa3;
+}
+
+.note-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+button {
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid #d8d3e0;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #1a1523;
+  cursor: pointer;
+}
+
+button.primary {
+  border-color: #7a4fa3;
+  background: #7a4fa3;
+  color: #ffffff;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.done {
+  font-size: 13px;
+  color: #2f855a;
+  font-weight: 600;
+}
+
+footer {
+  margin-top: 20px;
+}

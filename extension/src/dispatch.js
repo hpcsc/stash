@@ -1,6 +1,8 @@
 import { browser } from './browser.js'
 import { saveImage, saveLink, saveNote, saveText } from './api.js'
+import { markSaved, markFailed } from './badge.js'
 import { getToken } from './storage.js'
+import { stageCapture } from './staged.js'
 
 export async function handleMenuClick(info, tab) {
   try {
@@ -9,8 +11,10 @@ export async function handleMenuClick(info, tab) {
       await markFailed()
       return
     }
-    await capture(info, tab)
-    await markSaved()
+    const shouldMark = await capture(info, tab)
+    if (shouldMark !== false) {
+      await markSaved()
+    }
   } catch (error) {
     console.error(error)
     await markFailed()
@@ -21,13 +25,16 @@ async function capture(info, tab) {
   switch (info.menuItemId) {
     case 'save-selection':
       await saveSelection(info, tab)
-      break
+      return true
+    case 'append-selection':
+      await stageSelection(info, tab)
+      return false // The picker handles the badge.
     case 'save-image':
       await saveImageFromUrl(info.srcUrl)
-      break
+      return true
     case 'save-page':
       await saveLink(info.pageUrl || tab?.url)
-      break
+      return true
   }
 }
 
@@ -76,7 +83,7 @@ async function readPageSelection(tabId, frameId) {
   }
 }
 
-async function downloadSelectionImages(images) {
+export async function downloadSelectionImages(images) {
   const results = []
   for (const img of images) {
     // If the injected reader captured blob bytes, use them directly.
@@ -97,7 +104,7 @@ async function downloadSelectionImages(images) {
   return results
 }
 
-function resolveImageTokens(markdown, downloads) {
+export function resolveImageTokens(markdown, downloads) {
   const blobs = []
   let k = 0
   const resolved = markdown.replace(/@stash-image-(\d+)/g, (_match, n) => {
@@ -121,6 +128,27 @@ async function saveImageFromUrl(url) {
   await saveImage(blob, imageName(url))
 }
 
+async function stageSelection(info, tab) {
+  // Read the selection, same as saveSelection but stage it instead of saving.
+  const result = await readPageSelection(tab.id, info.frameId)
+
+  let markdown = ''
+  let images = []
+
+  if (result && (result.markdown || result.images.length > 0)) {
+    markdown = result.markdown
+    images = result.images
+  } else if (info.selectionText) {
+    markdown = info.selectionText
+  }
+
+  if (!markdown && images.length === 0) return
+
+  await stageCapture({ markdown, images, tabUrl: tab?.url || info.pageUrl })
+  await browser.tabs.create({ url: browser.runtime.getURL('picker/picker.html') })
+  // Do not mark saved — the picker handles the badge.
+}
+
 function imageName(url) {
   try {
     const path = new URL(url).pathname
@@ -128,16 +156,6 @@ function imageName(url) {
   } catch {
     return 'image'
   }
-}
-
-async function markSaved() {
-  await browser.action.setBadgeBackgroundColor({ color: '#2f855a' })
-  await browser.action.setBadgeText({ text: '✓' })
-}
-
-async function markFailed() {
-  await browser.action.setBadgeBackgroundColor({ color: '#c53030' })
-  await browser.action.setBadgeText({ text: '!' })
 }
 
 async function openPopup() {

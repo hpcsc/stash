@@ -45,6 +45,38 @@ describe('handleMenuClick', () => {
     expect(JSON.parse(init.body)).toEqual({ body: 'hello' })
   })
 
+  it('stages the selection and opens the picker for append', async () => {
+    await signIn()
+    chrome.scripting.executeScript.mockResolvedValue([{
+      result: { markdown: 'selected text', images: [] },
+    }])
+    vi.stubGlobal('fetch', vi.fn())
+
+    await handleMenuClick({ menuItemId: 'append-selection', selectionText: 'selected text' }, { id: 1 })
+
+    // Should open the picker tab.
+    expect(chrome.tabs.create).toHaveBeenCalledWith({
+      url: chrome.runtime.getURL('picker/picker.html'),
+    })
+    // Should NOT mark as saved — the picker does that.
+    expect(chrome.action.setBadgeText).not.toHaveBeenCalledWith({ text: '✓' })
+    // Should NOT send a request.
+    const fetchMock = globalThis.fetch
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('falls back to selectionText for append when injection returns nothing', async () => {
+    await signIn()
+    chrome.scripting.executeScript.mockResolvedValue([{ result: null }])
+    vi.stubGlobal('fetch', vi.fn())
+
+    await handleMenuClick({ menuItemId: 'append-selection', selectionText: 'fallback' }, { id: 1 })
+
+    expect(chrome.tabs.create).toHaveBeenCalled()
+    const staged = await chrome.storage.session.get('pending-selection')
+    expect(staged['pending-selection'].markdown).toBe('fallback')
+  })
+
   it('saves a selection with no images as JSON', async () => {
     await signIn()
     chrome.scripting.executeScript.mockResolvedValue([{

@@ -24,16 +24,19 @@ function storageArea(store) {
 function buildMock() {
   const local = new Map()
   const sync = new Map()
+  const session = new Map()
 
   const api = {
     runtime: {
       id: 'test-extension-id',
+      getURL: (path) => `chrome-extension://test-extension-id/${path}`,
       onInstalled: { addListener: vi.fn() },
       openOptionsPage: vi.fn(async () => {}),
     },
     storage: {
       local: storageArea(local),
       sync: storageArea(sync),
+      session: storageArea(session),
     },
     identity: {
       launchWebAuthFlow: vi.fn(async () => ''),
@@ -45,6 +48,9 @@ function buildMock() {
     scripting: {
       executeScript: vi.fn(async () => [{ result: null }]),
     },
+    tabs: {
+      create: vi.fn(async () => {}),
+    },
     action: {
       setBadgeText: vi.fn(async () => {}),
       setBadgeBackgroundColor: vi.fn(async () => {}),
@@ -52,19 +58,19 @@ function buildMock() {
     },
   }
 
-  return { api, local, sync }
+  return { api, local, sync, session }
 }
 
 export function installChromeMock() {
-  const { api, local, sync } = buildMock()
+  const { api, local, sync, session } = buildMock()
   globalThis.chrome = api
   delete globalThis.browser
-  return { chrome: api, local, sync }
+  return { chrome: api, local, sync, session }
 }
 
 export function installBrowserMock() {
-  const { api, local, sync } = buildMock()
+  const { api, local, sync, session } = buildMock()
   globalThis.browser = api
   delete globalThis.chrome
-  return { browser: api, local, sync }
+  return { browser: api, local, sync, session }
 }

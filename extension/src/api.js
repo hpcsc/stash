@@ -9,6 +9,13 @@ export class ApiError extends Error {
   }
 }
 
+export class ConflictError extends ApiError {
+  constructor(message) {
+    super(message, 409)
+    this.name = 'ConflictError'
+  }
+}
+
 async function parseEnvelope(response) {
   let envelope
   try {
@@ -18,7 +25,12 @@ async function parseEnvelope(response) {
   }
   if (envelope.successful !== true) {
     const messages = envelope.messages ?? []
-    throw new ApiError(messages.length > 0 ? messages.join('\n') : 'request failed', response.status)
+    const err = new ApiError(messages.length > 0 ? messages.join('\n') : 'request failed', response.status)
+    if (response.status === 409) {
+      const conflict = new ConflictError(err.message)
+      throw conflict
+    }
+    throw err
   }
   return envelope
 }
@@ -69,6 +81,50 @@ export async function saveNote(markdown, images = []) {
   }
   const response = await fetch(await apiUrl('/items'), {
     method: 'POST',
+    headers: await bearer(),
+    body: form,
+  })
+  await parseEnvelope(response)
+}
+
+export async function listItems(states = []) {
+  const params = new URLSearchParams()
+  for (const s of states) params.append('state', s)
+  const qs = params.toString()
+  const response = await fetch(await apiUrl(`/items${qs ? `?${qs}` : ''}`), {
+    headers: await bearer(),
+  })
+  const envelope = await parseEnvelope(response)
+  return envelope.data ?? []
+}
+
+export async function getItem(id) {
+  const response = await fetch(await apiUrl(`/items/${id}`), {
+    headers: await bearer(),
+  })
+  const envelope = await parseEnvelope(response)
+  return envelope.data
+}
+
+export async function editNote(id, markdown, version, images = []) {
+  if (images.length === 0) {
+    const response = await fetch(await apiUrl(`/items/${id}`), {
+      method: 'PATCH',
+      headers: { ...(await bearer()), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ body: markdown, version }),
+    })
+    await parseEnvelope(response)
+    return
+  }
+
+  const form = new FormData()
+  form.append('markdown', markdown)
+  form.append('version', String(version))
+  for (const image of images) {
+    form.append('images', image.blob, image.name)
+  }
+  const response = await fetch(await apiUrl(`/items/${id}`), {
+    method: 'PATCH',
     headers: await bearer(),
     body: form,
   })
