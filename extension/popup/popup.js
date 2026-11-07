@@ -15,6 +15,7 @@ const serverEl = document.getElementById('server')
 const signInBtn = document.getElementById('sign-in')
 const signOutBtn = document.getElementById('sign-out')
 const settingsBtn = document.getElementById('settings')
+const openWebBtn = document.getElementById('open-web')
 
 // Picker view elements
 const pickerEl = document.getElementById('picker')
@@ -78,6 +79,11 @@ signOutBtn.addEventListener('click', async () => {
 settingsBtn.addEventListener('click', async () => {
   await browser.runtime.openOptionsPage()
   window.close()
+})
+
+openWebBtn.addEventListener('click', async () => {
+  const base = await getApiBaseUrl()
+  await browser.tabs.create({ url: base })
 })
 
 // ---- Picker ----
