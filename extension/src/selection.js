@@ -36,21 +36,34 @@ export function readSelection() {
         return
 
       case 1: { // ELEMENT_NODE
-        const tag = node.tagName.toLowerCase()
+        const tag = (node.tagName || '').toLowerCase()
 
         if (tag === 'script' || tag === 'style' || tag === 'noscript') return
 
-        if (tag === 'img') {
+        if (tag === 'img' || tag === 'image') {
           flushPending(state)
           if (!inBlock && state.markdown.length > 0 && !state.markdown.endsWith('\n\n') && !state.lastWasImage) {
             state.markdown += '\n\n'
           }
-          const src = node.currentSrc || node.src
+          // SVG <image> uses href, HTML <img> uses currentSrc/src.
+          let src = node.currentSrc || node.src
+          if (!src && node.href && node.href.baseVal) src = node.href.baseVal
+          if (!src && node.getAttribute) src = node.getAttribute('src') || node.getAttribute('href') || node.getAttribute('xlink:href')
           if (src) {
+            try { src = new URL(src, document.baseURI).href } catch (_) {}
             const idx = state.images.length
             state.images.push({ src, alt: node.alt || '' })
             state.markdown += '![' + (node.alt || '') + '](@stash-image-' + idx + ')'
             state.lastWasImage = !inBlock
+          }
+          return
+        }
+
+        // <picture>: find the <img> inside and treat it as the image.
+        if (tag === 'picture') {
+          const innerImg = node.querySelector('img')
+          if (innerImg) {
+            walkNode(innerImg, state, inBlock)
           }
           return
         }

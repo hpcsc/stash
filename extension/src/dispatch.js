@@ -103,6 +103,8 @@ async function saveImageFromUrl(url) {
 async function stageSelection(info, tab) {
   // Read the selection, same as saveSelection but stage it instead of saving.
   const result = await readPageSelection(tab.id, info.frameId)
+  console.log('stageSelection: injection result =', result,
+    'selectionText =', info.selectionText)
 
   let markdown = ''
   let images = []
@@ -113,6 +115,9 @@ async function stageSelection(info, tab) {
   } else if (info.selectionText) {
     markdown = info.selectionText
   }
+
+  console.log('stageSelection: markdown =', markdown.slice(0, 200),
+    'images =', images.length)
 
   if (!markdown && images.length === 0) return
 
