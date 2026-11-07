@@ -171,9 +171,10 @@ async function saveAsNewNote(row) {
   row.appendChild(progress)
 
   try {
-    const downloads = await downloadSelectionImages(staged.images)
-    const { markdown, blobs } = resolveImageTokens(staged.markdown, downloads)
-    await saveNote(markdown, blobs)
+    const markdown = staged.markdown || ''
+    const downloads = await downloadSelectionImages(staged.images || [])
+    const { markdown: resolved, blobs } = resolveImageTokens(markdown, downloads)
+    await saveNote(resolved, blobs)
     staged = null
     await markSaved()
     window.close()

@@ -48,8 +48,9 @@ async function readPageSelection(tabId, frameId) {
       func: readSelection,
     })
     return injection?.result
-  } catch {
+  } catch (err) {
     // Injection is refused on browser-internal pages; fall back.
+    console.error('readPageSelection failed:', err)
     return null
   }
 }

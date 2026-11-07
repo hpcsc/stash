@@ -30,12 +30,12 @@ export function readSelection() {
 
   function walkNode(node, state, inBlock) {
     switch (node.nodeType) {
-      case Node.TEXT_NODE:
+      case 3: // TEXT_NODE
         state.pending += node.textContent
         if (node.textContent.trim()) state.lastWasImage = false
         return
 
-      case Node.ELEMENT_NODE: {
+      case 1: { // ELEMENT_NODE
         const tag = node.tagName.toLowerCase()
 
         if (tag === 'script' || tag === 'style' || tag === 'noscript') return
