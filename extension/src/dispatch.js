@@ -145,7 +145,7 @@ async function stageSelection(info, tab) {
   if (!markdown && images.length === 0) return
 
   await stageCapture({ markdown, images, tabUrl: tab?.url || info.pageUrl })
-  await browser.tabs.create({ url: browser.runtime.getURL('picker/picker.html') })
+  await openPopup()
   // Do not mark saved — the picker handles the badge.
 }
 
