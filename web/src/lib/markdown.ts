@@ -30,7 +30,7 @@ export function markdownToPlainText(markdown: string): string {
   container.innerHTML = DOMPurify.sanitize(raw)
 
   for (const img of Array.from(container.querySelectorAll('img'))) {
-    img.replaceWith(document.createTextNode(` ${img.getAttribute('alt') || '📷'} `))
+    img.replaceWith(document.createTextNode(` ${img.getAttribute('alt') || '[image]'} `))
   }
   for (const br of Array.from(container.querySelectorAll('br'))) {
     br.replaceWith(document.createTextNode('\n'))

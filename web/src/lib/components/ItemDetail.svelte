@@ -106,7 +106,12 @@
       <img class="full-image" src={fullImage} alt="" />
     {:else if item.type === 'file'}
       <div class="file-detail">
-        <span class="file-icon">📎</span>
+        <span class="file-icon">
+          <svg width="24" height="24" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M3 2.5h6l4 4V13.5a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1z"/>
+            <path d="M9 2.5v4h4"/>
+          </svg>
+        </span>
         <div class="file-info">
           <p class="file-name">{item.fileName || 'File'}</p>
           {#if item.fileSize}

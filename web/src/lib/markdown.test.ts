@@ -11,7 +11,7 @@ describe('markdownToPlainText', () => {
   })
 
   it('turns an image into a placeholder', () => {
-    expect(markdownToPlainText('before ![](photo.png) after')).toBe('before 📷 after')
+    expect(markdownToPlainText('before ![](photo.png) after')).toBe('before [image] after')
   })
 
   it('keeps list items on separate lines', () => {

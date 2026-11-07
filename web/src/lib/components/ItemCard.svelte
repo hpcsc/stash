@@ -16,11 +16,11 @@
 
   let { item, onclick, onkeep, ondrop, onrestore, ondelete }: Props = $props()
 
-  const typeMeta: Record<string, { icon: string; label: string }> = {
-    link: { icon: '🔗', label: 'Link' },
-    image: { icon: '📷', label: 'Image' },
-    file: { icon: '📎', label: 'File' },
-    note: { icon: '📝', label: 'Note' },
+  const typeMeta: Record<string, { label: string }> = {
+    link: { label: 'Link' },
+    image: { label: 'Image' },
+    file: { label: 'File' },
+    note: { label: 'Note' },
   }
 
   const meta = $derived(typeMeta[item.type] ?? typeMeta.note)
@@ -54,14 +54,20 @@
 
 <button type="button" class="card" {onclick}>
   <div class="card-header">
-    <span class="type-badge" title={meta.label}>{meta.icon}</span>
+    <span class="type-badge">{meta.label}</span>
     <span class="time">{timeAgo}</span>
   </div>
   {#if item.type === 'image'}
     {#if thumbnail}
       <img class="thumb" src={thumbnail} alt="" />
     {:else}
-      <div class="image-placeholder">📷</div>
+      <div class="image-placeholder">
+        <svg width="24" height="24" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="1.5" y="2.5" width="13" height="11" rx="1.5"/>
+          <circle cx="5.5" cy="6" r="1.5"/>
+          <path d="M1.5 11.5l4-3 2 1.5 3-3 4 4.5"/>
+        </svg>
+      </div>
     {/if}
   {:else if item.type === 'file'}
     <div class="file">
@@ -197,16 +203,17 @@
   }
 
   .type-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 30px;
-    height: 30px;
-    font-size: var(--text-sm);
+    display: inline-block;
+    padding: 1px 8px;
+    font-size: var(--text-xs);
+    font-weight: var(--weight-semibold);
     color: var(--color-accent);
     background: var(--color-accent-subtle);
-    border: 1px solid color-mix(in srgb, var(--color-accent) 25%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-accent) 20%, transparent);
     border-radius: var(--radius-sm);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    line-height: 1.6;
   }
 
   .time {
