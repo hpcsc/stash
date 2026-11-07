@@ -135,18 +135,27 @@ button:disabled {
 }
 
 .picker-row-new {
-  border-style: dashed;
-  color: #7a4fa3;
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  margin-bottom: 5px;
+  font-size: 13px;
   font-weight: 600;
+  color: #7a4fa3;
+  background: #f3edf8;
+  border: 1px solid #7a4fa3;
+  border-radius: 8px;
+  cursor: pointer;
   text-align: center;
+  transition: background 0.15s;
 }
 
 .picker-row-new:hover {
-  background: #f3edf8;
+  background: #e8daf5;
 }
 
 .picker-row-new.picking {
-  border-style: solid;
+  background: #d9c9eb;
 }
   border: 1px solid #d8d3e0;
   border-radius: 8px;

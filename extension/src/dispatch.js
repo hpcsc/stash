@@ -1,5 +1,5 @@
 import { browser } from './browser.js'
-import { saveImage, saveLink, saveNote, saveText } from './api.js'
+import { saveImage, saveLink } from './api.js'
 import { markSaved, markFailed } from './badge.js'
 import { getToken } from './storage.js'
 import { stageCapture } from './staged.js'
@@ -24,9 +24,6 @@ export async function handleMenuClick(info, tab) {
 async function capture(info, tab) {
   switch (info.menuItemId) {
     case 'save-selection':
-      await saveSelection(info, tab)
-      return true
-    case 'append-selection':
       await stageSelection(info, tab)
       return false // The picker handles the badge.
     case 'save-image':
@@ -35,32 +32,6 @@ async function capture(info, tab) {
     case 'save-page':
       await saveLink(info.pageUrl || tab?.url)
       return true
-  }
-}
-
-async function saveSelection(info, tab) {
-  // Try the injected DOM reader first so images are preserved.
-  const result = await readPageSelection(tab.id, info.frameId)
-
-  if (result && (result.markdown || result.images.length > 0)) {
-    const { markdown, images } = result
-
-    if (images.length === 0) {
-      // No images: post JSON as today.
-      await saveText(markdown)
-      return
-    }
-
-    // Download each image, renumber placeholders for successful downloads.
-    const downloads = await downloadSelectionImages(images)
-    const { markdown: resolved, blobs } = resolveImageTokens(markdown, downloads)
-    await saveNote(resolved, blobs)
-    return
-  }
-
-  // Fall back to the plain-text selection.
-  if (info.selectionText) {
-    await saveText(info.selectionText)
   }
 }
 
