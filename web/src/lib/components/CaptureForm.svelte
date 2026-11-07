@@ -61,28 +61,20 @@
     if (!file) return
     onattach(file)
   }
-
-  function handlePickedImage(e: Event) {
-    const input = e.target as HTMLInputElement
-    const file = input.files?.[0]
-    input.value = ''
-    if (!file || !editor) return
-    editor.insertImage(file)
-  }
 </script>
 
 <form class="capture" onsubmit={(e) => { e.preventDefault(); submit() }}>
   <div bind:this={container} class="editor"></div>
   <div class="capture-footer">
     <div class="footer-left">
-      <button type="button" class="attach-btn" onclick={pickImage} disabled={saving} title="Attach an image">
+      <button type="button" class="attach-btn" onclick={pickImage} disabled={saving} title="Save an image">
         <svg width="18" height="18" viewBox="0 0 16 16" fill="none">
           <path d="M1.5 3A1.5 1.5 0 0 1 3 1.5h10A1.5 1.5 0 0 1 14.5 3v10a1.5 1.5 0 0 1-1.5 1.5H3A1.5 1.5 0 0 1 1.5 13V3z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" />
           <path d="M5 6a1 1 0 1 0 0-2 1 1 0 0 0 0 2zM14.5 11l-4-4L3 14.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" />
         </svg>
       </button>
-      <input bind:this={imageEl} type="file" accept="image/*" onchange={handlePickedImage} hidden />
-      <button type="button" class="attach-btn" onclick={pickFile} disabled={saving} title="Attach a file">
+      <input bind:this={imageEl} type="file" accept="image/*" onchange={handlePicked} hidden />
+      <button type="button" class="attach-btn" onclick={pickFile} disabled={saving} title="Save a file">
         <svg width="18" height="18" viewBox="0 0 16 16" fill="none">
           <path d="M13.5 7.5l-5.6 5.6a3.5 3.5 0 0 1-5-5l6-6a2.3 2.3 0 0 1 3.3 3.3l-6 6a1.2 1.2 0 0 1-1.7-1.7l5.3-5.3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" />
         </svg>
