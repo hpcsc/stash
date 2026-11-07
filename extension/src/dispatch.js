@@ -3,6 +3,7 @@ import { saveImage, saveLink } from './api.js'
 import { markSaved, markFailed } from './badge.js'
 import { getToken } from './storage.js'
 import { stageCapture } from './staged.js'
+import { readSelection } from './selection.js'
 
 export async function handleMenuClick(info, tab) {
   try {
@@ -42,7 +43,6 @@ async function readPageSelection(tabId, frameId) {
       targets[0].frameIds = [frameId]
     }
 
-    const { readSelection } = await import('./selection.js')
     const [injection] = await browser.scripting.executeScript({
       target: targets[0],
       func: readSelection,
@@ -103,8 +103,6 @@ async function saveImageFromUrl(url) {
 async function stageSelection(info, tab) {
   // Read the selection, same as saveSelection but stage it instead of saving.
   const result = await readPageSelection(tab.id, info.frameId)
-  console.log('stageSelection: injection result =', result,
-    'selectionText =', info.selectionText)
 
   let markdown = ''
   let images = []
@@ -115,9 +113,6 @@ async function stageSelection(info, tab) {
   } else if (info.selectionText) {
     markdown = info.selectionText
   }
-
-  console.log('stageSelection: markdown =', markdown.slice(0, 200),
-    'images =', images.length)
 
   if (!markdown && images.length === 0) return
 
