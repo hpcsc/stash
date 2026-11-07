@@ -11,11 +11,13 @@
       <p class="preview" id="preview"></p>
     </header>
     <main>
-      <p class="status" id="status">Loading notes…</p>
-      <ul class="note-list" id="note-list"></ul>
+      <div class="status-line">
+        <span class="status" id="status">Loading notes…</span>
+      </div>
       <p class="error" id="error" hidden></p>
-      <p class="empty" id="empty" hidden>No notes to add to. Capture a note first.</p>
-      <p class="expired" id="expired" hidden>The selection has expired. Select again and try once more.</p>
+      <ul class="note-list" id="note-list"></ul>
+      <p class="empty" id="empty" hidden>No notes yet. Capture a note first, then add selections to it.</p>
+      <p class="expired" id="expired" hidden>This selection has expired. Select text and choose "Add selection to a note…" again.</p>
     </main>
     <footer>
       <button id="cancel">Cancel</button>

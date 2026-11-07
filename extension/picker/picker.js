@@ -1,5 +1,5 @@
 import { appendToNote, cancelAppend, getStagedCapture, loadNotes } from '../src/append.js'
-import { markSaved, markFailed } from './badge.js'
+import { markSaved } from '../src/badge.js'
 
 const preview = document.getElementById('preview')
 const status = document.getElementById('status')
