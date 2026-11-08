@@ -82,8 +82,8 @@ func consumers(pool *pgxpool.Pool, fileStore storage.Storage, logger *slog.Logge
 		projection.NewProjector(items.NewProjection(), pool, checkpointStore, eventSubscription, logger),
 		projection.NewProjector(tags.NewProjection(), pool, checkpointStore, eventSubscription, logger),
 		projection.NewProjector(item_tags.NewProjection(), pool, checkpointStore, eventSubscription, logger),
-		reaction.NewReactor(link_metadata.New(itemRepo, logger), checkpointStore, eventSubscription, logger),
-		reaction.NewReactor(thumbnail.New(itemRepo, fileStore, logger), checkpointStore, eventSubscription, logger),
+		reaction.NewReactor(reaction.NewConflictRetry(link_metadata.New(itemRepo, logger), 3), checkpointStore, eventSubscription, logger),
+		reaction.NewReactor(reaction.NewConflictRetry(thumbnail.New(itemRepo, fileStore, logger), 3), checkpointStore, eventSubscription, logger),
 		reaction.NewReactor(empty_trash_reactor.New(bus, logger), checkpointStore, eventSubscription, logger),
 	}
 }
