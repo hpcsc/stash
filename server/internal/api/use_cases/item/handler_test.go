@@ -226,13 +226,28 @@ func TestHandler(t *testing.T) {
 	})
 
 	t.Run("list", func(t *testing.T) {
-		t.Run("returns the items from the read model", func(t *testing.T) {
+		t.Run("returns a page of items with the total count", func(t *testing.T) {
 			router := newRouter(command.NewBus(), fakeReader{items: []items.Item{{ID: "1", Body: "hello", CapturedAt: time.Now()}}})
 
 			w := send(router, "GET", "/items", "")
 
 			require.Equal(t, http.StatusOK, w.Code)
 			require.Contains(t, w.Body.String(), `"body":"hello"`)
+			require.Contains(t, w.Body.String(), `"total":1`)
+		})
+
+		t.Run("passes filters and clamps the page size", func(t *testing.T) {
+			var got items.Filter
+			router := newRouter(command.NewBus(), fakeReader{gotFilter: &got})
+
+			w := send(router, "GET", "/items?q=hello&tag=work&tag=design&state=kept&limit=1000&offset=20", "")
+
+			require.Equal(t, http.StatusOK, w.Code)
+			require.Equal(t, "hello", got.Search)
+			require.Equal(t, []string{"work", "design"}, got.Tags)
+			require.Equal(t, []string{"kept"}, got.States)
+			require.Equal(t, items.MaxLimit, got.Limit)
+			require.Equal(t, 20, got.Offset)
 		})
 	})
 
@@ -415,17 +430,21 @@ func TestHandler(t *testing.T) {
 }
 
 type fakeReader struct {
-	items    []items.Item
-	item     *items.Item
-	existing *items.Item
+	items     []items.Item
+	item      *items.Item
+	existing  *items.Item
+	gotFilter *items.Filter
 }
 
 func (f fakeReader) For(domain.UserID) items.View {
 	return f
 }
 
-func (f fakeReader) List(_ context.Context, _ string, _ ...string) ([]items.Item, error) {
-	return f.items, nil
+func (f fakeReader) List(_ context.Context, filter items.Filter) (items.Page, error) {
+	if f.gotFilter != nil {
+		*f.gotFilter = filter
+	}
+	return items.Page{Items: f.items, Total: len(f.items)}, nil
 }
 
 func (f fakeReader) ByID(context.Context, string) (*items.Item, error) {

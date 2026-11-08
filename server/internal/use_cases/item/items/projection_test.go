@@ -139,11 +139,41 @@ func TestProjection(t *testing.T) {
 		err := projection.NewProjector(items.NewProjection(), pool, checkpointStore, sub, test.DiscardLogger()).Start(context.Background())
 		require.ErrorIs(t, err, event.ErrSubscriptionEnded)
 
-		all, err := items.NewQuery(pool).For(testUser).List(context.Background(), "")
+		page, err := items.NewQuery(pool).For(testUser).List(context.Background(), items.Filter{})
 		require.NoError(t, err)
+		all := page.Items
 		require.Len(t, all, 2)
+		require.Equal(t, 2, page.Total)
 		require.Equal(t, "newer", all[0].Body)
 		require.Equal(t, "older", all[1].Body)
+	})
+
+	t.Run("pages items without overlap", func(t *testing.T) {
+		pool := test.NewDBPool(t)
+		clearState(t, pool)
+		checkpointStore := store.NewPostgres(pool)
+		sub := subscription.NewFake().WithEventChannel(closedChannel(
+			noteCapturedEvent(3, 1, uuid.New(), "oldest", time.Date(2026, 10, 24, 10, 0, 0, 0, time.UTC)),
+			noteCapturedEvent(3, 2, uuid.New(), "middle", time.Date(2026, 10, 24, 11, 0, 0, 0, time.UTC)),
+			noteCapturedEvent(3, 3, uuid.New(), "newest", time.Date(2026, 10, 24, 12, 0, 0, 0, time.UTC)),
+		))
+
+		err := projection.NewProjector(items.NewProjection(), pool, checkpointStore, sub, test.DiscardLogger()).Start(context.Background())
+		require.ErrorIs(t, err, event.ErrSubscriptionEnded)
+
+		reader := items.NewQuery(pool).For(testUser)
+		first, err := reader.List(context.Background(), items.Filter{Limit: 2})
+		require.NoError(t, err)
+		require.Equal(t, 3, first.Total)
+		require.Len(t, first.Items, 2)
+		require.Equal(t, "newest", first.Items[0].Body)
+		require.Equal(t, "middle", first.Items[1].Body)
+
+		second, err := reader.List(context.Background(), items.Filter{Limit: 2, Offset: 2})
+		require.NoError(t, err)
+		require.Equal(t, 3, second.Total)
+		require.Len(t, second.Items, 1)
+		require.Equal(t, "oldest", second.Items[0].Body)
 	})
 
 	t.Run("finds an existing item by type and body", func(t *testing.T) {
@@ -186,13 +216,15 @@ func TestProjection(t *testing.T) {
 		alice := items.NewQuery(pool).For("alice")
 		bob := items.NewQuery(pool).For("bob")
 
-		aliceAll, err := alice.List(context.Background(), "")
+		alicePage, err := alice.List(context.Background(), items.Filter{})
 		require.NoError(t, err)
+		aliceAll := alicePage.Items
 		require.Len(t, aliceAll, 1)
 		require.Equal(t, aliceID.String(), aliceAll[0].ID)
 
-		bobAll, err := bob.List(context.Background(), "")
+		bobPage, err := bob.List(context.Background(), items.Filter{})
 		require.NoError(t, err)
+		bobAll := bobPage.Items
 		require.Len(t, bobAll, 1)
 		require.Equal(t, bobID.String(), bobAll[0].ID)
 

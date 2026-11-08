@@ -129,18 +129,38 @@ func (h *handler) captureResponse(req *http.Request, itemID uuid.UUID, itemType,
 }
 
 func (h *handler) list(w http.ResponseWriter, req *http.Request) {
-	search := req.URL.Query().Get("q")
-	states := req.URL.Query()["state"]
-	all, err := h.view(req).List(req.Context(), search, states...)
+	query := req.URL.Query()
+	page, err := h.view(req).List(req.Context(), items.Filter{
+		Search: query.Get("q"),
+		Tags:   query["tag"],
+		States: query["state"],
+		Limit:  clamp(queryInt(query.Get("limit"), items.DefaultLimit), 1, items.MaxLimit),
+		Offset: max(queryInt(query.Get("offset"), 0), 0),
+	})
 	if err != nil {
 		_ = h.renderer.JSON(w, http.StatusInternalServerError, response.Fail(err.Error()))
 		return
 	}
-	if all == nil {
-		all = []items.Item{}
+	if page.Items == nil {
+		page.Items = []items.Item{}
 	}
 
-	_ = h.renderer.JSON(w, http.StatusOK, response.SucceedWithData(all))
+	_ = h.renderer.JSON(w, http.StatusOK, response.SucceedWithData(page))
+}
+
+func queryInt(raw string, fallback int) int {
+	if raw == "" {
+		return fallback
+	}
+	value, err := strconv.Atoi(raw)
+	if err != nil {
+		return fallback
+	}
+	return value
+}
+
+func clamp(value, low, high int) int {
+	return min(max(value, low), high)
 }
 
 func (h *handler) get(w http.ResponseWriter, req *http.Request) {
@@ -217,14 +237,14 @@ func (h *handler) deleteItem(w http.ResponseWriter, req *http.Request) {
 }
 
 func (h *handler) emptyTrash(w http.ResponseWriter, req *http.Request) {
-	dropped, err := h.view(req).List(req.Context(), "", "dropped")
+	dropped, err := h.view(req).List(req.Context(), items.Filter{States: []string{"dropped"}})
 	if err != nil {
 		_ = h.renderer.JSON(w, http.StatusInternalServerError, response.Fail(err.Error()))
 		return
 	}
 
-	ids := make([]uuid.UUID, 0, len(dropped))
-	for _, i := range dropped {
+	ids := make([]uuid.UUID, 0, len(dropped.Items))
+	for _, i := range dropped.Items {
 		id, err := uuid.Parse(i.ID)
 		if err != nil {
 			continue

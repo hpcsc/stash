@@ -118,15 +118,35 @@ export interface Item {
   fileSize?: number
   mimeType?: string
   capturedAt: string
+  tagNames?: string[]
 }
 
-export async function listItems(search?: string, states?: string[]): Promise<Item[]> {
+export interface ItemPage {
+  items: Item[]
+  total: number
+  limit: number
+  offset: number
+}
+
+export interface ListItemsFilter {
+  search?: string
+  states?: string[]
+  tags?: string[]
+  limit?: number
+  offset?: number
+}
+
+export const PAGE_SIZE = 50
+
+export async function listItems(filter: ListItemsFilter = {}): Promise<ItemPage> {
   const params = new URLSearchParams()
-  if (search) params.set('q', search)
-  states?.forEach((s) => params.append('state', s))
-  const qs = params.toString()
-  const envelope = await request('GET', `/items${qs ? `?${qs}` : ''}`)
-  return envelope.data as Item[]
+  if (filter.search) params.set('q', filter.search)
+  filter.states?.forEach((s) => params.append('state', s))
+  filter.tags?.forEach((t) => params.append('tag', t))
+  params.set('limit', String(filter.limit ?? PAGE_SIZE))
+  params.set('offset', String(filter.offset ?? 0))
+  const envelope = await request('GET', `/items?${params.toString()}`)
+  return envelope.data as ItemPage
 }
 
 export interface Captured {

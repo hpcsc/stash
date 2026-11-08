@@ -60,29 +60,52 @@ describe('client', () => {
     expect(url).toBe('http://127.0.0.1:3333/api/auth/config')
   })
 
-  it('listItems returns the items', async () => {
+  it('listItems returns the page of items', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       jsonResponse({
         successful: true,
         messages: [],
-        data: [{ id: '1', type: 'text', body: 'hello', state: 'inbox', capturedAt: '2026-01-01T00:00:00Z' }],
+        data: {
+          items: [{ id: '1', type: 'text', body: 'hello', state: 'inbox', capturedAt: '2026-01-01T00:00:00Z' }],
+          total: 1,
+          limit: 50,
+          offset: 0,
+        },
       }),
     )
     vi.stubGlobal('fetch', fetchMock)
 
-    const items = await listItems()
+    const page = await listItems()
 
-    expect(items).toHaveLength(1)
-    expect(items[0].body).toBe('hello')
+    expect(page.items).toHaveLength(1)
+    expect(page.items[0].body).toBe('hello')
+    expect(page.total).toBe(1)
+  })
+
+  it('listItems passes search, state, tag, and paging query params', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({ successful: true, messages: [], data: { items: [], total: 0, limit: 20, offset: 40 } }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    await listItems({ search: 'hello', states: ['inbox'], tags: ['work', 'design'], limit: 20, offset: 40 })
+
+    const [url] = fetchMock.mock.calls[0]
+    expect(url).toContain('q=hello')
+    expect(url).toContain('state=inbox')
+    expect(url).toContain('tag=work')
+    expect(url).toContain('tag=design')
+    expect(url).toContain('limit=20')
+    expect(url).toContain('offset=40')
   })
 
   it('listItems passes search and state query params', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
-      jsonResponse({ successful: true, messages: [], data: [] }),
+      jsonResponse({ successful: true, messages: [], data: { items: [], total: 0, limit: 50, offset: 0 } }),
     )
     vi.stubGlobal('fetch', fetchMock)
 
-    await listItems('hello', ['inbox'])
+    await listItems({ search: 'hello', states: ['inbox'] })
 
     const [url] = fetchMock.mock.calls[0]
     expect(url).toContain('q=hello')

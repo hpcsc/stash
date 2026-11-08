@@ -39,8 +39,10 @@ func (p *Projection) Handle(ctx context.Context, tx pgx.Tx, evt *domain.Event) e
 	case *event.TagCreated:
 		_, err := tx.Exec(ctx, `
 			INSERT INTO tags (id, user_id, name, version)
-			VALUES ($1, $2, $3, $4)
-			ON CONFLICT (id) DO NOTHING
+			SELECT $1, $2, $3, $4
+			WHERE NOT EXISTS (
+				SELECT 1 FROM tags WHERE user_id = $2 AND LOWER(name) = LOWER($3)
+			)
 		`, payload.TagID, user.String(), payload.Name, evt.Version)
 		return err
 	case *event.TagRenamed:
