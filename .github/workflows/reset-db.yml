@@ -1,0 +1,65 @@
+name: Reset Database
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "reset stash" to confirm database wipe'
+        required: true
+        type: string
+
+run-name: 'Reset database by @${{ github.actor }}'
+
+permissions:
+  contents: read
+
+jobs:
+  reset:
+    runs-on: ubuntu-latest
+    environment: production
+    concurrency:
+      group: reset-db
+      cancel-in-progress: false
+    env:
+      TF_TOKEN_app_terraform_io: ${{ secrets.TF_TOKEN_APP_TERRAFORM_IO }}
+
+    steps:
+      - name: Validate confirmation
+        if: inputs.confirm != 'reset stash'
+        run: |
+          echo "Confirmation phrase did not match. Database was NOT reset."
+          exit 1
+
+      - uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.16.4
+
+      - name: Terraform init
+        working-directory: terraform
+        run: terraform init -input=false
+
+      - name: Install psql
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
+
+      - name: Reset database
+        working-directory: terraform
+        run: |
+          db_host=$(terraform output -raw db_host)
+          db_name=$(terraform output -raw db_name)
+          db_user=$(terraform output -raw db_user)
+          db_password=$(terraform output -raw db_password)
+
+          DB_URL="postgres://${db_user}:${db_password}@${db_host}:5432/${db_name}?sslmode=require"
+
+          psql "$DB_URL" <<SQL
+          BEGIN;
+            ALTER TABLE events DISABLE TRIGGER events_append_only;
+            TRUNCATE TABLE events, checkpoints, item_tags, tags, items RESTART IDENTITY CASCADE;
+            ALTER TABLE events ENABLE TRIGGER events_append_only;
+          COMMIT;
+          SQL
+
+          echo "=== Database ${db_name} reset"

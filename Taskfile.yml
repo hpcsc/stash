@@ -57,6 +57,14 @@ tasks:
     cmds:
       - docker compose -p stash-local exec db psql -U${DB_USERNAME} -d${DB_NAME} -c {{.CLI_ARGS}}
 
+  db:reset:
+    desc: wipe all user data from the local dev database
+    dir: server
+    dotenv:
+      - .env.local
+    cmds:
+      - ./scripts/reset-db.sh .env.local
+
   run-dependencies:
     dir: server
     cmds:
@@ -86,6 +94,14 @@ tasks:
     cmds:
       - docker compose --env-file .env.production -f docker-compose.production.yml down
 
+  self-host:reset-db:
+    desc: wipe all user data from the self-hosted database (stops api/catchup/web first)
+    dir: server
+    cmds:
+      - docker compose --env-file .env.production -f docker-compose.production.yml stop api catchup web
+      - ./scripts/reset-db.sh .env.production
+      - docker compose --env-file .env.production -f docker-compose.production.yml start api catchup web
+
   cloud:up:
     desc: start the cloud stack from published images (docs/cloud-deploy.md)
     dir: server
@@ -97,3 +113,11 @@ tasks:
     dir: server
     cmds:
       - docker compose --env-file .env.cloud -f docker-compose.cloud.yml down
+
+  cloud:reset-db:
+    desc: wipe all user data from the cloud database (stops api/catchup first)
+    dir: server
+    cmds:
+      - docker compose --env-file .env.cloud -f docker-compose.cloud.yml stop api catchup
+      - ./scripts/reset-db.sh .env.cloud
+      - docker compose --env-file .env.cloud -f docker-compose.cloud.yml start api catchup
