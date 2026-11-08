@@ -57,13 +57,15 @@
 
 {#if $token}
   <AppShell headerActions={signOutButton}>
-    {#if activeTab === 'inbox'}
+    <div class="tab-panel" class:hidden={activeTab !== 'inbox'}>
       <Inbox />
-    {:else if activeTab === 'library'}
+    </div>
+    <div class="tab-panel" class:hidden={activeTab !== 'library'}>
       <Library />
-    {:else if activeTab === 'trash'}
+    </div>
+    <div class="tab-panel" class:hidden={activeTab !== 'trash'}>
       <Trash />
-    {/if}
+    </div>
   </AppShell>
 {:else if waiting}
   <div class="loading-screen">
@@ -98,6 +100,10 @@
   .signout-btn:hover {
     color: var(--color-text);
     background: var(--color-surface-hover);
+  }
+
+  .tab-panel.hidden {
+    display: none;
   }
 
   .loading-screen {

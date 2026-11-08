@@ -31,6 +31,37 @@
   const thumbnail = $derived(item.thumbnailPath ? fileUrl(item.thumbnailPath) : null)
   const bodyHtml = $derived(item.type === 'note' ? renderMarkdown(item.body) : '')
 
+  const subtitle = $derived.by(() => {
+    if (item.type === 'link') return extractHost(item.body)
+    if (item.type === 'file') return fileTypeLabel(item.fileName, item.mimeType)
+    return null
+  })
+
+  function extractHost(raw: string): string | null {
+    try {
+      const u = new URL(raw)
+      return u.hostname.replace(/^www\./, '')
+    } catch {
+      return null
+    }
+  }
+
+  function fileTypeLabel(fileName?: string, mimeType?: string): string | null {
+    if (fileName) {
+      const dot = fileName.lastIndexOf('.')
+      if (dot >= 0 && dot < fileName.length - 1) {
+        return fileName.slice(dot + 1).toUpperCase()
+      }
+    }
+    if (mimeType) {
+      const slash = mimeType.indexOf('/')
+      if (slash >= 0 && slash < mimeType.length - 1) {
+        return mimeType.slice(slash + 1).toUpperCase()
+      }
+    }
+    return null
+  }
+
   function handleKeep(e: MouseEvent) {
     e.stopPropagation()
     onkeep?.(item.id)
@@ -52,68 +83,90 @@
   }
 </script>
 
-<button type="button" class="card" {onclick}>
+<button
+  type="button"
+  class="card"
+  class:link={item.type === 'link'}
+  class:image={item.type === 'image'}
+  class:file={item.type === 'file'}
+  {onclick}
+>
   <div class="card-header">
-    <span class="type-badge">{meta.label}</span>
+    <div class="header-left">
+      <span class="type-label">{meta.label}</span>
+      {#if subtitle}
+        <span class="meta-sep">·</span>
+        <span class="meta-text">{subtitle}</span>
+      {/if}
+    </div>
     <span class="time">{timeAgo}</span>
   </div>
-  {#if item.type === 'image'}
-    {#if thumbnail}
-      <img class="thumb" src={thumbnail} alt="" />
+  <div class="card-body">
+    {#if item.type === 'image'}
+      {#if thumbnail}
+        <img class="thumb" src={thumbnail} alt="" />
+      {:else}
+        <div class="image-placeholder">
+          <svg width="24" height="24" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect x="1.5" y="2.5" width="13" height="11" rx="1.5"/>
+            <circle cx="5.5" cy="6" r="1.5"/>
+            <path d="M1.5 11.5l4-3 2 1.5 3-3 4 4.5"/>
+          </svg>
+        </div>
+      {/if}
+    {:else if item.type === 'file'}
+      <div class="file-block">
+        <div class="file-info">
+          <span class="file-name">{item.fileName || 'File'}</span>
+          {#if item.fileSize}
+            <span class="file-size">{formatFileSize(item.fileSize)}</span>
+          {/if}
+        </div>
+      </div>
+    {:else if item.type === 'note' && bodyHtml}
+      <div class="body markdown">{@html bodyHtml}</div>
     {:else}
-      <div class="image-placeholder">
-        <svg width="24" height="24" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
-          <rect x="1.5" y="2.5" width="13" height="11" rx="1.5"/>
-          <circle cx="5.5" cy="6" r="1.5"/>
-          <path d="M1.5 11.5l4-3 2 1.5 3-3 4 4.5"/>
-        </svg>
+      <p class="body">{preview}{hasMore ? '…' : ''}</p>
+    {/if}
+    {#if item.tagNames && item.tagNames.length > 0}
+      <div class="tag-badges">
+        {#each item.tagNames as name}
+          <span class="tag-badge">{name}</span>
+        {/each}
       </div>
     {/if}
-  {:else if item.type === 'file'}
-    <div class="file">
-      <div class="file-info">
-        <span class="file-name">{item.fileName || 'File'}</span>
-        {#if item.fileSize}
-          <span class="file-size">{formatFileSize(item.fileSize)}</span>
-        {/if}
-      </div>
-    </div>
-  {:else if item.type === 'note' && bodyHtml}
-    <div class="body markdown">{@html bodyHtml}</div>
-  {:else}
-    <p class="body">{preview}{hasMore ? '…' : ''}</p>
-  {/if}
-  <div class="card-footer">
-    <div class="spacer"></div>
-    {#if item.state === 'dropped'}
-      <div class="actions">
-        <span role="button" tabindex="0" class="action-btn restore" onclick={handleRestore} onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleRestore(e as unknown as MouseEvent) }} title="Restore">
-          <svg width="20" height="20" viewBox="0 0 16 16" fill="none">
-            <path d="M3 8a5 5 0 1 0 1.5-3.5M3 3v3h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
-          </svg>
-        </span>
-        <span role="button" tabindex="0" class="action-btn delete" onclick={handleDelete} onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleDelete(e as unknown as MouseEvent) }} title="Delete permanently">
-          <svg width="20" height="20" viewBox="0 0 16 16" fill="none">
-            <path d="M3 4h10M5.5 4v8a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1V4M6.5 4V3a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
-          </svg>
-        </span>
-      </div>
-    {:else}
-      <div class="actions">
-        {#if !item.state || item.state === 'inbox'}
-          <span role="button" tabindex="0" class="action-btn keep" onclick={handleKeep} onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleKeep(e as unknown as MouseEvent) }} title="Keep">
+    <div class="card-footer">
+      <div class="spacer"></div>
+      {#if item.state === 'dropped'}
+        <div class="actions">
+          <span role="button" tabindex="0" class="action-btn restore" onclick={handleRestore} onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleRestore(e as unknown as MouseEvent) }} title="Restore">
             <svg width="20" height="20" viewBox="0 0 16 16" fill="none">
-              <path d="M3 8.5l3 3 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              <path d="M3 8a5 5 0 1 0 1.5-3.5M3 3v3h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
             </svg>
           </span>
-        {/if}
-        <span role="button" tabindex="0" class="action-btn drop" onclick={handleDrop} onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleDrop(e as unknown as MouseEvent) }} title="Drop">
-          <svg width="20" height="20" viewBox="0 0 16 16" fill="none">
-            <path d="M3 4h10M5.5 4v8a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1V4M6.5 4V3a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
-          </svg>
-        </span>
-      </div>
-    {/if}
+          <span role="button" tabindex="0" class="action-btn delete" onclick={handleDelete} onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleDelete(e as unknown as MouseEvent) }} title="Delete permanently">
+            <svg width="20" height="20" viewBox="0 0 16 16" fill="none">
+              <path d="M3 4h10M5.5 4v8a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1V4M6.5 4V3a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </span>
+        </div>
+      {:else}
+        <div class="actions">
+          {#if !item.state || item.state === 'inbox'}
+            <span role="button" tabindex="0" class="action-btn keep" onclick={handleKeep} onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleKeep(e as unknown as MouseEvent) }} title="Keep">
+              <svg width="20" height="20" viewBox="0 0 16 16" fill="none">
+                <path d="M3 8.5l3 3 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </span>
+          {/if}
+          <span role="button" tabindex="0" class="action-btn drop" onclick={handleDrop} onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleDrop(e as unknown as MouseEvent) }} title="Drop">
+            <svg width="20" height="20" viewBox="0 0 16 16" fill="none">
+              <path d="M3 4h10M5.5 4v8a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1V4M6.5 4V3a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </span>
+        </div>
+      {/if}
+    </div>
   </div>
 </button>
 
@@ -121,10 +174,10 @@
   .card {
     display: flex;
     flex-direction: column;
-    gap: var(--space-2);
     width: 100%;
     text-align: left;
-    padding: var(--space-4);
+    padding: 0;
+    overflow: hidden;
     background: var(--color-surface);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
@@ -133,6 +186,13 @@
     transition: border-color var(--duration-fast) var(--ease-out),
                 box-shadow var(--duration-fast) var(--ease-out),
                 transform var(--duration-fast) var(--ease-out);
+  }
+
+  .card-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-4);
   }
 
   .card:hover {
@@ -150,7 +210,6 @@
     max-height: 200px;
     object-fit: cover;
     border-radius: var(--radius-md);
-    margin-bottom: var(--space-2);
   }
 
   .image-placeholder {
@@ -163,17 +222,15 @@
     color: var(--color-text-tertiary);
     background: var(--color-bg);
     border-radius: var(--radius-md);
-    margin-bottom: var(--space-2);
   }
 
-  .file {
+  .file-block {
     display: flex;
     align-items: center;
     gap: var(--space-3);
     padding: var(--space-3);
     background: var(--color-bg);
     border-radius: var(--radius-md);
-    margin-bottom: var(--space-2);
   }
 
   .file-info {
@@ -200,20 +257,67 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: var(--space-2);
+    width: 100%;
+    box-sizing: border-box;
+    padding: var(--space-3) var(--space-4);
+    border-top: 4px solid var(--color-border-light);
+    border-bottom: 1px solid var(--color-border-light);
+    background: var(--color-bg);
   }
 
-  .type-badge {
-    display: inline-block;
-    padding: 1px 8px;
+  .header-left {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2);
+    min-width: 0;
+  }
+
+  .type-label {
     font-size: var(--text-xs);
     font-weight: var(--weight-semibold);
-    color: var(--color-accent);
-    background: var(--color-accent-subtle);
-    border: 1px solid color-mix(in srgb, var(--color-accent) 20%, transparent);
-    border-radius: var(--radius-sm);
+    color: var(--color-text-secondary);
     text-transform: uppercase;
-    letter-spacing: 0.04em;
-    line-height: 1.6;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+  }
+
+  .meta-sep {
+    font-size: var(--text-xs);
+    color: var(--color-text-tertiary);
+  }
+
+  .meta-text {
+    font-size: var(--text-xs);
+    font-weight: var(--weight-medium);
+    color: var(--color-text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .card.link .card-header {
+    border-top-color: var(--color-accent);
+  }
+
+  .card.link .type-label {
+    color: var(--color-accent);
+  }
+
+  .card.image .card-header {
+    border-top-color: var(--color-success);
+  }
+
+  .card.image .type-label {
+    color: var(--color-success);
+  }
+
+  .card.file .card-header {
+    border-top-color: var(--color-warning);
+  }
+
+  .card.file .type-label {
+    color: var(--color-warning);
   }
 
   .time {
@@ -257,6 +361,23 @@
 
   .body.markdown :global(img) {
     display: none;
+  }
+
+  .tag-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+  }
+
+  .tag-badge {
+    display: inline-block;
+    padding: 1px 9px;
+    font-size: var(--text-xs);
+    font-weight: var(--weight-medium);
+    color: var(--color-accent);
+    background: var(--color-accent-subtle);
+    border-radius: var(--radius-xl);
+    line-height: 1.6;
   }
 
   .card-footer {

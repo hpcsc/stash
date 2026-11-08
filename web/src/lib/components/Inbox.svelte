@@ -9,8 +9,10 @@
   import ItemDetail from './ItemDetail.svelte'
   import EmptyState from './EmptyState.svelte'
   import ErrorBanner from './ErrorBanner.svelte'
+  import LoadMore from './LoadMore.svelte'
   import SkeletonCard from './SkeletonCard.svelte'
   import SearchBar from './SearchBar.svelte'
+  import TagPicker from './TagPicker.svelte'
 
   const urlRe = /^https?:\/\/\S+$/i
 
@@ -21,12 +23,15 @@
   }
 
   let items = $state<Item[]>([])
+  let total = $state(0)
   let loading = $state(true)
+  let loadingMore = $state(false)
   let saving = $state(false)
   let error = $state<string | null>(null)
   let warning = $state<string | null>(null)
   let selected = $state<Item | null>(null)
   let query = $state('')
+  let keepingItem = $state<string | null>(null)
 
   onMount(() => {
     load()
@@ -56,15 +61,23 @@
     }
   })
 
-  async function load(search = '') {
-    loading = true
+  async function load(search = '', append = false) {
+    if (append) {
+      loadingMore = true
+    } else {
+      loading = true
+      items = []
+    }
     error = null
     try {
-      items = await listItems(search, ['inbox'])
+      const page = await listItems({ search, states: ['inbox'], offset: append ? items.length : 0 })
+      items = append ? [...items, ...page.items] : page.items
+      total = page.total
     } catch (e) {
       error = e instanceof Error ? e.message : 'Failed to load the inbox'
     } finally {
       loading = false
+      loadingMore = false
     }
   }
 
@@ -83,14 +96,19 @@
 
       if (upload.images.length === 0 && urlRe.test(markdown)) {
         const captured = await captureLink(markdown)
-        items = [
-          { id: captured.id, type: 'link', body: markdown, state: 'inbox', version: 1, capturedAt: new Date().toISOString() },
-          ...items,
-        ]
-        if (captured.duplicate) warning = duplicateNotice(captured.duplicateState)
+        if (captured.duplicate) {
+          warning = duplicateNotice(captured.duplicateState)
+        } else {
+          items = [
+            { id: captured.id, type: 'link', body: markdown, state: 'inbox', version: 1, capturedAt: new Date().toISOString() },
+            ...items,
+          ]
+          total += 1
+        }
       } else {
         const item = await captureNote(upload.markdown, upload.images)
         items = [item, ...items]
+        total += 1
       }
     } catch (e) {
       error = e instanceof Error ? e.message : 'Failed to save'
@@ -118,6 +136,7 @@
         item.fileSize = file.size
       }
       items = [item, ...items]
+      total += 1
     } catch (e) {
       error = e instanceof Error ? e.message : 'Failed to save attachment'
     } finally {
@@ -125,15 +144,28 @@
     }
   }
 
-  async function handleKeep(id: string) {
+  async function handleKeepStart(id: string) {
+    keepingItem = id
+  }
+
+  async function handleKeepConfirm(tagIDs: string[]) {
+    if (!keepingItem) return
+    const id = keepingItem
     error = null
     try {
-      await keepItem(id)
+      await keepItem(id, tagIDs.length > 0 ? tagIDs : undefined)
       items = items.filter((i) => i.id !== id)
+      total = Math.max(0, total - 1)
       if (selected?.id === id) selected = null
     } catch (e) {
       error = e instanceof Error ? e.message : 'Failed to keep item'
+    } finally {
+      keepingItem = null
     }
+  }
+
+  function handleKeepCancel() {
+    keepingItem = null
   }
 
   async function handleDrop(id: string) {
@@ -141,6 +173,7 @@
     try {
       await dropItem(id)
       items = items.filter((i) => i.id !== id)
+      total = Math.max(0, total - 1)
       if (selected?.id === id) selected = null
     } catch (e) {
       error = e instanceof Error ? e.message : 'Failed to drop item'
@@ -148,12 +181,16 @@
   }
 </script>
 
+{#if keepingItem}
+  <TagPicker onconfirm={handleKeepConfirm} oncancel={handleKeepCancel} />
+{/if}
+
 {#if selected}
   {@const current = selected}
   <ItemDetail
     item={current}
     onback={() => (selected = null)}
-    onkeep={() => handleKeep(current.id)}
+    onkeep={() => handleKeepStart(current.id)}
     ondrop={() => handleDrop(current.id)}
   />
 {:else}
@@ -177,7 +214,7 @@
 
   <div class="section-header">
     <h2>All items</h2>
-    <span class="count">{items.length} item{items.length !== 1 ? 's' : ''}</span>
+    <span class="count">{total} item{total !== 1 ? 's' : ''}</span>
   </div>
 
   {#if loading}
@@ -194,9 +231,14 @@
   {:else}
     <div class="list">
       {#each items as item (item.id)}
-        <ItemCard {item} onclick={() => (selected = item)} onkeep={handleKeep} ondrop={handleDrop} />
+        <ItemCard {item} onclick={() => (selected = item)} onkeep={handleKeepStart} ondrop={handleDrop} />
       {/each}
     </div>
+    <LoadMore
+      remaining={total - items.length}
+      loading={loadingMore}
+      onclick={() => load(query, true)}
+    />
   {/if}
 {/if}
 

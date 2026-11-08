@@ -5,11 +5,14 @@
   import ItemDetail from './ItemDetail.svelte'
   import EmptyState from './EmptyState.svelte'
   import ErrorBanner from './ErrorBanner.svelte'
+  import LoadMore from './LoadMore.svelte'
   import SkeletonCard from './SkeletonCard.svelte'
   import SearchBar from './SearchBar.svelte'
 
   let items = $state<Item[]>([])
+  let total = $state(0)
   let loading = $state(true)
+  let loadingMore = $state(false)
   let error = $state<string | null>(null)
   let query = $state('')
   let selected = $state<Item | null>(null)
@@ -17,17 +20,33 @@
 
   onMount(() => {
     load()
+
+    function onTabChange(e: Event) {
+      if ((e as CustomEvent).detail === 'trash') {
+        load(query)
+      }
+    }
+    window.addEventListener('tab-change', onTabChange)
+    return () => window.removeEventListener('tab-change', onTabChange)
   })
 
-  async function load(search = '') {
-    loading = true
+  async function load(search = '', append = false) {
+    if (append) {
+      loadingMore = true
+    } else {
+      loading = true
+      items = []
+    }
     error = null
     try {
-      items = await listItems(search, ['dropped'])
+      const page = await listItems({ search, states: ['dropped'], offset: append ? items.length : 0 })
+      items = append ? [...items, ...page.items] : page.items
+      total = page.total
     } catch (e) {
       error = e instanceof Error ? e.message : 'Failed to load trash'
     } finally {
       loading = false
+      loadingMore = false
     }
   }
 
@@ -41,6 +60,7 @@
     try {
       await restoreItem(id)
       items = items.filter((item) => item.id !== id)
+      total = Math.max(0, total - 1)
       if (selected?.id === id) selected = null
     } catch (e) {
       error = e instanceof Error ? e.message : 'Failed to restore the item'
@@ -53,6 +73,7 @@
     try {
       await deleteItem(id)
       items = items.filter((item) => item.id !== id)
+      total = Math.max(0, total - 1)
       if (selected?.id === id) selected = null
     } catch (e) {
       error = e instanceof Error ? e.message : 'Failed to delete the item'
@@ -67,6 +88,7 @@
     try {
       await emptyTrashRequest()
       items = []
+      total = 0
       selected = null
     } catch (e) {
       error = e instanceof Error ? e.message : 'Failed to empty the trash'
@@ -93,9 +115,9 @@
   <div class="section-header">
     <div class="heading">
       <h2>Trash</h2>
-      <span class="count">{items.length} item{items.length !== 1 ? 's' : ''}</span>
+      <span class="count">{total} item{total !== 1 ? 's' : ''}</span>
     </div>
-    {#if items.length > 0 && !loading}
+    {#if total > 0 && !loading}
       <button type="button" class="empty-btn" onclick={emptyTrash} disabled={emptying}>
         {emptying ? 'Emptying…' : 'Empty trash'}
       </button>
@@ -124,6 +146,11 @@
         />
       {/each}
     </div>
+    <LoadMore
+      remaining={total - items.length}
+      loading={loadingMore}
+      onclick={() => load(query, true)}
+    />
   {/if}
 {/if}
 
